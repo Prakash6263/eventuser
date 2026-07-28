@@ -1,0 +1,1626 @@
+"use client";
+
+import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import SiteHeader from "../components/Header";
+import Footer from "../components/Footer";
+import styles from "./create-event.module.css";
+import { getEventTypesApi, getEventCategoriesByTypeIdApi, getPlacePreferencesApi, getMerchantsByServiceApi, getEventNotesApi, createEventApi } from "../services/eventApi";
+import { syncContactsApi, getAllUsersApi } from "../services/authApi";
+import CountryCodePicker from "../components/CountryCodePicker";
+import { isLoggedIn } from "../services/apiClient";
+
+const steps = [
+  { id: "date", label: "Date & time", icon: "fa-calendar-days" },
+  { id: "category", label: "Event details", icon: "fa-shapes" },
+  { id: "place", label: "Event place", icon: "fa-location-dot" },
+  { id: "restaurants", label: "Venue", icon: "fa-utensils" },
+  { id: "guests", label: "Guests", icon: "fa-user-group" },
+  { id: "guestInfo", label: "Guest options", icon: "fa-clipboard-check" },
+  { id: "registry", label: "Gift registry", icon: "fa-gift" },
+  { id: "notes", label: "Notes", icon: "fa-note-sticky" },
+  { id: "content", label: "Invitation", icon: "fa-envelope-open-text" },
+  { id: "review", label: "Review", icon: "fa-list-check" },
+];
+
+
+
+// Static contacts list removed. Contacts are now loaded from the backend or local storage.
+
+const locations = [
+  "12, near Aurobindo Hospital, Rishi Nagar, Indore",
+  "6W6C+7GP, Sel Pinang, Mandau Talawang, Indore",
+];
+
+
+function getCalendarDays(month) {
+  const firstDay = new Date(2026, month, 1).getDay();
+  const monthLength = new Date(2026, month + 1, 0).getDate();
+  const previousMonthLength = new Date(2026, month, 0).getDate();
+  const days = [];
+
+  for (let index = firstDay - 1; index >= 0; index -= 1) {
+    days.push({ number: previousMonthLength - index, outside: true });
+  }
+  for (let day = 1; day <= monthLength; day += 1) {
+    days.push({ number: day, outside: false });
+  }
+  for (let day = 1; days.length < 42; day += 1) {
+    days.push({ number: day, outside: true });
+  }
+
+  return days;
+}
+
+export default function CreateEventPage() {
+  const router = useRouter();
+  const [step, setStep] = useState("date");
+  const [month, setMonth] = useState(6);
+  const [selectedDate, setSelectedDate] = useState(14);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [category, setCategory] = useState("Birthday");
+  const [eventType, setEventType] = useState("Family Celebration");
+  const [place, setPlace] = useState("");
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedLocation, setSelectedLocation] = useState(null);
+  const [contacts, setContacts] = useState([]);
+  const [selectedGuests, setSelectedGuests] = useState([]);
+  const [guestSearch, setGuestSearch] = useState("");
+  const [bringGuests, setBringGuests] = useState("No");
+  const [rsvp, setRsvp] = useState("No");
+  const [maxGuests, setMaxGuests] = useState("");
+  const [rsvpBy, setRsvpBy] = useState("");
+  const [registryUrl, setRegistryUrl] = useState("");
+  const [selectedNotes, setSelectedNotes] = useState([]);
+  const [customNote, setCustomNote] = useState("");
+  const [eventTitle, setEventTitle] = useState("");
+  const [invitationMessage, setInvitationMessage] = useState("");
+  const [eventImage, setEventImage] = useState(null);
+  const [eventImageFile, setEventImageFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [subview, setSubview] = useState(null);
+  const [placeSearch, setPlaceSearch] = useState("ind");
+  const [dialog, setDialog] = useState(null);
+  const [completed, setCompleted] = useState(false);
+  const [completionMode, setCompletionMode] = useState("sent");
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [newContact, setNewContact] = useState({ name: "", phone: "", email: "", countryCode: "+91" });
+  const [contactError, setContactError] = useState("");
+  const [isSavingContact, setIsSavingContact] = useState(false);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+
+  // Event Types & Categories API state
+  const [eventTypesList, setEventTypesList] = useState([]);
+  const [selectedEventTypeId, setSelectedEventTypeId] = useState("");
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [loadingEventData, setLoadingEventData] = useState(false);
+
+  // Place Preferences API state
+  const [placePreferencesList, setPlacePreferencesList] = useState([]);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
+
+  // Merchants / Restaurants API state
+  const [merchantRestaurants, setMerchantRestaurants] = useState([]);
+  const [loadingMerchants, setLoadingMerchants] = useState(false);
+
+  // Event Notes API state
+  const [eventNotesList, setEventNotesList] = useState([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      router.push("/login");
+    } else {
+      setCheckingAuth(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    async function loadEventTypes() {
+      setLoadingEventData(true);
+      try {
+        const res = await getEventTypesApi();
+        if (res && res.status && Array.isArray(res.data) && res.data.length > 0) {
+          setEventTypesList(res.data);
+          const firstType = res.data[0];
+          setSelectedEventTypeId(firstType._id);
+          setCategory(firstType.eventType);
+
+          if (Array.isArray(firstType.categories) && firstType.categories.length > 0) {
+            setCategoriesList(firstType.categories);
+            setSelectedCategoryId(firstType.categories[0]._id);
+            setEventType(firstType.categories[0].category);
+          } else {
+            setCategoriesList([]);
+            setEventType("");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load event types:", err);
+      } finally {
+        setLoadingEventData(false);
+      }
+    }
+
+    async function loadPlacePreferences() {
+      setLoadingPlaces(true);
+      try {
+        const res = await getPlacePreferencesApi();
+        if (res && res.status && Array.isArray(res.data) && res.data.length > 0) {
+          setPlacePreferencesList(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load place preferences:", err);
+      } finally {
+        setLoadingPlaces(false);
+      }
+    }
+
+    async function loadMerchants() {
+      setLoadingMerchants(true);
+      try {
+        const res = await getMerchantsByServiceApi("686fb6ced46e9740ee8277ec");
+        if (res && res.status && Array.isArray(res.data) && res.data.length > 0) {
+          setMerchantRestaurants(res.data);
+        } else {
+          console.error("Failed to load merchants: API error status.", res);
+        }
+      } catch (err) {
+        console.error("Failed to load merchants:", err.message || err);
+      } finally {
+        setLoadingMerchants(false);
+      }
+    }
+
+    async function loadEventNotes() {
+      setLoadingNotes(true);
+      try {
+        const res = await getEventNotesApi();
+        if (res && res.status && Array.isArray(res.data) && res.data.length > 0) {
+          setEventNotesList(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to load event notes:", err);
+      } finally {
+        setLoadingNotes(false);
+      }
+    }
+
+    loadEventTypes();
+    loadPlacePreferences();
+    loadMerchants();
+    loadEventNotes();
+  }, []);
+
+  const handleEventTypeChange = async (typeId) => {
+    setSelectedEventTypeId(typeId);
+    const foundType = eventTypesList.find((t) => t._id === typeId);
+    if (foundType) {
+      setCategory(foundType.eventType);
+
+      try {
+        const catRes = await getEventCategoriesByTypeIdApi(typeId);
+        let cats = [];
+        if (catRes && catRes.status && Array.isArray(catRes.data) && catRes.data.length > 0) {
+          cats = catRes.data;
+        } else if (Array.isArray(foundType.categories)) {
+          cats = foundType.categories;
+        }
+
+        setCategoriesList(cats);
+        if (cats.length > 0) {
+          setSelectedCategoryId(cats[0]._id);
+          setEventType(cats[0].category || cats[0].eventType?.eventType || "");
+        } else {
+          setSelectedCategoryId("");
+          setEventType("");
+        }
+      } catch (err) {
+        if (Array.isArray(foundType.categories) && foundType.categories.length > 0) {
+          setCategoriesList(foundType.categories);
+          setSelectedCategoryId(foundType.categories[0]._id);
+          setEventType(foundType.categories[0].category);
+        } else {
+          setCategoriesList([]);
+          setSelectedCategoryId("");
+          setEventType("");
+        }
+      }
+    }
+  };
+
+  const calendarDays = useMemo(() => getCalendarDays(month), [month]);
+  const activeIndex = steps.findIndex((item) => item.id === step);
+  const visibleGuests = contacts.filter((guest) =>
+    `${guest.name} ${guest.id} ${guest.email}`.toLowerCase().includes(guestSearch.toLowerCase())
+  );
+
+  const fetchContacts = async () => {
+    setLoadingContacts(true);
+    try {
+      const response = await getAllUsersApi();
+      if (response && response.status === true) {
+        const serverUsers = Array.isArray(response.users) ? response.users : [];
+        const mapped = serverUsers.map((u) => ({
+          ...u,
+          id: u._id || u.mobile, // Primary identifier: _id, fallback: mobile
+          name: u.fullName || u.name || "",
+          email: u.email || "",
+          mobile: u.mobile || "",
+          countryCode: u.countryCode || "+91",
+          _id: u._id || "",
+          profilePic: u.profilePic || null,
+          invitation_sent: !!u.invitation_sent,
+        }));
+
+        // Preserve selected guests by matching them using _id or mobile
+        setSelectedGuests((prevSelected) => {
+          return prevSelected.map((selId) => {
+            const matchedUser = mapped.find(
+              (u) => (u._id && u._id === selId) || (u.mobile && u.mobile === selId)
+            );
+            if (matchedUser) {
+              return matchedUser.id; // Map to the matched user's preferred ID
+            }
+            return selId;
+          });
+        });
+
+        setContacts(mapped);
+        try {
+          window.localStorage.setItem("eventuna-contacts", JSON.stringify(mapped));
+        } catch {
+          // Ignore
+        }
+        return true;
+      } else {
+        throw new Error(response?.message || "Failed to fetch contacts from the server.");
+      }
+    } catch (err) {
+      console.error("Error fetching contacts:", err);
+      return false;
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  useEffect(() => {
+    let hydrationTimer;
+    try {
+      const savedContacts = window.localStorage.getItem("eventuna-contacts");
+      if (savedContacts) {
+        const parsedContacts = JSON.parse(savedContacts);
+        if (Array.isArray(parsedContacts)) {
+          hydrationTimer = window.setTimeout(() => setContacts(parsedContacts), 0);
+        }
+      }
+    } catch {
+      // Keep the built-in contacts when browser storage is unavailable.
+    }
+
+    if (isLoggedIn()) {
+      fetchContacts();
+    }
+
+    return () => window.clearTimeout(hydrationTimer);
+  }, []);
+
+  // Auto-sync any unsynced local contacts on load
+  useEffect(() => {
+    if (!isLoggedIn() || contacts.length === 0) return;
+
+    const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+    const unsynced = contacts.filter((c) => !isValidObjectId(c.id || c._id));
+    if (unsynced.length === 0) return;
+
+    async function syncLocalContacts() {
+      let updated = false;
+      const updatedContacts = [...contacts];
+
+      for (const contact of unsynced) {
+        try {
+          const res = await syncContactsApi({
+            contacts: [
+              {
+                name: contact.name || "Guest",
+                email: contact.email || "",
+                mobile: contact.mobile || contact.id,
+                countryCode: contact.countryCode || "+91",
+              },
+            ],
+          });
+          if (res && res.status && Array.isArray(res.contacts) && res.contacts[0]?._id) {
+            const newId = res.contacts[0]._id;
+            
+            // Find and update the contact in our list
+            const index = updatedContacts.findIndex((c) => c.id === contact.id);
+            if (index !== -1) {
+              updatedContacts[index] = {
+                ...updatedContacts[index],
+                id: newId,
+                _id: newId,
+              };
+              updated = true;
+            }
+          }
+        } catch (err) {
+          console.error("Error auto-syncing local contact on load:", err);
+        }
+      }
+
+      if (updated) {
+        setContacts(updatedContacts);
+        try {
+          window.localStorage.setItem("eventuna-contacts", JSON.stringify(updatedContacts));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    syncLocalContacts();
+  }, [contacts]);
+
+  const saveContact = async () => {
+    const name = newContact.name.trim();
+    const phone = newContact.phone.trim();
+    const email = newContact.email.trim();
+    const countryCode = newContact.countryCode || "+91";
+
+    if (!name || !phone) {
+      setContactError("Name and phone number are required.");
+      return;
+    }
+    if (!/^\+?[0-9 ()-]{7,20}$/.test(phone)) {
+      setContactError("Enter a valid phone number.");
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setContactError("Enter a valid email address or leave it empty.");
+      return;
+    }
+    if (contacts.some((contact) => contact.id === phone || contact.mobile === phone || contact._id === phone)) {
+      setContactError("A contact with this phone number already exists.");
+      return;
+    }
+
+    setIsSavingContact(true);
+    setContactError("");
+
+    try {
+      if (isLoggedIn()) {
+        const response = await syncContactsApi({
+          contacts: [
+            {
+              name,
+              email: email || "",
+              mobile: phone,
+              countryCode,
+            },
+          ],
+        });
+
+        if (!response || !response.status) {
+          throw new Error(response?.message || "Failed to save contact on the server.");
+        }
+
+        const refreshSuccess = await fetchContacts();
+        if (!refreshSuccess) {
+          throw new Error("Contact was saved successfully, but the updated list could not be loaded from the server.");
+        }
+      } else {
+        // Add contact locally
+        const updatedContacts = [
+          ...contacts,
+          { id: phone, name, email, countryCode, mobile: phone },
+        ];
+        setContacts(updatedContacts);
+        try {
+          window.localStorage.setItem("eventuna-contacts", JSON.stringify(updatedContacts));
+        } catch {
+          // Keep in current session
+        }
+      }
+
+      setNewContact({ name: "", phone: "", email: "", countryCode: "+91" });
+      setContactError("");
+      setContactModalOpen(false);
+    } catch (err) {
+      setContactError(err.message || "An error occurred while saving the contact.");
+    } finally {
+      setIsSavingContact(false);
+    }
+  };
+
+  const submitEvent = async ({ saveDraft }) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData();
+
+      // Required fields from current UI state
+      formData.append("eventTitle", eventTitle);
+      formData.append("eventDescription", invitationMessage);
+      formData.append("eventTypeId", selectedEventTypeId);
+      formData.append("eventCategoryId", selectedCategoryId);
+      
+      const formattedDate = `2026-${(month + 1).toString().padStart(2, "0")}-${selectedDate.toString().padStart(2, "0")}`;
+      formData.append("eventDate", formattedDate);
+      formData.append("eventStartTime", startTime);
+      formData.append("eventEndTime", endTime);
+      formData.append("bringalongGuest", bringGuests);
+      formData.append("rvsp", rsvp);
+      formData.append("saveDraft", saveDraft ? "true" : "false");
+
+      // Optional fields - only append if they have values
+      if (registryUrl.trim()) {
+        formData.append("amazonGiftUrlId", registryUrl);
+      }
+      if (selectedRestaurant) {
+        formData.append("merchantId", selectedRestaurant);
+      }
+      if (selectedLocation && selectedLocation._id) {
+        formData.append("serviceLocationId", selectedLocation._id);
+      }
+      if (eventImageFile) {
+        formData.append("image", eventImageFile);
+      }
+      const selectedPlaceOption = placePreferencesList.find((p) => p.preferences === place);
+      if (selectedPlaceOption && selectedPlaceOption._id) {
+        formData.append("placeId", selectedPlaceOption._id);
+      }
+
+      // Guest preferences details (appended conditionally if bringGuests is Yes or RSVP is Yes)
+      if (bringGuests === "Yes" && maxGuests) {
+        formData.append("bringalongGuestNumber", maxGuests);
+      }
+      if (rsvp === "Yes" && rsvpBy) {
+        formData.append("rvspDateBy", rsvpBy);
+      }
+
+      // Array fields - JSON stringify if they have values
+      const selectedNoteIds = eventNotesList
+        .filter((item) => selectedNotes.includes(item.notes))
+        .map((item) => item._id);
+      if (selectedNoteIds.length > 0) {
+        formData.append("noteIds", JSON.stringify(selectedNoteIds));
+      }
+
+      // Validate and automatically sync any guests that do not have a valid MongoDB ObjectId
+      const finalSelectedGuests = [];
+      const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+
+      for (const guestId of selectedGuests) {
+        if (isValidObjectId(guestId)) {
+          finalSelectedGuests.push(guestId);
+        } else {
+          // This guest is local-only (e.g. has a phone number as ID). Sync them first.
+          const guestInfo = contacts.find((c) => c.id === guestId || c.mobile === guestId);
+          const guestName = guestInfo ? guestInfo.name : "Unknown guest";
+          if (guestInfo) {
+            try {
+              const syncRes = await syncContactsApi({
+                contacts: [
+                  {
+                    name: guestInfo.name || "Guest",
+                    email: guestInfo.email || "",
+                    mobile: guestInfo.mobile || guestId,
+                    countryCode: guestInfo.countryCode || "+91",
+                  },
+                ],
+              });
+              if (syncRes && syncRes.status && Array.isArray(syncRes.contacts) && syncRes.contacts[0]?._id) {
+                const newDbId = syncRes.contacts[0]._id;
+                finalSelectedGuests.push(newDbId);
+                
+                // Update contact details in the current list
+                guestInfo.id = newDbId;
+                guestInfo._id = newDbId;
+                continue;
+              }
+            } catch (syncErr) {
+              console.error("Error syncing guest on submission:", syncErr);
+            }
+          }
+          throw new Error(`Guest "${guestName}" is not synced with the server. Please remove and re-add this contact.`);
+        }
+      }
+
+      // Save updated contacts list with synced IDs
+      setContacts([...contacts]);
+      try {
+        window.localStorage.setItem("eventuna-contacts", JSON.stringify(contacts));
+      } catch (e) {
+        console.error(e);
+      }
+
+      if (finalSelectedGuests.length > 0) {
+        formData.append("contactListIds", JSON.stringify(finalSelectedGuests));
+      }
+
+      // Call API
+      const response = await createEventApi(formData);
+
+      if (!response || !response.status) {
+        throw new Error(response?.message || "Failed to create event on the server.");
+      }
+
+      // Success: Save backend response to localStorage as source of truth
+      const backendEvent = response.event || response.data || {};
+      const resolvedEvent = {
+        eventTitle: backendEvent.eventTitle || eventTitle,
+        invitationMessage: backendEvent.eventDescription || invitationMessage,
+        eventImage: backendEvent.imageUrl || eventImage, // backend uploaded URL if exists
+        selectedDate: selectedDate,
+        month: month,
+        startTime: backendEvent.eventStartTime || startTime,
+        endTime: backendEvent.eventEndTime || endTime,
+        selectedRestaurant: backendEvent.merchantId || selectedRestaurant,
+        selectedGuests: backendEvent.contactListIds || selectedGuests,
+        bringGuests: backendEvent.bringalongGuest || bringGuests,
+        maxGuests: backendEvent.bringalongGuestNumber || maxGuests,
+        rsvp: backendEvent.rvsp || rsvp,
+        rsvpBy: backendEvent.rvspDateBy || rsvpBy,
+        selectedNotes: selectedNotes,
+        registryUrl: backendEvent.amazonGiftUrlId || registryUrl,
+        place: place,
+        selectedLocation: selectedLocation,
+        category: category,
+        eventType: eventType,
+        organizerName: "Takur",
+        id: backendEvent._id || backendEvent.id || ""
+      };
+
+      window.localStorage.setItem("eventuna-latest-event", JSON.stringify(resolvedEvent));
+      if (backendEvent._id || backendEvent.id) {
+        window.localStorage.setItem("eventuna-latest-event-id", backendEvent._id || backendEvent.id);
+      }
+
+      setCompletionMode(saveDraft ? "draft" : "sent");
+      setCompleted(true);
+    } catch (err) {
+      setDialog({
+        title: "Submission failed",
+        message: err.message || "An error occurred while creating the event. Please try again.",
+        confirmLabel: "OK",
+        onConfirm: () => setDialog(null),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openCancelDialog = () => setDialog({
+    title: "Cancel event setup?",
+    message: "Your event details have not been saved. All progress will be lost.",
+    cancelLabel: "Keep editing",
+    confirmLabel: "Exit setup",
+    onConfirm: () => { window.location.href = "/"; },
+  });
+
+  const showInvalidTime = () => setDialog({
+    title: "Invalid time",
+    message: "End time must be greater than start time.",
+    confirmLabel: "OK",
+    onConfirm: () => setDialog(null),
+  });
+
+  const advance = () => {
+    if (step === "date") {
+      if (!startTime || !endTime || endTime <= startTime) {
+        showInvalidTime();
+        return;
+      }
+      setStep("category");
+    } else if (step === "category") {
+      setStep("place");
+    } else if (step === "place") {
+      const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006";
+      setStep(isRestaurantOption ? "restaurants" : "guests");
+    } else if (step === "restaurants") {
+      setStep("guests");
+    } else if (step === "guests") {
+      setStep("guestInfo");
+    } else if (step === "guestInfo") setStep("registry");
+    else if (step === "registry") setStep("notes");
+    else if (step === "notes") setStep("content");
+    else if (step === "content") setStep("review");
+  };
+
+  const goBack = () => {
+    if (subview) {
+      setSubview(null);
+      return;
+    }
+    const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006";
+    if (step === "category") setStep("date");
+    else if (step === "place") setStep("category");
+    else if (step === "restaurants") setStep("place");
+    else if (step === "guests") setStep(isRestaurantOption ? "restaurants" : "place");
+    else if (step === "guestInfo") setStep("guests");
+    else if (step === "registry") setStep("guestInfo");
+    else if (step === "notes") setStep("registry");
+    else if (step === "content") setStep("notes");
+    else if (step === "review") setStep("content");
+  };
+
+  const toggleGuest = (guestId) => {
+    setSelectedGuests((current) =>
+      current.includes(guestId) ? current.filter((id) => id !== guestId) : [...current, guestId]
+    );
+  };
+
+  const markAllGuests = () => {
+    const visibleIds = visibleGuests.map((guest) => guest.id);
+    const allSelected = visibleIds.every((id) => selectedGuests.includes(id));
+    setSelectedGuests((current) =>
+      allSelected
+        ? current.filter((id) => !visibleIds.includes(id))
+        : Array.from(new Set([...current, ...visibleIds]))
+    );
+  };
+
+  const canContinue =
+    (step !== "place" || Boolean(place)) &&
+    (step !== "restaurants" || Boolean(selectedRestaurant)) &&
+    (step !== "guestInfo" || (bringGuests === "No" || Boolean(maxGuests))) &&
+    (step !== "guestInfo" || (rsvp === "No" || Boolean(rsvpBy))) &&
+    (step !== "content" || (Boolean(eventTitle.trim()) && Boolean(invitationMessage.trim())));
+
+  if (checkingAuth) {
+    return (
+      <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status" style={{ width: "3rem", height: "3rem" }}>
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3 text-muted fw-semibold">Checking authorization...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <SiteHeader />
+      <div className="wrapper">
+        <section className={styles.pageTitle}>
+          <div className="container">
+            <div>
+              <span>Create and organize</span>
+              <h1>Create Event</h1>
+              <p>Set up your event details, venue, and guest preferences.</p>
+            </div>
+            <div className={styles.titleIcon}><i className="fa-solid fa-calendar-check"></i></div>
+          </div>
+        </section>
+
+        <main className={styles.mainSection}>
+          <div className="container">
+            {completed ? (
+              <section className={styles.successPanel}>
+                <div className={styles.successIcon}><i className="fa-solid fa-check"></i></div>
+                <span>{completionMode === "draft" ? "Draft saved" : "Invitations sent"}</span>
+                <h2>{completionMode === "draft" ? "Your event draft is saved" : "Your event is ready"}</h2>
+                <p>{completionMode === "draft" ? "You can continue editing this event from My Events." : `Invitations have been sent for ${category} - ${eventType} on July ${selectedDate}, 2026.`}</p>
+                <div className={styles.successActions}>
+                  <a href="/event-details" className={styles.primaryButton}>View event details</a>
+                  <a href="/my-events" className={styles.secondaryButton}>View my events</a>
+                </div>
+              </section>
+            ) : (
+              <div className={styles.wizard}>
+                <aside className={styles.stepRail}>
+                  <div className={styles.railHeading}>
+                    <span>Event setup</span>
+                    <strong>Step {activeIndex + 1} of {steps.length}</strong>
+                  </div>
+                  <ol>
+                    {steps.map((item, index) => (
+                      <li key={item.id} className={index === activeIndex ? styles.activeStep : index < activeIndex ? styles.finishedStep : ""}>
+                        <span className={styles.stepIcon}><i className={`fa-solid ${index < activeIndex ? "fa-check" : item.icon}`}></i></span>
+                        <span><strong>{item.label}</strong><small>{index < activeIndex ? "Completed" : index === activeIndex ? "In progress" : "Not started"}</small></span>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className={styles.railHelp}>
+                    <i className="fa-regular fa-circle-question"></i>
+                    <span><strong>Need help?</strong><small>Contact our event support team.</small></span>
+                  </div>
+                </aside>
+
+                <section className={styles.wizardContent}>
+                  <div className={styles.formHeader}>
+                    <div>
+                      <span>{subview ? "Venue information" : steps[activeIndex].label}</span>
+                      <h2>{getViewTitle(step, subview)}</h2>
+                      <p>{getViewDescription(step, subview)}</p>
+                    </div>
+                    <div className="d-flex align-items-center gap-2">
+                      {(step !== "date" || subview) && (
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2"
+                          onClick={goBack}
+                          style={{ fontSize: "14px", height: "38px" }}
+                          title="Back to previous step"
+                        >
+                          <i className="fa-solid fa-arrow-left"></i>
+                          <span>Back</span>
+                        </button>
+                      )}
+                      <button className={styles.closeButton} onClick={openCancelDialog} aria-label="Cancel event setup">
+                        <i className="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.formBody}>
+                    {step === "date" && (
+                      <DateTimeStep
+                        month={month}
+                        setMonth={setMonth}
+                        selectedDate={selectedDate}
+                        setSelectedDate={setSelectedDate}
+                        calendarDays={calendarDays}
+                        startTime={startTime}
+                        setStartTime={setStartTime}
+                        endTime={endTime}
+                        setEndTime={setEndTime}
+                      />
+                    )}
+
+                    {step === "category" && (
+                      <div className={styles.fieldsGrid}>
+                        <Field label="Event type" hint="Choose the event type that best describes your event.">
+                          {loadingEventData ? (
+                            <select disabled>
+                              <option>Loading event types...</option>
+                            </select>
+                          ) : (
+                            <select
+                              value={selectedEventTypeId}
+                              onChange={(event) => handleEventTypeChange(event.target.value)}
+                            >
+                              {eventTypesList.map((item) => (
+                                <option key={item._id} value={item._id}>
+                                  {item.eventType}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </Field>
+                        <Field label="Event category" hint="Select the category for this event.">
+                          {loadingEventData ? (
+                            <select disabled>
+                              <option>Loading event categories...</option>
+                            </select>
+                          ) : (
+                            <select
+                              value={selectedCategoryId}
+                              onChange={(event) => {
+                                const catId = event.target.value;
+                                setSelectedCategoryId(catId);
+                                const foundCat = categoriesList.find((c) => c._id === catId);
+                                if (foundCat) {
+                                  setEventType(foundCat.category || foundCat.eventType?.eventType || "");
+                                }
+                              }}
+                            >
+                              {categoriesList.length > 0 ? (
+                                categoriesList.map((cat) => (
+                                  <option key={cat._id} value={cat._id}>
+                                    {cat.category}
+                                  </option>
+                                ))
+                              ) : (
+                                <option value="">No categories available</option>
+                              )}
+                            </select>
+                          )}
+                        </Field>
+                      </div>
+                    )}
+
+                    {step === "place" && (
+                      <div className={styles.optionList}>
+                        {loadingPlaces ? (
+                          <div className="text-center py-4 text-muted">
+                            <i className="fa-solid fa-spinner fa-spin me-2"></i> Loading place options...
+                          </div>
+                        ) : placePreferencesList.length > 0 ? (
+                          placePreferencesList.map((option) => {
+                            const optionKey = option.preferences;
+                            const isChecked = place === optionKey || place === option._id;
+                            const detailsMap = {
+                              "Private location": "Use a private venue or home address",
+                              "I will give the address": "Enter the location details yourself",
+                              "Choose from map": "Search and select a place on the map",
+                              "Restaurant from list": "Choose a participating restaurant",
+                              "Other participating facilities": "Browse other available event facilities",
+                            };
+                            const detailText = detailsMap[option.preferences] || "Select this location option for your event";
+
+                            return (
+                              <label key={option._id} className={isChecked ? styles.selectedOption : ""}>
+                                <input
+                                  type="radio"
+                                  name="place"
+                                  checked={isChecked}
+                                  onChange={() => setPlace(optionKey)}
+                                />
+                                <span className={styles.optionCheck}>
+                                  <i className="fa-solid fa-check"></i>
+                                </span>
+                                <span>
+                                  <strong>{option.preferences}</strong>
+                                  <small>{detailText}</small>
+                                </span>
+                              </label>
+                            );
+                          })
+                        ) : (
+                          <div className="text-center py-4 text-muted">No place preferences available</div>
+                        )}
+                      </div>
+                    )}
+
+                    {step === "restaurants" && !subview && (
+                      <RestaurantList
+                        restaurantsList={merchantRestaurants}
+                        loading={loadingMerchants}
+                        selectedRestaurant={selectedRestaurant}
+                        setSelectedRestaurant={setSelectedRestaurant}
+                        selectedLocation={selectedLocation}
+                        setSelectedLocation={setSelectedLocation}
+                        openDetail={(restaurant) => { setSelectedRestaurant(restaurant._id || restaurant.id); setSubview("detail"); }}
+                        openLocations={(restaurant) => { setSelectedRestaurant(restaurant._id || restaurant.id); setSubview("locations"); }}
+                        openSearch={() => setSubview("search")}
+                      />
+                    )}
+                    {step === "restaurants" && subview === "detail" && (
+                      <RestaurantDetail
+                        restaurant={
+                          merchantRestaurants.find((item) => (item._id || item.id) === selectedRestaurant) ||
+                          merchantRestaurants[0]
+                        }
+                      />
+                    )}
+                    {step === "restaurants" && subview === "locations" && (
+                      <LocationsList
+                        restaurant={
+                          merchantRestaurants.find((item) => (item._id || item.id) === selectedRestaurant)
+                        }
+                        onSelect={(loc) => { setSelectedLocation(loc); setSubview(null); }}
+                        selectedLocation={selectedLocation}
+                      />
+                    )}
+                    {step === "restaurants" && subview === "search" && <PlaceSearch search={placeSearch} setSearch={setPlaceSearch} onSelect={() => setSubview(null)} />}
+
+                    {step === "guests" && (
+                      <GuestsStep
+                        guests={visibleGuests}
+                        search={guestSearch}
+                        setSearch={setGuestSearch}
+                        selectedGuests={selectedGuests}
+                        toggleGuest={toggleGuest}
+                        markAll={markAllGuests}
+                        openAddContact={() => { setContactError(""); setContactModalOpen(true); }}
+                        loading={loadingContacts}
+                      />
+                    )}
+
+                    {step === "guestInfo" && (
+                      <div className={styles.guestOptionsGrid}>
+                        <Field label="Can guests bring someone?" hint="Allow each invitee to bring an additional guest.">
+                          <select value={bringGuests} onChange={(event) => setBringGuests(event.target.value)}><option>No</option><option>Yes</option></select>
+                        </Field>
+                        {bringGuests === "Yes" && <Field label="Maximum additional guests" hint="Set the maximum number each invitee may bring."><input type="number" min="1" value={maxGuests} onChange={(event) => setMaxGuests(event.target.value)} placeholder="Maximum number" /></Field>}
+                        <Field label="Is RSVP required?" hint="Ask invitees to confirm whether they will attend.">
+                          <select value={rsvp} onChange={(event) => setRsvp(event.target.value)}><option>No</option><option>Yes</option></select>
+                        </Field>
+                        {rsvp === "Yes" && <Field label="RSVP deadline" hint="Choose the final date for guest responses."><input type="date" value={rsvpBy} onChange={(event) => setRsvpBy(event.target.value)} /></Field>}
+                      </div>
+                    )}
+
+                    {step === "registry" && (
+                      <div className={styles.registryPanel}>
+                        <div className={styles.registryIcon}><i className="fa-brands fa-amazon"></i></div>
+                        <div><span>Optional</span><h3>Amazon gift registry</h3><p>Add a registry link so guests can easily find your gift list.</p></div>
+                        <Field label="Registry URL" hint="Paste your public Amazon gift registry URL."><input type="url" value={registryUrl} onChange={(event) => setRegistryUrl(event.target.value)} placeholder="https://amazon.com/registries/..." /></Field>
+                        <a className={styles.outlineButton} href="https://www.amazon.com/registries" target="_blank" rel="noreferrer"><i className="fa-solid fa-arrow-up-right-from-square"></i> Create a new registry</a>
+                      </div>
+                    )}
+
+                    {step === "notes" && (
+                      <NotesStep
+                        notesList={eventNotesList}
+                        loading={loadingNotes}
+                        selectedNotes={selectedNotes}
+                        setSelectedNotes={setSelectedNotes}
+                        customNote={customNote}
+                        setCustomNote={setCustomNote}
+                      />
+                    )}
+
+                    {step === "content" && (
+                      <div className={styles.contentFields}>
+                        <Field label="Event title" hint="Use a clear title your guests will recognize."><input type="text" value={eventTitle} onChange={(event) => setEventTitle(event.target.value)} placeholder="Enter event title" maxLength="80" /></Field>
+                        <label className={styles.field}><span>Invitation message</span><textarea value={invitationMessage} onChange={(event) => setInvitationMessage(event.target.value)} placeholder="Write your invitation message and important event details" rows="7"></textarea><small>{invitationMessage.length}/500 characters</small></label>
+                      </div>
+                    )}
+
+                    {step === "review" && !subview && (
+                      <ReviewStep
+                        eventTitle={eventTitle}
+                        invitationMessage={invitationMessage}
+                        eventImage={eventImage}
+                        setEventImage={setEventImage}
+                        setEventImageFile={setEventImageFile}
+                        selectedDate={selectedDate}
+                        startTime={startTime}
+                        endTime={endTime}
+                        selectedRestaurant={selectedRestaurant}
+                        selectedGuests={selectedGuests}
+                        contacts={contacts}
+                        bringGuests={bringGuests}
+                        maxGuests={maxGuests}
+                        rsvp={rsvp}
+                        rsvpBy={rsvpBy}
+                        selectedNotes={selectedNotes}
+                        customNote={customNote}
+                        registryUrl={registryUrl}
+                        restaurants={merchantRestaurants}
+                        month={month}
+                        place={place}
+                        selectedLocation={selectedLocation}
+                        category={category}
+                        eventType={eventType}
+                        onViewDetail={() => setSubview("review-detail")}
+                      />
+                    )}
+
+                    {step === "review" && subview === "review-detail" && (
+                      <RestaurantDetail
+                        restaurant={
+                          merchantRestaurants.find((item) => (item._id || item.id) === selectedRestaurant) ||
+                          merchantRestaurants[0]
+                        }
+                      />
+                    )}
+                  </div>
+
+                  <div className={styles.formActions}>
+                    <button 
+                      className={styles.secondaryButton} 
+                      onClick={goBack} 
+                      disabled={(step === "date" && !subview) || isSubmitting}
+                    >
+                      <i className="fa-solid fa-arrow-left"></i> Back
+                    </button>
+                    {!subview && step !== "review" && (
+                      <button className={styles.primaryButton} onClick={advance} disabled={!canContinue}>
+                        Continue <i className="fa-solid fa-arrow-right"></i>
+                      </button>
+                    )}
+                    {step === "review" && !subview && (
+                      <div className={styles.reviewActions}>
+                        <button 
+                          className={styles.draftButton} 
+                          onClick={() => submitEvent({ saveDraft: true })}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <><i className="fa-solid fa-spinner fa-spin me-2"></i>Saving...</>
+                          ) : (
+                            <><i className="fa-regular fa-floppy-disk"></i> Save draft</>
+                          )}
+                        </button>
+                        <button 
+                          className={styles.primaryButton} 
+                          onClick={() => submitEvent({ saveDraft: false })}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <><i className="fa-solid fa-spinner fa-spin me-2"></i>Sending...</>
+                          ) : (
+                            <><i className="fa-regular fa-paper-plane"></i> Send invitations</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+      <Footer />
+
+      {dialog && (
+        <div className={styles.dialogBackdrop} role="presentation">
+          <div className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+            <div className={styles.dialogIcon}><i className="fa-solid fa-triangle-exclamation"></i></div>
+            <h2 id="dialog-title">{dialog.title}</h2>
+            <p>{dialog.message}</p>
+            <div className={styles.dialogActions}>
+              {dialog.cancelLabel && <button className={styles.secondaryButton} onClick={() => setDialog(null)}>{dialog.cancelLabel}</button>}
+              <button className={dialog.cancelLabel ? styles.dangerButton : styles.primaryButton} onClick={dialog.onConfirm}>{dialog.confirmLabel}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {contactModalOpen && (
+        <div className={styles.dialogBackdrop} role="presentation">
+          <div className={`${styles.dialog} ${styles.contactDialog}`} role="dialog" aria-modal="true" aria-labelledby="contact-dialog-title">
+            <div className={styles.contactDialogHeader}><div><span>Web app contacts</span><h2 id="contact-dialog-title">Add a new contact</h2><p>Save the contact first, then select them from the guest list.</p></div><button onClick={() => setContactModalOpen(false)} aria-label="Close contact form" disabled={isSavingContact}><i className="fa-solid fa-xmark"></i></button></div>
+            <div className={styles.contactFields}>
+              <Field label="Full name" hint="Required"><input autoFocus type="text" value={newContact.name} onChange={(event) => setNewContact((current) => ({ ...current, name: event.target.value }))} placeholder="Enter contact name" disabled={isSavingContact} /></Field>
+              <Field label="Phone number" hint="Required">
+                <div className="d-flex gap-2 align-items-center">
+                  <div style={{ width: "95px", flexShrink: 0 }}>
+                    <CountryCodePicker
+                      value={newContact.countryCode || "+91"}
+                      onChange={(code) => setNewContact((current) => ({ ...current, countryCode: code }))}
+                      style={{
+                        border: "1px solid #d5d8df",
+                        background: "#fff",
+                        borderRadius: "4px",
+                        height: "46px",
+                        transition: "all 0.2s ease-in-out",
+                      }}
+                      className="btn bg-white border-light-subtle d-flex align-items-center justify-content-center gap-2 w-100 shadow-sm"
+                    />
+                  </div>
+                  <div className="flex-grow-1">
+                    <input type="tel" value={newContact.phone} onChange={(event) => setNewContact((current) => ({ ...current, phone: event.target.value }))} placeholder="Enter phone number" disabled={isSavingContact} />
+                  </div>
+                </div>
+              </Field>
+              <Field label="Email address" hint="Optional"><input type="email" value={newContact.email} onChange={(event) => setNewContact((current) => ({ ...current, email: event.target.value }))} placeholder="Enter email if available" disabled={isSavingContact} /></Field>
+              {contactError && <p className={styles.contactError}><i className="fa-solid fa-circle-exclamation"></i>{contactError}</p>}
+            </div>
+            <div className={styles.contactDialogActions}>
+              <button className={styles.secondaryButton} onClick={() => setContactModalOpen(false)} disabled={isSavingContact}>Cancel</button>
+              <button className={styles.primaryButton} onClick={saveContact} disabled={isSavingContact}>
+                {isSavingContact ? (
+                  <><i className="fa-solid fa-spinner fa-spin"></i> Saving...</>
+                ) : (
+                  <><i className="fa-solid fa-address-book"></i> Save contact</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function getViewTitle(step, subview) {
+  if (subview === "detail" || subview === "review-detail") return "Restaurant details";
+  if (subview === "locations") return "Available locations";
+  if (subview === "search") return "Search places";
+  return {
+    date: "When is your event?",
+    category: "What kind of event is it?",
+    place: "Where will the event take place?",
+    restaurants: "Choose a participating restaurant",
+    guests: "Who would you like to invite?",
+    guestInfo: "Set guest preferences",
+    registry: "Add a gift registry",
+    notes: "Share important guest notes",
+    content: "Write your invitation",
+    review: "Review event details",
+  }[step];
+}
+
+function getViewDescription(step, subview) {
+  if (subview) return "Review the venue information before making your selection.";
+  return {
+    date: "Select the event date, start time, and end time.",
+    category: "These details help guests understand the event at a glance.",
+    place: "Choose the location option that works best for your event.",
+    restaurants: "Select one venue or review its locations and details.",
+    guests: "Search your contacts and select the people you want to invite.",
+    guestInfo: "Decide how guests can respond and whether they can bring someone.",
+    registry: "Connect an optional Amazon registry to your invitation.",
+    notes: "Select helpful information guests should know before attending.",
+    content: "Add the title and message guests will see on their invitation.",
+    review: "Check every detail before sending invitations or saving a draft.",
+  }[step];
+}
+
+function Field({ label, hint, children }) {
+  return <label className={styles.field}><span>{label}</span>{children}<small>{hint}</small></label>;
+}
+
+function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, calendarDays, startTime, setStartTime, endTime, setEndTime }) {
+  const monthName = new Date(2026, month, 1).toLocaleString("en-US", { month: "long" });
+  return (
+    <div className={styles.dateLayout}>
+      <div className={styles.calendarPanel}>
+        <div className={styles.monthControls}>
+          <button onClick={() => setMonth((month + 11) % 12)} aria-label="Previous month"><i className="fa-solid fa-chevron-left"></i></button>
+          <strong>{monthName} 2026</strong>
+          <button onClick={() => setMonth((month + 1) % 12)} aria-label="Next month"><i className="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div className={styles.weekdays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <span key={day}>{day}</span>)}</div>
+        <div className={styles.calendarGrid}>{calendarDays.map((day, index) => <button key={`${day.number}-${index}`} className={`${day.outside ? styles.outsideDay : ""} ${!day.outside && day.number === selectedDate ? styles.selectedDay : ""}`} disabled={day.outside} onClick={() => setSelectedDate(day.number)}>{day.number}</button>)}</div>
+      </div>
+      <div className={styles.timePanel}>
+        <div className={styles.timeHeading}><span><i className="fa-regular fa-clock"></i></span><div><strong>Time duration</strong><small>Choose an end time later than the start time.</small></div></div>
+        <Field label="Start time" hint="When guests should arrive."><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></Field>
+        <Field label="End time" hint="When the event is expected to finish."><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></Field>
+        <div className={styles.dateSummary}><i className="fa-regular fa-calendar"></i><span><small>Selected date</small><strong>{monthName} {selectedDate}, 2026</strong></span></div>
+      </div>
+    </div>
+  );
+}
+
+function RestaurantList({ restaurantsList, loading, selectedRestaurant, setSelectedRestaurant, selectedLocation, setSelectedLocation, openDetail, openLocations, openSearch }) {
+  const items = restaurantsList || [];
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [restaurantsList]);
+
+  const totalPages = Math.ceil(items.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = items.slice(indexOfFirstItem, indexOfLastItem);
+
+  return (
+    <div>
+      <button className={styles.locationFilter} onClick={openSearch}>
+        <i className="fa-solid fa-location-crosshairs"></i>
+        <span>
+          <small>Showing venues near</small>
+          <strong>Indore, Madhya Pradesh</strong>
+        </span>
+        <i className="fa-solid fa-chevron-down"></i>
+      </button>
+
+      {loading ? (
+        <div className="text-center py-5 text-muted">
+          <i className="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
+          <div>Loading participating restaurants...</div>
+        </div>
+       ) : items.length > 0 ? (
+        <>
+          <div className={styles.restaurantList}>
+            {currentItems.map((restaurant) => {
+              const id = restaurant._id || restaurant.id;
+              const name = restaurant.serviceName || restaurant.fullName || restaurant.name || "Restaurant";
+              
+              const isChecked = selectedRestaurant === id;
+              const currentSelectedLoc = isChecked ? selectedLocation : null;
+              const locationStr =
+                (currentSelectedLoc && (currentSelectedLoc.addressName || currentSelectedLoc.address)) ||
+                (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.addressName) ||
+                (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.address) ||
+                restaurant.location ||
+                "Location available";
+
+              const imageSrc =
+                restaurant.bannerImage ||
+                restaurant.profileImage ||
+                restaurant.image ||
+                "/images/1.jpg";
+
+              return (
+                <article key={id} className={isChecked ? styles.selectedRestaurant : ""}>
+                  <img
+                    src={imageSrc}
+                    alt={name}
+                    width={92}
+                    height={76}
+                    style={{ objectFit: "cover", borderRadius: "8px" }}
+                  />
+                  <div className={styles.restaurantMeta}>
+                    <strong>{name}</strong>
+                    <span>
+                      <i className="fa-solid fa-location-dot me-1"></i>
+                      {locationStr}
+                    </span>
+                  </div>
+                  <div className={styles.restaurantActions}>
+                    <button type="button" onClick={() => openLocations(restaurant)}>
+                      <i className="fa-solid fa-map-pin"></i> Locations
+                    </button>
+                    <button type="button" onClick={() => openDetail(restaurant)}>
+                      <i className="fa-regular fa-eye"></i> Details
+                    </button>
+                  </div>
+                  <label className={styles.selectVenue}>
+                    <input
+                      type="radio"
+                      name="restaurant"
+                      checked={isChecked}
+                      onChange={() => {
+                        setSelectedRestaurant(id);
+                        const firstLoc = restaurant.serviceLocationIds && restaurant.serviceLocationIds[0];
+                        setSelectedLocation(firstLoc || null);
+                      }}
+                    />
+                    <span>
+                      <i className="fa-solid fa-check"></i>
+                    </span>
+                  </label>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* Pagination Navigation */}
+          {totalPages > 1 && (
+            <div className="d-flex align-items-center justify-content-center gap-2 mt-4 flex-wrap">
+              <button 
+                type="button"
+                className="btn btn-outline-primary rounded-pill px-3 py-1.5 d-flex align-items-center gap-1"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                style={{ fontSize: "13px", fontWeight: "600" }}
+              >
+                <i className="fa-solid fa-chevron-left"></i> Prev
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                const isActive = page === currentPage;
+                return (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`btn rounded-circle ${isActive ? 'btn-primary' : 'btn-light'} d-flex align-items-center justify-content-center`}
+                    onClick={() => setCurrentPage(page)}
+                    style={{ 
+                      width: "34px", 
+                      height: "34px", 
+                      fontSize: "13px", 
+                      fontWeight: isActive ? "700" : "500",
+                      background: isActive ? "#3e56f0" : undefined,
+                      borderColor: isActive ? "#3e56f0" : undefined,
+                      color: isActive ? "#ffffff" : "#4b5563"
+                    }}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+
+              <button 
+                type="button"
+                className="btn btn-outline-primary rounded-pill px-3 py-1.5 d-flex align-items-center gap-1"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                style={{ fontSize: "13px", fontWeight: "600" }}
+              >
+                Next <i className="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-5 text-muted">No participating restaurants found.</div>
+      )}
+    </div>
+  );
+}
+
+function RestaurantDetail({ restaurant }) {
+  if (!restaurant) return null;
+  const name = restaurant.serviceName || restaurant.fullName || restaurant.name || "Restaurant";
+  const banner = restaurant.bannerImage || restaurant.profileImage || "/images/banner.jpg";
+  const locationStr =
+    (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.address) ||
+    restaurant.location ||
+    "Location details available";
+  const phone = restaurant.phone || restaurant.mobile || "";
+  const webUrl = restaurant.webUrl || "";
+  const menuUrl = restaurant.menuUrl || "";
+  const cuisine = restaurant.cuisineName || "";
+  const description = restaurant.serviceDescription || restaurant.serviceSlogan || "Participating event venue.";
+  const products = Array.isArray(restaurant.products) ? restaurant.products : [];
+
+  return (
+    <div className={styles.detailLayout}>
+      <div className={styles.detailImage}>
+        <img src={banner} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "12px" }} />
+      </div>
+      <div className={styles.detailInfo}>
+        <span>Participating restaurant</span>
+        <h3>{name}</h3>
+        <p>{description}</p>
+        {[
+          ["fa-utensils", "Cuisine", cuisine],
+          ["fa-location-dot", "Service location", locationStr],
+          phone ? ["fa-phone", "Phone", phone] : null,
+          webUrl ? ["fa-link", "Website", webUrl] : null,
+          menuUrl ? ["fa-book-open", "Menu URL", menuUrl] : null,
+        ].filter(Boolean).map(([icon, label, value]) => (
+          <div className={styles.detailRow} key={label}>
+            <i className={`fa-solid ${icon}`}></i>
+            <span>
+              <small>{label}</small>
+              {label === "Website" || label === "Menu URL" ? (
+                <a href={value.startsWith("http") ? value : `https://${value}`} target="_blank" rel="noreferrer" className="text-primary text-decoration-none">
+                  <strong>{value} <i className="fa-solid fa-arrow-up-right-from-square ms-1"></i></strong>
+                </a>
+              ) : (
+                <strong>{value}</strong>
+              )}
+            </span>
+          </div>
+        ))}
+
+        {products.length > 0 && (
+          <div className="mt-4 pt-3 border-top">
+            <h5 className="fw-bold mb-3 d-flex align-items-center gap-2">
+              <i className="fa-solid fa-list-check text-primary"></i>
+              Menu Items ({products.length})
+            </h5>
+            <div className="d-flex flex-column gap-2" style={{ maxHeight: "220px", overflowY: "auto" }}>
+              {products.map((prod) => {
+                const img = prod.photo && prod.photo[0] && prod.photo[0].fileName ? prod.photo[0].fileName : null;
+                const prodImg = img ? (img.startsWith("http") ? img : `https://event-una-image-bucket.s3.amazonaws.com/merchant/products/${img}`) : null;
+                return (
+                  <div key={prod._id} className="d-flex align-items-center gap-3 p-2 bg-light rounded border">
+                    {prodImg && (
+                      <img src={prodImg} alt={prod.name} width={48} height={48} style={{ objectFit: "cover", borderRadius: "6px" }} />
+                    )}
+                    <div className="flex-grow-1">
+                      <div className="d-flex justify-content-between align-items-center">
+                        <strong className="text-dark">{prod.name}</strong>
+                        <span className="badge bg-primary fs-6">${prod.price}</span>
+                      </div>
+                      {prod.description && <small className="text-muted d-block">{prod.description}</small>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LocationsList({ restaurant, onSelect, selectedLocation }) {
+  const locs = restaurant && restaurant.serviceLocationIds && restaurant.serviceLocationIds.length > 0
+    ? restaurant.serviceLocationIds
+    : locations.map((loc, idx) => ({ _id: idx, addressName: `Indore location ${idx + 1}`, address: loc }));
+
+  return (
+    <div className={styles.locationList}>
+      {locs.map((location, index) => {
+        const isSelected = selectedLocation && (selectedLocation._id === location._id || selectedLocation.address === location.address || (typeof location === "string" && selectedLocation === location));
+        return (
+          <button 
+            key={location._id || index} 
+            onClick={() => onSelect(location)}
+            style={isSelected ? { background: "#eef0ff", borderLeft: "4px solid #3e56f0" } : undefined}
+          >
+            <span>
+              <i className="fa-solid fa-location-dot"></i>
+            </span>
+            <div>
+              <strong>{location.addressName || `Location ${index + 1}`}</strong>
+              <small>{location.address || location}</small>
+            </div>
+            <i className="fa-solid fa-arrow-right"></i>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PlaceSearch({ search, setSearch, onSelect }) {
+  const results = ["India", "Indore", "Indonesia", "Indri", "Indora", "Indragarh", "Indergarh", "Indianapolis, IN"].filter((item) => item.toLowerCase().includes(search.toLowerCase()));
+  return <div><div className={styles.searchBox}><i className="fa-solid fa-magnifying-glass"></i><input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search a city or place" />{search && <button onClick={() => setSearch("")} aria-label="Clear search"><i className="fa-solid fa-xmark"></i></button>}</div><div className={styles.searchResults}>{results.map((item) => <button key={item} onClick={onSelect}><i className="fa-solid fa-location-dot"></i><span><strong>{item}</strong><small>{item === "Indianapolis, IN" ? "United States" : "Madhya Pradesh, India"}</small></span></button>)}</div></div>;
+}
+
+function NotesStep({ notesList, loading, selectedNotes, setSelectedNotes, customNote, setCustomNote }) {
+  const toggleNote = (noteText) => {
+    setSelectedNotes((current) =>
+      current.includes(noteText) ? current.filter((item) => item !== noteText) : [...current, noteText]
+    );
+  };
+
+  return (
+    <div className={styles.notesLayout}>
+      {loading ? (
+        <div className="text-center py-4 text-muted">
+          <i className="fa-solid fa-spinner fa-spin me-2"></i> Loading event notes from API...
+        </div>
+      ) : notesList && notesList.length > 0 ? (
+        <div className={styles.notesList}>
+          {notesList.map((item) => {
+            const text = item.notes;
+            const isChecked = selectedNotes.includes(text);
+            return (
+              <label key={item._id}>
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggleNote(text)}
+                />
+                <span className={styles.noteCheck}>
+                  <i className="fa-solid fa-check"></i>
+                </span>
+                <span>
+                  <strong>{text}</strong>
+                  <small>Include this note in the event invitation.</small>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-center py-4 text-muted">No notes options available</div>
+      )}
+    </div>
+  );
+}
+
+function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, setEventImageFile, selectedDate, startTime, endTime, selectedRestaurant, selectedGuests, contacts, bringGuests, maxGuests, rsvp, rsvpBy, selectedNotes, customNote, registryUrl, restaurants, month, place, selectedLocation, category, eventType, onViewDetail }) {
+  const restaurant = Array.isArray(restaurants) ? restaurants.find((item) => (item._id || item.id) === selectedRestaurant) : null;
+  const invitedGuests = contacts.filter((guest) => selectedGuests.includes(guest.id));
+  const allNotes = [...selectedNotes, ...(customNote.trim() ? [customNote.trim()] : [])];
+  
+  const monthName = new Date(2026, month, 1).toLocaleString("en-US", { month: "long" });
+
+  const isRestaurantOption = place === "At a participating restaurant" || 
+                             place === "restaurant" || 
+                             place === "Restaurant from list" || 
+                             place === "6877a86668d1e0b9fcdf5006";
+
+  let venueDisplay = "Location provided by organizer";
+  if (isRestaurantOption) {
+    if (restaurant) {
+      const restName = restaurant.serviceName || restaurant.fullName || restaurant.name || "Participating restaurant";
+      if (selectedLocation) {
+        venueDisplay = `${restName} - ${selectedLocation.addressName || selectedLocation.address}`;
+      } else {
+        const defaultLoc = (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.addressName) || 
+                           (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.address) || 
+                           restaurant.location;
+        venueDisplay = defaultLoc ? `${restName} (${defaultLoc})` : restName;
+      }
+    } else {
+      venueDisplay = "Participating restaurant";
+    }
+  } else if (place) {
+    venueDisplay = place;
+  }
+
+  return <div className={styles.reviewLayout}>
+    <section className={styles.reviewPrimary}>
+      <label className={styles.uploadArea} style={eventImage ? { backgroundImage: `url(${eventImage})` } : undefined}>
+        <input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) { setEventImage(URL.createObjectURL(file)); if (setEventImageFile) setEventImageFile(file); } }} />
+        <span><i className="fa-solid fa-cloud-arrow-up"></i><strong>{eventImage ? "Change event image" : "Upload event image"}</strong><small>Recommended size: 1200 x 675 px</small></span>
+      </label>
+      <div className={styles.reviewTitle}>
+        <span>Event preview • {category} ({eventType})</span>
+        <h3>{eventTitle || "Untitled event"}</h3>
+        <p>{invitationMessage || "No invitation message added."}</p>
+        {isRestaurantOption && restaurant && (
+          <button
+            type="button"
+            className="btn btn-primary rounded-pill py-2.5 px-4 mt-3 fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2"
+            onClick={onViewDetail}
+            style={{ background: "#4f46e5", border: "none", fontSize: "14px", width: "fit-content" }}
+          >
+            <i className="fa-solid fa-circle-info"></i>
+            Venue Details
+          </button>
+        )}
+      </div>
+      <div className={styles.reviewFacts}>
+        <div><i className="fa-regular fa-calendar"></i><span><small>Date and time</small><strong>{monthName} {selectedDate}, 2026 | {startTime || "--:--"} - {endTime || "--:--"}</strong></span></div>
+        <div>
+          <i className="fa-solid fa-location-dot"></i>
+          <span>
+            <small>Venue</small>
+            <strong>{venueDisplay}</strong>
+          </span>
+        </div>
+        <div><i className="fa-solid fa-user-plus"></i><span><small>Additional guests</small><strong>{bringGuests === "Yes" ? `Allowed, maximum ${maxGuests || 1}` : "Not allowed"}</strong></span></div>
+        <div><i className="fa-regular fa-calendar-check"></i><span><small>RSVP</small><strong>{rsvp === "Yes" ? `Required${rsvpBy ? ` by ${rsvpBy}` : ""}` : "Not required"}</strong></span></div>
+      </div>
+    </section>
+    <aside className={styles.reviewSummary}>
+      <div className={styles.summaryBlock}><div className={styles.summaryHeading}><strong>Guests ({invitedGuests.length})</strong><button type="button">View all</button></div>{invitedGuests.length ? <div className={styles.guestAvatars}>{invitedGuests.slice(0, 4).map((guest) => <div key={guest.id}><span>{guest.name.slice(0, 1)}</span><small>{guest.name}</small></div>)}</div> : <p>No guests selected.</p>}</div>
+      <div className={styles.summaryBlock}><strong>Selected notes</strong>{allNotes.length ? <ul>{allNotes.map((note) => <li key={note}>{note}</li>)}</ul> : <p>No notes selected.</p>}</div>
+      <div className={styles.summaryBlock}><strong>Gift registry</strong><p>{registryUrl || "No gift registry added."}</p></div>
+      <div className={styles.summaryBlock}><strong>Additional services</strong><p>Furniture rentals</p></div>
+    </aside>
+  </div>;
+}
+
+function GuestsStep({ guests: guestResults, search, setSearch, selectedGuests, toggleGuest, markAll, openAddContact, loading }) {
+  return (
+    <div>
+      <div className={styles.contactsIntro}>
+        <div>
+          <strong>Saved contacts</strong>
+          <span>Add people to your web app contacts before assigning them to this event.</span>
+        </div>
+        <button className={styles.addContactButton} onClick={openAddContact}>
+          <i className="fa-solid fa-user-plus"></i> Add contact
+        </button>
+      </div>
+      <div className={styles.guestToolbar}>
+        <div className={styles.searchBox}>
+          <i className="fa-solid fa-magnifying-glass"></i>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name, phone, or email"
+          />
+        </div>
+        <button onClick={markAll}>Select all</button>
+      </div>
+      {loading ? (
+        <div className="text-center py-5 text-muted">
+          <i className="fa-solid fa-spinner fa-spin fa-2x mb-2 text-primary"></i>
+          <div>Loading contacts from server...</div>
+        </div>
+      ) : (
+        <>
+          <div className={styles.guestList}>
+            {guestResults.map((guest) => (
+              <label key={guest.id}>
+                <span className={styles.avatar}>
+                  {guest.profilePic ? (
+                    <img
+                      src={guest.profilePic}
+                      alt={guest.name}
+                      width={38}
+                      height={38}
+                      style={{ borderRadius: "50%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    guest.name.slice(0, 1)
+                  )}
+                </span>
+                <span className={styles.guestMeta}>
+                  <strong>{guest.name}</strong>
+                  <small>
+                    {guest.mobile || guest.id}
+                    {guest.email && ` | ${guest.email}`}
+                  </small>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={selectedGuests.includes(guest.id)}
+                  onChange={() => toggleGuest(guest.id)}
+                />
+                <span className={styles.guestCheck}>
+                  <i className="fa-solid fa-check"></i>
+                </span>
+              </label>
+            ))}
+          </div>
+          {!guestResults.length && (
+            <div className={styles.emptyState}>
+              <i className="fa-regular fa-user"></i>
+              <strong>No contacts found</strong>
+              <span>Add a new contact or try another search.</span>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
