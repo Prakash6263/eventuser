@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import SafeImage from "../components/SafeImage";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { getEventMediaApi } from "../services/eventApi";
+import { handleAuthFailure, isAuthFailureResponse } from "../services/apiClient";
 
 export default function EventsPage() {
   const router = useRouter();
@@ -29,7 +31,7 @@ export default function EventsPage() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   // Filters state variables (date, myevent and status)
-  const [filterMyEvent, setFilterMyEvent] = useState("");
+  const [filterMyEvent, setFilterMyEvent] = useState("false");
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [galleryLoading, setGalleryLoading] = useState(false);
@@ -53,9 +55,8 @@ export default function EventsPage() {
       // Build query parameters for Events API
       const queryParams = new URLSearchParams();
       
-      if (selectedMyEvent) {
-        queryParams.append("myevent", selectedMyEvent); // "true" or "false"
-      }
+      // Always append myevent - default to false if empty or not selected, or match selection
+      queryParams.append("myevent", selectedMyEvent || "false");
       
       if (selectedDate) {
         queryParams.append("date", selectedDate); // YYYY-MM-DD
@@ -66,8 +67,12 @@ export default function EventsPage() {
           "Authorization": `Bearer ${activeToken}`
         }
       });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const json = await res.json();
+      if (isAuthFailureResponse(res, json)) {
+        handleAuthFailure();
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       if (json.status && Array.isArray(json.data)) {
         let mapped = json.data.map((evt) => {
           let formattedMonthDay = "";
@@ -111,7 +116,7 @@ export default function EventsPage() {
             title: evt.eventTitle || "Untitled Event",
             category: evt.eventType?.eventType || evt.eventCategory?.category || "Celebration",
             location: locationStr,
-            img: evt.image || "https://eventuna.com/api/s3-media?key=event%2F1783417395237-960311026.jpg",
+            img: evt.image || "",
             date: formattedMonthDay,
             filterDateStr: rawDateString,
             time: evt.eventStartTime || "",
@@ -136,7 +141,7 @@ export default function EventsPage() {
   };
 
   useEffect(() => {
-    fetchFilteredEvents("", "", "");
+    fetchFilteredEvents("false", "", "");
   }, [token]);
 
   const handleApplyFilters = () => {
@@ -144,10 +149,10 @@ export default function EventsPage() {
   };
 
   const handleResetFilters = () => {
-    setFilterMyEvent("");
+    setFilterMyEvent("false");
     setFilterDate("");
     setFilterStatus("");
-    fetchFilteredEvents("", "", "");
+    fetchFilteredEvents("false", "", "");
   };
 
   const handleViewEventDetails = (evt) => {
@@ -190,7 +195,9 @@ export default function EventsPage() {
       rsvp: rawEvent.rvsp || "No",
       rsvpBy: rawEvent.eventDate || "",
       selectedNotes: (rawEvent.noteId || []).map((n) => n.notes || n),
-      registryUrl: rawEvent.registryUrl || "",
+      registryUrl: typeof rawEvent.registryUrl === "object" && rawEvent.registryUrl !== null
+        ? (rawEvent.registryUrl.registryUrl || rawEvent.registryUrl.registryName || "")
+        : (rawEvent.registryUrl || ""),
       place: rawEvent.placeId?.preferences || "At a participating restaurant",
       selectedLocation: rawEvent.serviceLocationId
         ? {
@@ -388,7 +395,6 @@ export default function EventsPage() {
                         value={filterMyEvent}
                         onChange={(e) => setFilterMyEvent(e.target.value)}
                       >
-                        <option value="">All</option>
                         <option value="true">True</option>
                         <option value="false">False</option>
                       </select>
@@ -454,7 +460,15 @@ export default function EventsPage() {
                             <div>
                               <div className="event-thumbnail" style={{ height: "180px", overflow: "hidden", position: "relative" }}>
                                 <div className="thumbnail-img h-100 w-100">
-                                  <img src={evt.img} alt={evt.title} className="w-100 h-100" style={{ objectFit: "cover" }} />
+                                  <SafeImage
+                                    src={evt.img}
+                                    alt={evt.title}
+                                    className="w-100 h-100"
+                                    style={{ objectFit: "cover" }}
+                                    variant="event"
+                                    fallbackLabel={evt.title}
+                                    fallbackSubLabel={evt.category}
+                                  />
                                 </div>
                                 <span className="bookmark-icon" title="Bookmark"></span>
 

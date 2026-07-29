@@ -6760,13 +6760,86 @@ input[type=number]::-webkit-inner-spin-button {
     }
 
 
-    .user-profile-sidebar {
+.user-profile-sidebar {
     background: #fff;
     border-radius: 10px;
     margin-bottom: 25px;
     padding: 20px;
-   box-shadow: 0 0 40px 5px rgb(0 0 0 / 5%);
+    box-shadow: 0 0 40px 5px rgb(0 0 0 / 5%);
+    position: sticky;
+    top: 110px;
+    z-index: 5;
 }
+
+@media (max-width: 991.98px) {
+    .user-profile-sidebar {
+        position: static;
+    }
+}
+
+.image-fallback {
+    width: 100%;
+    height: 100%;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px;
+    color: #243047;
+    text-align: center;
+    background:
+        radial-gradient(circle at 18% 18%, rgba(62, 86, 240, .16), transparent 28%),
+        linear-gradient(135deg, #f7f8ff 0%, #eef3ff 50%, #f6f8fb 100%);
+    border: 1px solid rgba(62, 86, 240, .12);
+    overflow: hidden;
+}
+
+.image-fallback-icon {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: #3e56f0;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(36, 48, 71, .08);
+    font-size: 18px;
+}
+
+.image-fallback strong {
+    max-width: 100%;
+    color: #151b2d;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.image-fallback small {
+    color: #6d7485;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.image-fallback-profile {
+    min-height: 100%;
+    border-radius: 50%;
+    padding: 8px;
+}
+
+.image-fallback-profile .image-fallback-icon {
+    width: 100%;
+    height: 100%;
+    min-height: 72px;
+    border-radius: 50%;
+    font-size: 30px;
+}
+
 .user-profile-sidebar-top {
     text-align: center;
     margin-bottom: 15px;
@@ -6938,10 +7011,16 @@ input[type=number]::-webkit-inner-spin-button {
       box-shadow: 0 6px 15px rgba(0,0,0,0.1);
     }
     .event-img {
-     
+      height: 150px;
       width: 100%;
       object-fit: cover;
     }
+
+.thumbnail-img .image-fallback,
+.event-image1 .image-fallback {
+    width: 100%;
+    height: 100%;
+}
     .event-status {
       font-size: 0.75rem;
       padding: 5px 12px;

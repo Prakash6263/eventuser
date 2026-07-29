@@ -9,6 +9,7 @@ import { authService } from "../services/authService";
 export default function ReservationDetailsPage() {
   const [profile, setProfile] = useState(null);
   const [reservation, setReservation] = useState(null);
+  const [detailsLoaded, setDetailsLoaded] = useState(false);
 
   // Load profile and reservation info from storage
   useEffect(() => {
@@ -33,41 +34,45 @@ export default function ReservationDetailsPage() {
       const stored = localStorage.getItem("eventuna-latest-reservation");
       if (stored) {
         setReservation(JSON.parse(stored));
-      } else {
-        // Mock fallback reservation matching reservation-details.html exactly
-        setReservation({
-          id: "RES-10245",
-          eventTitle: "Birthday Celebration",
-          eventDate: "18 Jul 2026",
-          eventStartTime: "6:30 PM",
-          eventEndTime: "09:30 PM",
-          venue: "Grand Hall, Lisbon",
-          status: "Confirmed",
-          guestsCount: "4 Adults",
-          reservedOn: "15 Jul 2026",
-          img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s=10",
-          packagePrice: 35,
-          tax: 5,
-          discount: 5,
-          totalPaid: 35,
-          tableNumber: "VIP-04",
-          organizerName: "ABC Events",
-          organizerEmail: "support@abcevents.com",
-          organizerPhone: "+351 999999",
-        });
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setDetailsLoaded(true);
     }
   }, []);
 
-  if (!reservation) {
+  if (!detailsLoaded) {
     return (
       <>
         <Header />
         <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!reservation) {
+    return (
+      <>
+        <Header />
+        <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+          <div className="text-center bg-white rounded-4 shadow-sm p-5 mx-3" style={{ maxWidth: "520px" }}>
+            <div className="mb-3 text-primary" style={{ fontSize: "42px" }}>
+              <i className="fa-regular fa-calendar-xmark"></i>
+            </div>
+            <h2 className="fw-bold mb-2" style={{ color: "#0c1b33" }}>No reservation selected</h2>
+            <p className="text-muted mb-4">
+              Choose a reservation from your reservations list to view its details.
+            </p>
+            <Link href="/my-reservations" className="main-btn btn-hover d-inline-flex align-items-center gap-2 text-decoration-none">
+              <i className="fa-solid fa-arrow-left"></i>
+              Go to My Reservations
+            </Link>
           </div>
         </div>
         <Footer />
@@ -145,6 +150,12 @@ export default function ReservationDetailsPage() {
 
               {/* Main Content Dashboard */}
               <div className="col-lg-9">
+                <div className="mb-3">
+                  <Link href="/my-reservations" className="btn btn-outline-primary rounded-pill px-4 d-inline-flex align-items-center gap-2 text-decoration-none">
+                    <i className="fa-solid fa-arrow-left"></i>
+                    Back
+                  </Link>
+                </div>
                 <div 
                   className="topper d-flex align-items-end mb-3" 
                   style={{ 

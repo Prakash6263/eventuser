@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { authService } from "../services/authService";
 import { getEventGroupChatApi, getChatMessagesApi, sendChatMessageApi } from "../services/chatApi";
+import { handleAuthFailure, isAuthFailureResponse } from "../services/apiClient";
 
 function ChatContent() {
   const router = useRouter();
@@ -71,8 +72,12 @@ function ChatContent() {
             "Authorization": `Bearer ${token}`
           }
         });
+        const json = await res.json();
+        if (isAuthFailureResponse(res, json)) {
+          handleAuthFailure();
+          return;
+        }
         if (res.ok) {
-          const json = await res.json();
           if (json.status && Array.isArray(json.data)) {
             const match = json.data.find(e => e._id === eventId);
             if (match) {

@@ -8,12 +8,13 @@ import { getMerchantsByServiceApi } from "../services/eventApi";
 
 export default function EventDetailsPage() {
   const [event, setEvent] = useState(null);
+  const [detailsLoaded, setDetailsLoaded] = useState(false);
   const [merchants, setMerchants] = useState([]);
   const [showVenueModal, setShowVenueModal] = useState(false);
   const [backUrl, setBackUrl] = useState("/my-events");
   const [backLabel, setBackLabel] = useState("Back to My Events");
 
-  // Load event details from localStorage or fall back to mock matching screenshot
+  // Load event details that were selected from an event list or created event flow.
   useEffect(() => {
     try {
       const savedUrl = window.localStorage.getItem("event-details-back-url");
@@ -34,41 +35,8 @@ export default function EventDetailsPage() {
       console.error("Error reading event details from localStorage:", e);
     }
 
-    if (savedEvent) {
-      setEvent(savedEvent);
-    } else {
-      // Mock event matching screenshot
-      setEvent({
-        eventTitle: "we're",
-        invitationMessage: "Erererer",
-        eventImage: null,
-        selectedDate: 28,
-        month: 6, // July
-        startTime: "12:42 PM",
-        endTime: "02:43 PM",
-        selectedRestaurant: "6877a86668d1e0b9fcdf5006",
-        selectedGuests: [
-          { id: "1", name: "Ava Onetwoseven", profilePic: null, email: "ava127@example.com", mobile: "1234567890" },
-          { id: "2", name: "Diya Kapoor", profilePic: null, email: "diya@example.com", mobile: "9876543210" },
-          { id: "3", name: "Rohan Malhotra", profilePic: null, email: "rohan@example.com", mobile: "8765432109" },
-          { id: "4", name: "Ananya Sharma", profilePic: null, email: "ananya@example.com", mobile: "7654321098" },
-          { id: "5", name: "Kabir Verma", profilePic: null, email: "kabir@example.com", mobile: "6543210987" },
-          { id: "6", name: "Narendra Thakur", profilePic: null, email: "narendra@example.com", mobile: "5432109876" }
-        ],
-        bringGuests: "Yes",
-        maxGuests: "2",
-        rsvp: "Yes",
-        rsvpBy: "2026-07-27",
-        selectedNotes: [],
-        registryUrl: "",
-        place: "At a participating restaurant",
-        selectedLocation: { addressName: "Indore location 1", address: "12, near Aurobindo Hospital, Rishi Nagar, Indore" },
-        category: "Birthday",
-        eventType: "Family Celebration",
-        organizerName: "Takur",
-        eventAttendanceQr: null
-      });
-    }
+    setEvent(savedEvent);
+    setDetailsLoaded(true);
 
     // Load merchants list to display venue info details
     const fetchMerchants = async () => {
@@ -86,7 +54,7 @@ export default function EventDetailsPage() {
     fetchMerchants();
   }, []);
 
-  if (!event) {
+  if (!detailsLoaded) {
     return (
       <>
         <Header />
@@ -95,6 +63,30 @@ export default function EventDetailsPage() {
             <div className="spinner-border text-primary" role="status">
               <span className="visually-hidden">Loading event...</span>
             </div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!event) {
+    return (
+      <>
+        <Header />
+        <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+          <div className="text-center bg-white rounded-4 shadow-sm p-5 mx-3" style={{ maxWidth: "520px" }}>
+            <div className="mb-3 text-primary" style={{ fontSize: "42px" }}>
+              <i className="fa-regular fa-calendar-xmark"></i>
+            </div>
+            <h2 className="fw-bold mb-2" style={{ color: "#0c1b33" }}>No event selected</h2>
+            <p className="text-muted mb-4">
+              Choose an event from your event list to view its details.
+            </p>
+            <Link href="/my-events" className="main-btn btn-hover d-inline-flex align-items-center gap-2 text-decoration-none">
+              <i className="fa-solid fa-arrow-left"></i>
+              Go to My Events
+            </Link>
           </div>
         </div>
         <Footer />
@@ -283,6 +275,7 @@ export default function EventDetailsPage() {
 
             {/* Right Column - Sidebar */}
             <div className="col-lg-4">
+              <div className="sticky-top" style={{ top: "24px", zIndex: 10 }}>
 
               {/* Event Attendance QR Code Card */}
               {event.eventAttendanceQr && (
@@ -418,9 +411,15 @@ export default function EventDetailsPage() {
                       </div>
                       <div className="overflow-hidden">
                         <span className="text-muted small d-block">Registry URL</span>
-                        <a href={event.registryUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none small text-truncate d-block fw-semibold">
-                          {event.registryUrl} <i className="fa-solid fa-arrow-up-right-from-square ms-1" style={{ fontSize: "10px" }}></i>
-                        </a>
+                        {typeof event.registryUrl === "object" ? (
+                          <a href={event.registryUrl.registryUrl || event.registryUrl.registryName || "#"} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none small text-truncate d-block fw-semibold">
+                            {event.registryUrl.registryName || event.registryUrl.registryUrl || "Registry"} <i className="fa-solid fa-arrow-up-right-from-square ms-1" style={{ fontSize: "10px" }}></i>
+                          </a>
+                        ) : (
+                          <a href={event.registryUrl} target="_blank" rel="noopener noreferrer" className="text-primary text-decoration-none small text-truncate d-block fw-semibold">
+                            {event.registryUrl} <i className="fa-solid fa-arrow-up-right-from-square ms-1" style={{ fontSize: "10px" }}></i>
+                          </a>
+                        )}
                       </div>
                     </div>
                   )}
@@ -441,12 +440,10 @@ export default function EventDetailsPage() {
 
                 </div>
               </div>
-
             </div>
-
           </div>
-
         </div>
+      </div>
       </div>
 
       {/* Venue Details Modal dialog */}

@@ -15,13 +15,31 @@ export const getUser = () => {
   return null;
 };
 
+export const clearUserScopedData = () => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("eventuna-latest-event");
+    localStorage.removeItem("eventuna-latest-event-id");
+    localStorage.removeItem("eventuna-contacts");
+    localStorage.removeItem("eventuna-reservations");
+    localStorage.removeItem("eventuna-latest-reservation");
+    localStorage.removeItem("event-details-back-url");
+    localStorage.removeItem("event-details-back-label");
+  }
+};
+
 export const saveAuthData = (authData) => {
   if (typeof window !== "undefined") {
+    const currentUser = getUser() || {};
+    const isAuthSessionUpdate = !!(authData.token || authData.userId || authData.email);
+
+    if (isAuthSessionUpdate) {
+      clearUserScopedData();
+    }
+
     if (authData.token) {
       localStorage.setItem("user_token", authData.token);
     }
-    const currentUser = getUser() || {};
-    const updatedUser = { ...currentUser, ...authData };
+    const updatedUser = isAuthSessionUpdate ? { ...authData } : { ...currentUser, ...authData };
     localStorage.setItem("user_info", JSON.stringify(updatedUser));
   }
 };
@@ -30,6 +48,7 @@ export const clearAuthData = () => {
   if (typeof window !== "undefined") {
     localStorage.removeItem("user_token");
     localStorage.removeItem("user_info");
+    clearUserScopedData();
   }
 };
 
@@ -38,6 +57,26 @@ export const isLoggedIn = () => {
     return !!localStorage.getItem("user_token");
   }
   return false;
+};
+
+export const isAuthFailureResponse = (response, data) => {
+  const message = String(data?.message || data?.error || "").toLowerCase();
+  return response?.status === 401 ||
+    response?.status === 403 ||
+    message.includes("invalid token") ||
+    message.includes("token expired") ||
+    message.includes("jwt expired") ||
+    message.includes("unauthorized");
+};
+
+export const handleAuthFailure = () => {
+  if (typeof window === "undefined") return;
+
+  clearAuthData();
+
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
+  }
 };
 
 export const apiRequest = async (endpoint, options = {}) => {
@@ -64,6 +103,15 @@ export const apiRequest = async (endpoint, options = {}) => {
 
     const response = await fetch(`${BASE_URL}${endpoint}`, config);
     const data = await response.json();
+
+    if (isAuthFailureResponse(response, data)) {
+      handleAuthFailure();
+      return {
+        status: false,
+        message: data?.message || "Session expired. Please login again.",
+      };
+    }
+
     return data;
   } catch (error) {
     console.error(`API Request Error [${endpoint}]:`, error);

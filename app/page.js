@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import { isLoggedIn } from "./services/apiClient";
+import SafeImage from "./components/SafeImage";
+import { handleAuthFailure, isAuthFailureResponse, isLoggedIn } from "./services/apiClient";
 
 export default function Home() {
   const router = useRouter();
@@ -204,8 +205,12 @@ export default function Home() {
             "Authorization": `Bearer ${activeToken}`
           }
         });
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const json = await res.json();
+        if (isAuthFailureResponse(res, json)) {
+          handleAuthFailure();
+          return;
+        }
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         if (json.status && Array.isArray(json.data)) {
           const mapped = json.data.map((evt) => {
             let formattedMonthDay = "";
@@ -245,7 +250,7 @@ export default function Home() {
               id: evt._id,
               title: evt.eventTitle || "Untitled Event",
               location: locationStr,
-              img: evt.image || "https://eventuna.com/api/s3-media?key=event%2F1783417395237-960311026.jpg",
+              img: evt.image || "",
               date: formattedMonthDay,
               time: formattedTime,
               duration: evt.eventEndTime ? `to ${evt.eventEndTime}` : "",
@@ -392,7 +397,15 @@ export default function Home() {
                             <div className="main-card mt-4" style={{ cursor: "pointer" }} onClick={() => handleViewEventDetails(evt)}>
                               <div className="event-thumbnail" style={{ height: "180px", overflow: "hidden", position: "relative" }}>
                                 <div className="thumbnail-img h-100 w-100">
-                                  <img src={evt.img} alt={evt.title} className="w-100 h-100" style={{ objectFit: "cover" }} />
+                                  <SafeImage
+                                    src={evt.img}
+                                    alt={evt.title}
+                                    className="w-100 h-100"
+                                    style={{ objectFit: "cover" }}
+                                    variant="event"
+                                    fallbackLabel={evt.title}
+                                    fallbackSubLabel="Upcoming event"
+                                  />
                                 </div>
                                 <span className="bookmark-icon" title="Bookmark"></span>
                               </div>

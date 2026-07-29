@@ -6,8 +6,9 @@ import { useRouter } from "next/navigation";
 import SiteHeader from "../components/Header";
 import Footer from "../components/Footer";
 import styles from "./create-event.module.css";
-import { getEventTypesApi, getEventCategoriesByTypeIdApi, getPlacePreferencesApi, getMerchantsByServiceApi, getEventNotesApi, createEventApi } from "../services/eventApi";
+import { getEventTypesApi, getEventCategoriesByTypeIdApi, getPlacePreferencesApi, getMerchantsByServiceApi, getEventNotesApi, createEventApi, getMyCreatedEventsApi } from "../services/eventApi";
 import { syncContactsApi, getAllUsersApi } from "../services/authApi";
+import { makeReservationApi } from "../services/reservationApi";
 import CountryCodePicker from "../components/CountryCodePicker";
 import { isLoggedIn } from "../services/apiClient";
 
@@ -91,6 +92,16 @@ export default function CreateEventPage() {
   const [contactError, setContactError] = useState("");
   const [isSavingContact, setIsSavingContact] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(false);
+
+  // Reservation modal state
+  const [reservationModal, setReservationModal] = useState(false);
+  const [createdEventId, setCreatedEventId] = useState("");
+  const [createdMerchantName, setCreatedMerchantName] = useState("");
+  const [resAdultCount, setResAdultCount] = useState("");
+  const [resInstruction, setResInstruction] = useState("");
+  const [resSubmitting, setResSubmitting] = useState(false);
+  const [resSuccess, setResSuccess] = useState(false);
+  const [resError, setResError] = useState("");
 
   // Event Types & Categories API state
   const [eventTypesList, setEventTypesList] = useState([]);
@@ -551,7 +562,9 @@ export default function CreateEventPage() {
       }
 
       // Success: Save backend response to localStorage as source of truth
-      const backendEvent = response.event || response.data || {};
+      const backendEvent = response.event || response.data || response.eventData || response.data?.event || response || {};
+      const resolvedId = backendEvent._id || backendEvent.id || response._id || response.id || response.data?._id || response.data?.id || "";
+      
       const resolvedEvent = {
         eventTitle: backendEvent.eventTitle || eventTitle,
         invitationMessage: backendEvent.eventDescription || invitationMessage,
@@ -573,16 +586,30 @@ export default function CreateEventPage() {
         category: category,
         eventType: eventType,
         organizerName: "Takur",
-        id: backendEvent._id || backendEvent.id || ""
+        id: resolvedId
       };
 
       window.localStorage.setItem("eventuna-latest-event", JSON.stringify(resolvedEvent));
-      if (backendEvent._id || backendEvent.id) {
-        window.localStorage.setItem("eventuna-latest-event-id", backendEvent._id || backendEvent.id);
+      if (resolvedId) {
+        window.localStorage.setItem("eventuna-latest-event-id", resolvedId);
       }
+
+      // Store created event ID and merchant name for the reservation modal
+      setCreatedEventId(resolvedId);
+      const selectedMerchant = merchantRestaurants.find((m) => m._id === selectedRestaurant || m._id === backendEvent.merchantId);
+      setCreatedMerchantName(selectedMerchant?.serviceName || selectedMerchant?.name || "");
 
       setCompletionMode(saveDraft ? "draft" : "sent");
       setCompleted(true);
+
+      // Automatically open the reservation modal if invitations were sent
+      if (!saveDraft) {
+        setResSuccess(false);
+        setResError("");
+        setResAdultCount("");
+        setResInstruction("");
+        setReservationModal(true);
+      }
     } catch (err) {
       setDialog({
         title: "Submission failed",
@@ -594,6 +621,64 @@ export default function CreateEventPage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleMakeReservation = async (e) => {
+    if (e) e.preventDefault();
+    if (!resAdultCount || isNaN(resAdultCount) || parseInt(resAdultCount) <= 0) {
+      setResError("Please enter a valid number of guests.");
+      return;
+    }
+    setResSubmitting(true);
+    setResError("");
+    setResSuccess(false);
+    try {
+      let eventIdVal = createdEventId || window.localStorage.getItem("eventuna-latest-event-id") || "";
+      
+      if (!eventIdVal) {
+        try {
+          const eventsRes = await getMyCreatedEventsApi();
+          if (eventsRes && eventsRes.status === true && Array.isArray(eventsRes.data) && eventsRes.data.length > 0) {
+            // Match by eventTitle if possible, otherwise use the first one (most recent)
+            const matched = eventsRes.data.find(e => e.eventTitle === eventTitle) || eventsRes.data[0];
+            if (matched && matched._id) {
+              eventIdVal = matched._id;
+              setCreatedEventId(matched._id);
+              window.localStorage.setItem("eventuna-latest-event-id", matched._id);
+            }
+          }
+        } catch (fetchErr) {
+          console.error("Failed to fetch fallback created event ID:", fetchErr);
+        }
+      }
+
+      if (!eventIdVal) {
+        throw new Error("Event ID not found. Please try creating the event again.");
+      }
+      const payload = {
+        eventId: eventIdVal,
+        couponId: "",
+        childCount: "",
+        instruction: resInstruction,
+        adultCount: String(resAdultCount),
+        guestType: "Normal"
+      };
+      const res = await makeReservationApi(payload);
+      if (res && res.status === true) {
+        setResSuccess(true);
+        setTimeout(() => {
+          setReservationModal(false);
+          router.push("/my-reservations");
+        }, 1500);
+      } else {
+        throw new Error(res?.message || "Failed to save reservation.");
+      }
+    } catch (err) {
+      setResError(err.message || "An error occurred. Please try again.");
+    } finally {
+      setResSubmitting(false);
+    }
+  };
+
 
   const openCancelDialog = () => setDialog({
     title: "Cancel event setup?",
@@ -707,11 +792,39 @@ export default function CreateEventPage() {
                 <div className={styles.successIcon}><i className="fa-solid fa-check"></i></div>
                 <span>{completionMode === "draft" ? "Draft saved" : "Invitations sent"}</span>
                 <h2>{completionMode === "draft" ? "Your event draft is saved" : "Your event is ready"}</h2>
-                <p>{completionMode === "draft" ? "You can continue editing this event from My Events." : `Invitations have been sent for ${category} - ${eventType} on July ${selectedDate}, 2026.`}</p>
+                <p style={{ color: "#5b5fc7", fontWeight: 500 }}>
+                  {completionMode === "draft"
+                    ? "You can continue editing this event from My Events."
+                    : `Your event invitation has been sent${createdMerchantName ? ` selected Restaurant or Facility : ${createdMerchantName}` : ""}`}
+                </p>
                 <div className={styles.successActions}>
                   <a href="/event-details" className={styles.primaryButton}>View event details</a>
                   <a href="/my-events" className={styles.secondaryButton}>View my events</a>
                 </div>
+                {completionMode !== "draft" && (
+                  <button
+                    onClick={() => { setResSuccess(false); setResError(""); setResAdultCount(""); setResInstruction(""); setReservationModal(true); }}
+                    style={{
+                      marginTop: "28px",
+                      width: "100%",
+                      maxWidth: "340px",
+                      background: "#5b5fc7",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "10px",
+                      padding: "14px 0",
+                      fontSize: "16px",
+                      fontWeight: "700",
+                      letterSpacing: "1.5px",
+                      cursor: "pointer",
+                      display: "block",
+                      marginLeft: "auto",
+                      marginRight: "auto",
+                    }}
+                  >
+                    ADD RESERVATION
+                  </button>
+                )}
               </section>
             ) : (
               <div className={styles.wizard}>
@@ -1097,6 +1210,137 @@ export default function CreateEventPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {reservationModal && (
+        <div className={styles.dialogBackdrop} role="presentation" style={{ background: "rgba(5, 2, 62, 0.65)" }}>
+          <div className={`${styles.dialog} ${styles.contactDialog}`} role="dialog" aria-modal="true" style={{ maxWidth: "480px", borderRadius: "20px", overflow: "hidden" }}>
+            <div className={styles.contactDialogHeader} style={{ padding: "20px 24px" }}>
+              <div className="d-flex align-items-center gap-3">
+                <button 
+                  onClick={() => setReservationModal(false)} 
+                  style={{ border: "none", background: "none", fontSize: "18px", color: "#333", cursor: "pointer", padding: 0 }}
+                  aria-label="Back"
+                >
+                  <i className="fa-solid fa-arrow-left"></i>
+                </button>
+                <div>
+                  <h2 style={{ fontSize: "19px", fontWeight: "700", color: "#111", margin: 0 }}>Restaurant Reservation</h2>
+                </div>
+              </div>
+            </div>
+            
+            <form onSubmit={handleMakeReservation}>
+              <div className={styles.contactFields} style={{ padding: "24px" }}>
+                {/* Notice banner */}
+                <div style={{
+                  background: "#fff5f5",
+                  border: "1px solid #ffe3e3",
+                  borderRadius: "10px",
+                  padding: "12px 16px",
+                  marginBottom: "20px",
+                  color: "#e53e3e",
+                  fontSize: "13px",
+                  lineHeight: "1.5",
+                  fontWeight: "500"
+                }}>
+                  Note : You are making reservation for yourself only as an invited guest. allow to bring others box is not checked, so only the account owner can attend
+                </div>
+
+                <div className="mb-4">
+                  <label style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#222", marginBottom: "8px" }}>
+                    Only one ADULT seats is allowed to reserve
+                  </label>
+                  <input
+                    type="number"
+                    value={resAdultCount}
+                    onChange={(e) => setResAdultCount(e.target.value)}
+                    placeholder="Number"
+                    required
+                    min="1"
+                    disabled={resSubmitting || resSuccess}
+                    style={{
+                      width: "100%",
+                      height: "48px",
+                      border: "1px solid #d5d8df",
+                      borderRadius: "10px",
+                      padding: "0 16px",
+                      fontSize: "14px",
+                      background: "#fff"
+                    }}
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#222", marginBottom: "8px" }}>
+                    Special Instruction
+                  </label>
+                  <textarea
+                    value={resInstruction}
+                    onChange={(e) => setResInstruction(e.target.value)}
+                    placeholder="Message Details"
+                    disabled={resSubmitting || resSuccess}
+                    rows="4"
+                    style={{
+                      width: "100%",
+                      border: "1px solid #d5d8df",
+                      borderRadius: "10px",
+                      padding: "12px 16px",
+                      fontSize: "14px",
+                      background: "#fff",
+                      resize: "none"
+                    }}
+                  />
+                </div>
+
+                {resError && (
+                  <p className="text-danger small mt-2 mb-0 fw-medium">
+                    <i className="fa-solid fa-circle-exclamation me-1"></i>
+                    {resError}
+                  </p>
+                )}
+
+                {resSuccess && (
+                  <p className="text-success small mt-2 mb-0 fw-medium">
+                    <i className="fa-solid fa-circle-check me-1"></i>
+                    Reservation updated successfully. Redirecting...
+                  </p>
+                )}
+              </div>
+
+              <div style={{ padding: "0 24px 24px" }}>
+                <button
+                  type="submit"
+                  disabled={resSubmitting || resSuccess}
+                  style={{
+                    width: "100%",
+                    background: "#5b5fc7",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "10px",
+                    padding: "14px 0",
+                    fontSize: "15px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px"
+                  }}
+                >
+                  {resSubmitting ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin"></i>
+                      Reserving...
+                    </>
+                  ) : (
+                    "Restaurant Reservation"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

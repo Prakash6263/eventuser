@@ -196,6 +196,7 @@ export default function UserProfilePage() {
             <div className="row">
               {/* Sidebar Navigation */}
               <div className="col-lg-3">
+                <div style={{ position: "sticky", top: "24px", zIndex: 10 }}>
                 <div className="user-profile-sidebar border p-4 bg-white rounded-3 shadow-sm mb-4">
                   <div className="user-profile-sidebar-top text-center mb-4">
                     <div className="user-profile-img position-relative d-inline-block mb-3">
@@ -279,6 +280,7 @@ export default function UserProfilePage() {
                       </button>
                     </li>
                   </ul>
+                </div>
                 </div>
               </div>
 

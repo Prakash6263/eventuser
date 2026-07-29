@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import SafeImage from "../components/SafeImage";
 import { getMyCreatedEventsApi } from "../services/eventApi";
 import { authService } from "../services/authService";
 
@@ -15,11 +16,6 @@ export default function MyEventsPage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab]);
 
   useEffect(() => {
     async function loadData() {
@@ -105,7 +101,7 @@ export default function MyEventsPage() {
               organizer: evt.eventcreator?.fullName || "Unknown Organizer",
               status: uiStatus,
               badgeClass: badgeClass,
-              img: evt.image || "https://eventuna.com/api/s3-media?key=event%2F1784709751549-498997941.jfif",
+              img: evt.image || "",
               rawEvent: evt,
             };
           });
@@ -188,9 +184,6 @@ export default function MyEventsPage() {
   const filteredEvents =
     activeTab === "All" ? events : events.filter((evt) => evt.status === activeTab);
 
-  const totalPages = Math.ceil(filteredEvents.length / 6);
-  const paginatedEvents = filteredEvents.slice((currentPage - 1) * 6, currentPage * 6);
-
   return (
     <>
       <Header />
@@ -215,9 +208,10 @@ export default function MyEventsPage() {
                 <div className="user-profile-sidebar border p-4 bg-white rounded-3 shadow-sm mb-4">
                   <div className="user-profile-sidebar-top text-center mb-4">
                     <div className="user-profile-img position-relative d-inline-block mb-3">
-                      <img
+                      <SafeImage
                         alt="Profile avatar"
                         src={profile?.profilePic || "https://st2.depositphotos.com/1006318/5909/v/450/depositphotos_59094701-stock-illustration-businessman-profile-icon.jpg"}
+                        variant="profile"
                         className="rounded-circle border"
                         width="100"
                         height="100"
@@ -301,14 +295,17 @@ export default function MyEventsPage() {
                       </div>
                     ) : (
                       <div className="row g-4">
-                        {paginatedEvents.map((evt) => (
+                        {filteredEvents.map((evt) => (
                           <div key={evt.id} className="col-12 col-md-6 col-lg-4">
                             <div className="event-card border rounded-3 overflow-hidden shadow-sm bg-white h-100 d-flex flex-column">
-                              <img
+                              <SafeImage
                                 src={evt.img}
                                 className="event-img w-100 object-fit-cover"
                                 alt={evt.title}
                                 height="150"
+                                variant="event"
+                                fallbackLabel={evt.title}
+                                fallbackSubLabel={evt.status}
                               />
                               <div className="p-3 d-flex flex-column flex-grow-1">
                                 <h5 className="fw-bold text-dark text-truncate mb-2">{evt.title}</h5>
@@ -340,49 +337,6 @@ export default function MyEventsPage() {
                             </div>
                           </div>
                         ))}
-                      </div>
-                    )}
-
-                    {totalPages > 1 && (
-                      <div className="d-flex justify-content-center mt-5">
-                        <nav aria-label="Page navigation">
-                          <ul className="pagination pagination-primary gap-1 mb-0">
-                            <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-                              <button 
-                                className="page-link rounded-circle border-0 shadow-sm d-flex align-items-center justify-content-center" 
-                                style={{ width: "36px", height: "36px", color: currentPage === 1 ? "#ccc" : "#4f46e5" }}
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                              >
-                                  <i className="bi bi-chevron-left"></i>
-                              </button>
-                            </li>
-                            {Array.from({ length: totalPages }, (_, i) => (
-                              <li key={i} className={`page-item ${currentPage === i + 1 ? "active" : ""}`}>
-                                <button 
-                                  className="page-link rounded-circle border-0 shadow-sm d-flex align-items-center justify-content-center fw-bold" 
-                                  style={{ 
-                                    width: "36px", 
-                                    height: "36px", 
-                                    background: currentPage === i + 1 ? "#4f46e5" : "#fff",
-                                    color: currentPage === i + 1 ? "#fff" : "#4f46e5"
-                                  }}
-                                  onClick={() => setCurrentPage(i + 1)}
-                                >
-                                  {i + 1}
-                                </button>
-                              </li>
-                            ))}
-                            <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-                              <button 
-                                className="page-link rounded-circle border-0 shadow-sm d-flex align-items-center justify-content-center" 
-                                style={{ width: "36px", height: "36px", color: currentPage === totalPages ? "#ccc" : "#4f46e5" }}
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                              >
-                                <i className="bi bi-chevron-right"></i>
-                              </button>
-                            </li>
-                          </ul>
-                        </nav>
                       </div>
                     )}
                   </div>
