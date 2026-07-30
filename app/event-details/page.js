@@ -784,6 +784,30 @@ function EventDetailsContent() {
                     </div>
                   </div>
 
+                  {/* Your Invitation Status */}
+                  {!event.isMyEvent && (
+                    <div className="d-flex align-items-start gap-3 border-top pt-3 mb-3 animate__animated animate__fadeIn">
+                      <div
+                        className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                        style={{
+                          width: "36px",
+                          height: "36px",
+                          background: event.status?.toLowerCase() === "accepted" || event.status?.toLowerCase() === "upcoming" ? "#d1fae5" : event.status?.toLowerCase() === "declined" ? "#fee2e2" : "#fef3c7",
+                          color: event.status?.toLowerCase() === "accepted" || event.status?.toLowerCase() === "upcoming" ? "#065f46" : event.status?.toLowerCase() === "declined" ? "#991b1b" : "#854d0e",
+                          fontSize: "16px"
+                        }}
+                      >
+                        <i className={event.status?.toLowerCase() === "accepted" || event.status?.toLowerCase() === "upcoming" ? "fa-solid fa-circle-check" : event.status?.toLowerCase() === "declined" ? "fa-solid fa-circle-xmark" : "fa-regular fa-clock"}></i>
+                      </div>
+                      <div>
+                        <span className="text-muted small d-block">Your Invitation Status</span>
+                        <strong className="text-dark small" style={{ textTransform: "capitalize" }}>
+                          {event.status || "Pending"}
+                        </strong>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Invitation Action Buttons */}
                   {!event.isMyEvent && (
                     <div className="border-top pt-3 mt-2">
