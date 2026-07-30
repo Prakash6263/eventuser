@@ -124,6 +124,49 @@ export default function ReservationDetailsPage() {
     initializeData();
   }, []);
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setReservation(prev => ({ ...prev, img: url }));
+    }
+  };
+
+  const getMappedServices = () => {
+    const rawServices = reservation.rawItem?.additionalServices || [];
+    const serviceMap = {
+      "686fb723d46e9740ee8277f4": { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s" },
+      "686fb7bad46e9740ee8277f8": { name: "Decoration & Lighting", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_1g&s" },
+      "686fb714d46e9740ee8277f2": { name: "Furniture Rental", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtg-K5_J_9L9Z11o1R19Tj8a_V19v1K0G_2g&s" },
+      "686fb788d46e9740ee8277f6": { name: "Music & DJ", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_3g&s" },
+    };
+
+    if (rawServices.length === 0) {
+      return [
+        { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s", status: "confirmed" },
+        { name: "Decoration & Lighting", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_1g&s", status: "pending" }
+      ];
+    }
+
+    return rawServices.map((srv, index) => {
+      const srvId = typeof srv === "string" ? srv : srv.serviceId;
+      const srvStatus = typeof srv === "object" ? srv.status : "pending";
+      const info = serviceMap[srvId] || { name: `Additional Service ${index + 1}`, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s" };
+      return {
+        ...info,
+        status: srvStatus
+      };
+    });
+  };
+
+  const getServiceStatusDisplay = (status) => {
+    const s = (status || "Pending").toLowerCase();
+    if (s === "confirmed" || s === "accepted" || s === "yes" || s === "confirmed by provider") {
+      return { text: "Confirmed By Provider", color: "#22c55e" };
+    }
+    return { text: "Pending", color: "#ef4444" };
+  };
+
   if (!detailsLoaded) {
     return (
       <>
@@ -232,113 +275,406 @@ export default function ReservationDetailsPage() {
 
               {/* Main Content Dashboard */}
               <div className="col-lg-9">
-                <div className="mb-3">
+                <div className="mb-4">
                   <Link href="/my-reservations" className="btn btn-outline-primary rounded-pill px-4 d-inline-flex align-items-center gap-2 text-decoration-none">
                     <i className="fa-solid fa-arrow-left"></i>
                     Back
                   </Link>
                 </div>
-                <div 
-                  className="topper d-flex align-items-end mb-3" 
-                  style={{ 
-                    backgroundImage: `linear-gradient(rgba(0, 0, 0, .45), rgba(0, 0, 0, .45)), url('${reservation.img || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s=10"}')`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center"
-                  }}
-                >
-                  <div className="container pb-4">
-                    <h2>{reservation.eventTitle}</h2>
-                    <span className="badge bg-success">{reservation.status}</span>
-                  </div>
-                </div>
 
-                <div className="row g-4">
-                  {/* Left Main column */}
-                  <div className="col-lg-8">
-                    {/* Reservation Information */}
-                    <div className="cardx p-4 mb-4">
-                      <h4>Reservation Information</h4>
-                      <div className="row">
-                        <div className="col-md-6">
-                          <p><b>Reservation ID:</b> {reservation.id}</p>
-                          <p><b>Booking Date:</b> {reservation.reservedOn}</p>
-                          <p><b>Guests:</b> {reservation.guestsCount}</p>
+                <style>{`
+                  .res-card {
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background: #fff;
+                    border-radius: 20px;
+                    overflow: hidden;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+                    font-family: 'Outfit', sans-serif;
+                    color: #111;
+                    border: 1px solid #f1f3f7;
+                  }
+                  .res-banner {
+                    height: 250px;
+                    background-size: cover;
+                    background-position: center;
+                    position: relative;
+                    cursor: pointer;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    padding: 20px;
+                    background-color: #f3f4f6;
+                    border-bottom: 1px solid #e5e7eb;
+                  }
+                  .res-banner-overlay {
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0.55));
+                    z-index: 1;
+                  }
+                  .upload-prompt {
+                    position: relative;
+                    z-index: 2;
+                    align-self: center;
+                    margin-top: auto;
+                    margin-bottom: auto;
+                    text-align: center;
+                    color: #fff;
+                  }
+                  .upload-prompt i {
+                    font-size: 32px;
+                    margin-bottom: 8px;
+                    display: block;
+                  }
+                  .upload-prompt span {
+                    font-weight: 600;
+                    font-size: 16px;
+                  }
+                  .participants-badge {
+                    position: relative;
+                    z-index: 2;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-top: auto;
+                    background: rgba(255, 255, 255, 0.95);
+                    padding: 6px 14px;
+                    border-radius: 30px;
+                    width: fit-content;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                  }
+                  .avatar-stack {
+                    display: flex;
+                    align-items: center;
+                  }
+                  .avatar-stack img {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 50%;
+                    border: 2px solid #fff;
+                    margin-left: -8px;
+                    object-fit: cover;
+                  }
+                  .avatar-stack img:first-child {
+                    margin-left: 0;
+                  }
+                  .participants-text {
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #3e56f0;
+                  }
+                  .event-info-section {
+                    padding: 24px;
+                  }
+                  .event-title {
+                    font-size: 26px;
+                    font-weight: 800;
+                    color: #0c1b33;
+                    margin-bottom: 16px;
+                  }
+                  .event-details-label {
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: #111;
+                    margin-bottom: 8px;
+                  }
+                  .event-description {
+                    font-size: 14px;
+                    color: #666;
+                    line-height: 1.6;
+                    margin-bottom: 24px;
+                    white-space: pre-wrap;
+                  }
+                  .info-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    padding: 16px 0;
+                    border-bottom: 1px solid #f1f3f7;
+                  }
+                  .info-row:last-child {
+                    border-bottom: none;
+                  }
+                  .icon-wrapper {
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 12px;
+                    background: #eef0ff;
+                    color: #3e56f0;
+                    display: grid;
+                    place-items: center;
+                    font-size: 18px;
+                    flex-shrink: 0;
+                  }
+                  .row-content {
+                    flex-grow: 1;
+                  }
+                  .row-title {
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: #111;
+                  }
+                  .row-subtitle {
+                    font-size: 12.5px;
+                    color: #666;
+                    margin-top: 2px;
+                  }
+                  .row-action-btn {
+                    background: #5b5fc7;
+                    color: #fff;
+                    border: none;
+                    border-radius: 20px;
+                    padding: 6px 16px;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    box-shadow: 0 4px 10px rgba(91, 95, 199, 0.15);
+                    transition: background 0.2s;
+                  }
+                  .row-action-btn:hover {
+                    background: #4a4db5;
+                  }
+                  .summary-section {
+                    padding: 24px;
+                    background: #fafbfe;
+                    border-top: 1px solid #f1f3f7;
+                    border-bottom: 1px solid #f1f3f7;
+                  }
+                  .section-heading {
+                    font-size: 18px;
+                    font-weight: 800;
+                    color: #111;
+                    margin-bottom: 20px;
+                  }
+                  .summary-item {
+                    margin-bottom: 18px;
+                  }
+                  .summary-item:last-child {
+                    margin-bottom: 0;
+                  }
+                  .summary-label {
+                    font-size: 14.5px;
+                    font-weight: 700;
+                    color: #111;
+                    margin-bottom: 4px;
+                  }
+                  .summary-value {
+                    font-size: 13px;
+                    color: #555;
+                    line-height: 1.5;
+                  }
+                  .services-section {
+                    padding: 24px;
+                  }
+                  .services-heading {
+                    font-size: 18px;
+                    font-weight: 800;
+                    color: #ef4444;
+                    margin-bottom: 20px;
+                  }
+                  .service-card {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    padding: 12px;
+                    border-radius: 14px;
+                    border: 1px solid #f1f3f7;
+                    background: #fff;
+                    margin-bottom: 12px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+                  }
+                  .service-card:last-child {
+                    margin-bottom: 0;
+                  }
+                  .service-img {
+                    width: 54px;
+                    height: 54px;
+                    border-radius: 10px;
+                    object-fit: cover;
+                  }
+                  .service-details {
+                    flex-grow: 1;
+                  }
+                  .service-name {
+                    font-size: 14.5px;
+                    font-weight: 700;
+                    color: #111;
+                  }
+                  .service-status {
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    margin-top: 2px;
+                  }
+                `}</style>
+
+                <div className="res-card">
+                  {/* Banner Image with Upload Feature */}
+                  <label 
+                    className="res-banner" 
+                    style={{ 
+                      backgroundImage: `url('${reservation.img || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s=10"}')`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center"
+                    }}
+                  >
+                    <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+                    <div className="res-banner-overlay"></div>
+                    
+                    <div className="upload-prompt">
+                      <i className="fa-solid fa-cloud-arrow-up"></i>
+                      <span>Tap to Upload Image</span>
+                    </div>
+
+                    {/* Participants stack */}
+                    <div className="participants-badge">
+                      <div className="avatar-stack">
+                        <img src="images/05.jpg" alt="Guest 1" />
+                        <img src="images/06.jpg" alt="Guest 2" />
+                        <img src="images/07.jpg" alt="Guest 3" />
+                      </div>
+                      <span className="participants-text">
+                        +{Math.max(0, (reservation.contactList?.length || reservation.invitedUsers?.length || 10) - 3)} invited
+                      </span>
+                    </div>
+                  </label>
+
+                  <div className="event-info-section">
+                    <h2 className="event-title">{reservation.eventTitle}</h2>
+                    <h3 className="event-details-label">Event Details</h3>
+                    <p className="event-description">
+                      {reservation.rawItem?.description || "No description provided."}
+                    </p>
+
+                    {/* Date and Time Row */}
+                    <div className="info-row">
+                      <div className="icon-wrapper">
+                        <i className="fa-regular fa-calendar-days"></i>
+                      </div>
+                      <div className="row-content">
+                        <div className="row-title">{reservation.eventDate}</div>
+                        <div className="row-subtitle">
+                          {reservation.eventStartTime} - {reservation.eventEndTime}
                         </div>
-                        <div className="col-md-6">
-                          <p><b>Event Date:</b> {reservation.eventDate}</p>
-                          <p><b>Time:</b> {reservation.eventStartTime}</p>
-                          <p><b>Table:</b> {reservation.tableNumber}</p>
+                      </div>
+                      <button className="row-action-btn" onClick={() => alert("Navigate to event modifier")}>Update</button>
+                    </div>
+
+                    {/* Venue Row */}
+                    <div className="info-row">
+                      <div className="icon-wrapper">
+                        <i className="fa-solid fa-location-dot"></i>
+                      </div>
+                      <div className="row-content">
+                        <div className="row-title">{reservation.venue?.split(" - ")?.[0] || "Venue"}</div>
+                        <div className="row-subtitle">
+                          {reservation.venue?.split(" - ")?.[1] || reservation.venue || "TBD"}
                         </div>
                       </div>
                     </div>
 
-                    {/* Venue */}
-                    <div className="cardx p-4 mb-4">
-                      <h4>Venue</h4>
-                      <p><i className="bi bi-geo-alt"></i> {reservation.venue}</p>
-                    </div>
-
-                    {/* Payment Summary */}
-                    <div className="cardx p-4">
-                      <h4>Payment Summary</h4>
-                      <table className="table">
-                        <tbody>
-                          <tr>
-                            <td>Package</td>
-                            <td className="text-end">€{reservation.packagePrice}</td>
-                          </tr>
-                          <tr>
-                            <td>Tax</td>
-                            <td className="text-end">€{reservation.tax}</td>
-                          </tr>
-                          <tr>
-                            <td>Discount</td>
-                            <td className="text-end text-success">-€{reservation.discount}</td>
-                          </tr>
-                          <tr className="fw-bold">
-                            <td>Total Paid</td>
-                            <td className="text-end">€{reservation.totalPaid}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  {/* Right Sidebar column */}
-                  <div className="col-lg-4">
-                    {/* Entry QR Code */}
-                    <div className="cardx p-4 mb-4 text-center">
-                      <h5>Entry QR</h5>
-                      <div className="qr">
+                    {/* Organizer Row */}
+                    <div className="info-row">
+                      <div className="icon-wrapper" style={{ background: "transparent" }}>
                         <img 
-                          src={reservation.attendanceQr || `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(reservation.id)}`}
-                          alt="Entry QR"
-                          style={{ width: "140px", height: "140px", objectFit: "contain" }}
+                          src={profile?.profilePic || "images/05.jpg"} 
+                          alt="Organizer Avatar" 
+                          style={{ width: "44px", height: "44px", borderRadius: "50%", objectFit: "cover" }} 
                         />
                       </div>
-                      <small>Show at entrance</small>
+                      <div className="row-content">
+                        <div className="row-title" style={{ fontSize: "12px", color: "#888", fontWeight: "500", textTransform: "uppercase" }}>Organizer</div>
+                        <div className="row-title">{reservation.organizerName}</div>
+                        <div className="row-subtitle">
+                          Mobile: {reservation.organizerPhone || "-"}
+                        </div>
+                      </div>
+                      <button className="row-action-btn" style={{ background: "#5b5fc7" }}>Attend.</button>
                     </div>
 
-                    {/* Organizer */}
-                    <div className="cardx p-4 mb-4">
-                      <h5>Organizer</h5>
-                      <p>
-                        {reservation.organizerName}<br />
-                        {reservation.organizerEmail}<br />
-                        {reservation.organizerPhone}
-                      </p>
-                      <button className="btn btn-primary w-100">Contact Organizer</button>
+                    {/* Can Bring Additional Guest Row */}
+                    <div className="info-row">
+                      <div className="icon-wrapper">
+                        <i className="fa-solid fa-user-plus"></i>
+                      </div>
+                      <div className="row-content">
+                        <div className="row-title">Can Bring Additional Guest</div>
+                        <div className="row-subtitle">{reservation.rawItem?.bringaLongGuest || "No"}</div>
+                      </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="cardx p-4">
-                      <h5>Actions</h5>
-                      <button className="btn btn-success w-100 mb-2">Download Ticket</button>
-                      <button className="btn btn-outline-primary w-100">Share Reservation</button>
+                    {/* RSVP Row */}
+                    <div className="info-row">
+                      <div className="icon-wrapper">
+                        <i className="fa-regular fa-envelope"></i>
+                      </div>
+                      <div className="row-content">
+                        <div className="row-title">RSVP</div>
+                        <div className="row-subtitle">{reservation.rawItem?.rvsp || "No"}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
 
+                  {/* Selected Summary Section */}
+                  <div className="summary-section">
+                    <h4 className="section-heading">Selected Summary</h4>
+                    
+                    <div className="summary-item">
+                      <div className="summary-label">Invites</div>
+                      <div className="summary-value">
+                        {reservation.contactList && reservation.contactList.length > 0
+                          ? reservation.contactList.map(c => c.fullName || c.name).join(", ")
+                          : reservation.invitedUsers && reservation.invitedUsers.length > 0
+                            ? reservation.invitedUsers.map(u => u.userId?.fullName || u.userId?.name || u.email).filter(Boolean).join(", ")
+                            : "None"}
+                      </div>
+                    </div>
+
+                    <div className="summary-item">
+                      <div className="summary-label">Selected Notes</div>
+                      <div className="summary-value">
+                        {reservation.rawItem?.noteId && reservation.rawItem.noteId.length > 0
+                          ? reservation.rawItem.noteId.map(n => n.notes || n).join(", ")
+                          : "None"}
+                      </div>
+                    </div>
+
+                    <div className="summary-item">
+                      <div className="summary-label">Gift registry URL</div>
+                      <div className="summary-value">
+                        {reservation.rawItem?.registryUrl
+                          ? (reservation.rawItem.registryUrl.registryName || reservation.rawItem.registryUrl.registryUrtl || "None")
+                          : "None"}
+                      </div>
+                    </div>
+
+                    <div className="summary-item">
+                      <div className="summary-label">Adult seats requested</div>
+                      <div className="summary-value">
+                        {reservation.rawItem?.makeReservation?.adultCount || reservation.rawItem?.adultCount || "35"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Services Section */}
+                  <div className="services-section">
+                    <h4 className="services-heading">Additional Services</h4>
+                    {getMappedServices().map((srv, index) => {
+                      const statusInfo = getServiceStatusDisplay(srv.status);
+                      return (
+                        <div className="service-card" key={index}>
+                          <img src={srv.img} alt={srv.name} className="service-img" />
+                          <div className="service-details">
+                            <div className="service-name">{srv.name}</div>
+                            <div className="service-status" style={{ color: statusInfo.color }}>
+                              {statusInfo.text}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
