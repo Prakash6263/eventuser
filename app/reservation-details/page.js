@@ -72,11 +72,11 @@ export default function ReservationDetailsPage() {
       packagePrice: totalAmount || 35,
       tax: 5,
       discount: 5,
-      totalPaid: totalAmount || 35,
-      tableNumber: resObj.instruction || "Table-Standard",
-      organizerName: item.eventcreator?.fullName || merchantObj.serviceName || "Event Host",
-      organizerEmail: item.eventcreator?.email || merchantObj.email || "support@eventuna.com",
-      organizerPhone: merchantObj.mobile || merchantObj.phone || "+91 810300655",
+      totalPaid: totalAmount || 0,
+      tableNumber: resObj.instruction || "-",
+      organizerName: item.eventcreator?.fullName || item.userId?.fullName || merchantObj.serviceName || "Organizer",
+      organizerEmail: item.eventcreator?.email || item.userId?.email || merchantObj.email || "-",
+      organizerPhone: item.eventcreator?.mobile || item.userId?.mobile || merchantObj.mobile || merchantObj.phone || "-",
       attendanceQr: resObj.attendanceQr || null,
       serviceBookings: item.serviceBookings || [],
       contactList: item.contactList || [],
@@ -142,16 +142,13 @@ export default function ReservationDetailsPage() {
     };
 
     if (rawServices.length === 0) {
-      return [
-        { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s", status: "confirmed" },
-        { name: "Decoration & Lighting", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_1g&s", status: "pending" }
-      ];
+      return [];
     }
 
     return rawServices.map((srv, index) => {
       const srvId = typeof srv === "string" ? srv : srv.serviceId;
       const srvStatus = typeof srv === "object" ? srv.status : "pending";
-      const info = serviceMap[srvId] || { name: `Additional Service ${index + 1}`, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s" };
+      const info = serviceMap[srvId] || { name: `Additional Service`, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s" };
       return {
         ...info,
         status: srvStatus
@@ -204,6 +201,12 @@ export default function ReservationDetailsPage() {
       </>
     );
   }
+
+  const guestsList = reservation.contactList?.length > 0 
+    ? reservation.contactList 
+    : (reservation.invitedUsers || []).map(u => u.userId).filter(Boolean);
+  const totalInvited = guestsList.length;
+  const displayGuests = guestsList.slice(0, 3);
 
   return (
     <>
@@ -283,235 +286,233 @@ export default function ReservationDetailsPage() {
                 </div>
 
                 <style>{`
-                  .res-card {
-                    max-width: 600px;
-                    margin: 0 auto;
+                  .web-res-card {
                     background: #fff;
-                    border-radius: 20px;
+                    border-radius: 16px;
                     overflow: hidden;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+                    border: 1px solid #eef0f5;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
                     font-family: 'Outfit', sans-serif;
-                    color: #111;
-                    border: 1px solid #f1f3f7;
+                    margin-bottom: 30px;
                   }
-                  .res-banner {
-                    height: 250px;
+                  .web-banner {
+                    height: 260px;
                     background-size: cover;
                     background-position: center;
                     position: relative;
                     cursor: pointer;
                     display: flex;
                     flex-direction: column;
-                    justify-content: space-between;
-                    padding: 20px;
-                    background-color: #f3f4f6;
+                    justify-content: flex-end;
+                    padding: 24px;
                     border-bottom: 1px solid #e5e7eb;
                   }
-                  .res-banner-overlay {
+                  .web-banner-overlay {
                     position: absolute;
                     inset: 0;
-                    background: linear-gradient(to bottom, rgba(0,0,0,0.15), rgba(0,0,0,0.55));
+                    background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.6));
                     z-index: 1;
                   }
-                  .upload-prompt {
-                    position: relative;
+                  .web-upload-prompt {
+                    position: absolute;
+                    top: 20px;
+                    right: 20px;
                     z-index: 2;
-                    align-self: center;
-                    margin-top: auto;
-                    margin-bottom: auto;
-                    text-align: center;
+                    background: rgba(0, 0, 0, 0.5);
+                    padding: 8px 16px;
+                    border-radius: 20px;
                     color: #fff;
-                  }
-                  .upload-prompt i {
-                    font-size: 32px;
-                    margin-bottom: 8px;
-                    display: block;
-                  }
-                  .upload-prompt span {
-                    font-weight: 600;
-                    font-size: 16px;
-                  }
-                  .participants-badge {
-                    position: relative;
-                    z-index: 2;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    margin-top: auto;
-                    background: rgba(255, 255, 255, 0.95);
-                    padding: 6px 14px;
-                    border-radius: 30px;
-                    width: fit-content;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                  }
-                  .avatar-stack {
-                    display: flex;
-                    align-items: center;
-                  }
-                  .avatar-stack img {
-                    width: 28px;
-                    height: 28px;
-                    border-radius: 50%;
-                    border: 2px solid #fff;
-                    margin-left: -8px;
-                    object-fit: cover;
-                  }
-                  .avatar-stack img:first-child {
-                    margin-left: 0;
-                  }
-                  .participants-text {
                     font-size: 13px;
                     font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: background 0.2s;
+                  }
+                  .web-upload-prompt:hover {
+                    background: rgba(0, 0, 0, 0.7);
+                  }
+                  .web-participants-badge {
+                    position: relative;
+                    z-index: 2;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    background: rgba(255, 255, 255, 0.95);
+                    padding: 8px 18px;
+                    border-radius: 30px;
+                    width: fit-content;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                  }
+                  .web-avatar-stack {
+                    display: flex;
+                    align-items: center;
+                  }
+                  .web-avatar-stack img {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 50%;
+                    border: 2px solid #fff;
+                    margin-left: -10px;
+                    object-fit: cover;
+                  }
+                  .web-avatar-stack img:first-child {
+                    margin-left: 0;
+                  }
+                  .web-participants-text {
+                    font-size: 13.5px;
+                    font-weight: 700;
                     color: #3e56f0;
                   }
-                  .event-info-section {
-                    padding: 24px;
+                  .web-content-grid {
+                    padding: 30px;
                   }
-                  .event-title {
-                    font-size: 26px;
+                  .web-event-title {
+                    font-size: 32px;
                     font-weight: 800;
                     color: #0c1b33;
-                    margin-bottom: 16px;
-                  }
-                  .event-details-label {
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: #111;
                     margin-bottom: 8px;
                   }
-                  .event-description {
-                    font-size: 14px;
-                    color: #666;
+                  .web-details-label {
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #111;
+                    margin-top: 24px;
+                    margin-bottom: 12px;
+                    border-bottom: 2px solid #f1f3f7;
+                    padding-bottom: 8px;
+                  }
+                  .web-description {
+                    font-size: 15px;
+                    color: #555;
                     line-height: 1.6;
-                    margin-bottom: 24px;
                     white-space: pre-wrap;
                   }
-                  .info-row {
+                  .web-info-row {
                     display: flex;
                     align-items: center;
                     gap: 16px;
                     padding: 16px 0;
-                    border-bottom: 1px solid #f1f3f7;
+                    border-bottom: 1px solid #f8fafc;
                   }
-                  .info-row:last-child {
+                  .web-info-row:last-child {
                     border-bottom: none;
                   }
-                  .icon-wrapper {
-                    width: 44px;
-                    height: 44px;
+                  .web-icon-wrapper {
+                    width: 46px;
+                    height: 46px;
                     border-radius: 12px;
                     background: #eef0ff;
                     color: #3e56f0;
                     display: grid;
                     place-items: center;
-                    font-size: 18px;
+                    font-size: 20px;
                     flex-shrink: 0;
                   }
-                  .row-content {
+                  .web-row-content {
                     flex-grow: 1;
                   }
-                  .row-title {
-                    font-size: 14px;
+                  .web-row-title {
+                    font-size: 15px;
                     font-weight: 700;
                     color: #111;
                   }
-                  .row-subtitle {
-                    font-size: 12.5px;
+                  .web-row-subtitle {
+                    font-size: 13px;
                     color: #666;
                     margin-top: 2px;
                   }
-                  .row-action-btn {
+                  .web-row-action-btn {
                     background: #5b5fc7;
                     color: #fff;
                     border: none;
                     border-radius: 20px;
-                    padding: 6px 16px;
-                    font-size: 12.5px;
+                    padding: 8px 20px;
+                    font-size: 13px;
                     font-weight: 600;
                     cursor: pointer;
                     box-shadow: 0 4px 10px rgba(91, 95, 199, 0.15);
                     transition: background 0.2s;
                   }
-                  .row-action-btn:hover {
+                  .web-row-action-btn:hover {
                     background: #4a4db5;
                   }
-                  .summary-section {
-                    padding: 24px;
+                  .web-sidebar-box {
                     background: #fafbfe;
-                    border-top: 1px solid #f1f3f7;
-                    border-bottom: 1px solid #f1f3f7;
+                    border: 1px solid #eef0f5;
+                    border-radius: 16px;
+                    padding: 24px;
+                    margin-bottom: 24px;
                   }
-                  .section-heading {
+                  .web-sidebar-heading {
                     font-size: 18px;
                     font-weight: 800;
                     color: #111;
-                    margin-bottom: 20px;
-                  }
-                  .summary-item {
                     margin-bottom: 18px;
+                    border-bottom: 2px solid #eef0f5;
+                    padding-bottom: 8px;
                   }
-                  .summary-item:last-child {
+                  .web-summary-item {
+                    margin-bottom: 16px;
+                  }
+                  .web-summary-item:last-child {
                     margin-bottom: 0;
                   }
-                  .summary-label {
+                  .web-summary-label {
                     font-size: 14.5px;
                     font-weight: 700;
                     color: #111;
                     margin-bottom: 4px;
                   }
-                  .summary-value {
-                    font-size: 13px;
+                  .web-summary-value {
+                    font-size: 13.5px;
                     color: #555;
                     line-height: 1.5;
                   }
-                  .services-section {
-                    padding: 24px;
-                  }
-                  .services-heading {
+                  .web-services-heading {
                     font-size: 18px;
                     font-weight: 800;
                     color: #ef4444;
-                    margin-bottom: 20px;
+                    margin-bottom: 18px;
+                    border-bottom: 2px solid #fee2e2;
+                    padding-bottom: 8px;
                   }
-                  .service-card {
+                  .web-service-card {
                     display: flex;
                     align-items: center;
                     gap: 16px;
-                    padding: 12px;
-                    border-radius: 14px;
-                    border: 1px solid #f1f3f7;
+                    padding: 12px 16px;
+                    border-radius: 12px;
+                    border: 1px solid #eef0f5;
                     background: #fff;
                     margin-bottom: 12px;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.01);
                   }
-                  .service-card:last-child {
+                  .web-service-card:last-child {
                     margin-bottom: 0;
                   }
-                  .service-img {
-                    width: 54px;
-                    height: 54px;
+                  .web-service-img {
+                    width: 50px;
+                    height: 50px;
                     border-radius: 10px;
                     object-fit: cover;
                   }
-                  .service-details {
-                    flex-grow: 1;
-                  }
-                  .service-name {
+                  .web-service-name {
                     font-size: 14.5px;
                     font-weight: 700;
                     color: #111;
                   }
-                  .service-status {
+                  .web-service-status {
                     font-size: 12.5px;
                     font-weight: 600;
                     margin-top: 2px;
                   }
                 `}</style>
 
-                <div className="res-card">
+                <div className="web-res-card">
                   {/* Banner Image with Upload Feature */}
                   <label 
-                    className="res-banner" 
+                    className="web-banner" 
                     style={{ 
                       backgroundImage: `url('${reservation.img || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s=10"}')`,
                       backgroundSize: "cover",
@@ -519,160 +520,214 @@ export default function ReservationDetailsPage() {
                     }}
                   >
                     <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
-                    <div className="res-banner-overlay"></div>
+                    <div className="web-banner-overlay"></div>
                     
-                    <div className="upload-prompt">
+                    <div className="web-upload-prompt">
                       <i className="fa-solid fa-cloud-arrow-up"></i>
                       <span>Tap to Upload Image</span>
                     </div>
 
-                    {/* Participants stack */}
-                    <div className="participants-badge">
-                      <div className="avatar-stack">
-                        <img src="images/05.jpg" alt="Guest 1" />
-                        <img src="images/06.jpg" alt="Guest 2" />
-                        <img src="images/07.jpg" alt="Guest 3" />
+                    {/* Dynamic Participants stack */}
+                    {totalInvited > 0 && (
+                      <div className="web-participants-badge">
+                        <div className="web-avatar-stack">
+                          {displayGuests.map((g, idx) => {
+                            const name = g.fullName || g.name || "Guest";
+                            const initial = name.charAt(0).toUpperCase();
+                            return (
+                              <div 
+                                key={idx} 
+                                style={{ 
+                                  width: "32px", 
+                                  height: "32px", 
+                                  borderRadius: "50%", 
+                                  background: ["#3e56f0", "#22c55e", "#ff9f43", "#ef4444"][idx % 4], 
+                                  color: "#fff", 
+                                  display: "grid", 
+                                  placeItems: "center", 
+                                  fontSize: "12px", 
+                                  fontWeight: "700",
+                                  border: "2px solid #fff",
+                                  marginLeft: idx > 0 ? "-10px" : "0",
+                                  position: "relative",
+                                  zIndex: 4 - idx
+                                }}
+                              >
+                                {initial}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <span className="web-participants-text">
+                          {totalInvited > 3 ? `+${totalInvited - 3} invited` : `${totalInvited} invited`}
+                        </span>
                       </div>
-                      <span className="participants-text">
-                        +{Math.max(0, (reservation.contactList?.length || reservation.invitedUsers?.length || 10) - 3)} invited
-                      </span>
-                    </div>
+                    )}
                   </label>
 
-                  <div className="event-info-section">
-                    <h2 className="event-title">{reservation.eventTitle}</h2>
-                    <h3 className="event-details-label">Event Details</h3>
-                    <p className="event-description">
-                      {reservation.rawItem?.description || "No description provided."}
-                    </p>
+                  <div className="web-content-grid">
+                    <div className="row g-4">
+                      {/* Left Main details column (col-lg-7) */}
+                      <div className="col-lg-7">
+                        <h2 className="web-event-title">{reservation.eventTitle}</h2>
+                        
+                        <h3 className="web-details-label" style={{ marginTop: "16px" }}>Event Details</h3>
+                        <p className="web-description">
+                          {reservation.rawItem?.description || "No description provided."}
+                        </p>
 
-                    {/* Date and Time Row */}
-                    <div className="info-row">
-                      <div className="icon-wrapper">
-                        <i className="fa-regular fa-calendar-days"></i>
-                      </div>
-                      <div className="row-content">
-                        <div className="row-title">{reservation.eventDate}</div>
-                        <div className="row-subtitle">
-                          {reservation.eventStartTime} - {reservation.eventEndTime}
+                        <h3 className="web-details-label">Scheduling & Location</h3>
+
+                        {/* Date and Time Row */}
+                        <div className="web-info-row">
+                          <div className="web-icon-wrapper">
+                            <i className="fa-regular fa-calendar-days"></i>
+                          </div>
+                          <div className="web-row-content">
+                            <div className="web-row-title">{reservation.eventDate}</div>
+                            <div className="web-row-subtitle">
+                              {reservation.eventStartTime} - {reservation.eventEndTime}
+                            </div>
+                          </div>
+                          <button className="web-row-action-btn" onClick={() => alert("Navigate to event modifier")}>Update</button>
                         </div>
-                      </div>
-                      <button className="row-action-btn" onClick={() => alert("Navigate to event modifier")}>Update</button>
-                    </div>
 
-                    {/* Venue Row */}
-                    <div className="info-row">
-                      <div className="icon-wrapper">
-                        <i className="fa-solid fa-location-dot"></i>
-                      </div>
-                      <div className="row-content">
-                        <div className="row-title">{reservation.venue?.split(" - ")?.[0] || "Venue"}</div>
-                        <div className="row-subtitle">
-                          {reservation.venue?.split(" - ")?.[1] || reservation.venue || "TBD"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Organizer Row */}
-                    <div className="info-row">
-                      <div className="icon-wrapper" style={{ background: "transparent" }}>
-                        <img 
-                          src={profile?.profilePic || "images/05.jpg"} 
-                          alt="Organizer Avatar" 
-                          style={{ width: "44px", height: "44px", borderRadius: "50%", objectFit: "cover" }} 
-                        />
-                      </div>
-                      <div className="row-content">
-                        <div className="row-title" style={{ fontSize: "12px", color: "#888", fontWeight: "500", textTransform: "uppercase" }}>Organizer</div>
-                        <div className="row-title">{reservation.organizerName}</div>
-                        <div className="row-subtitle">
-                          Mobile: {reservation.organizerPhone || "-"}
-                        </div>
-                      </div>
-                      <button className="row-action-btn" style={{ background: "#5b5fc7" }}>Attend.</button>
-                    </div>
-
-                    {/* Can Bring Additional Guest Row */}
-                    <div className="info-row">
-                      <div className="icon-wrapper">
-                        <i className="fa-solid fa-user-plus"></i>
-                      </div>
-                      <div className="row-content">
-                        <div className="row-title">Can Bring Additional Guest</div>
-                        <div className="row-subtitle">{reservation.rawItem?.bringaLongGuest || "No"}</div>
-                      </div>
-                    </div>
-
-                    {/* RSVP Row */}
-                    <div className="info-row">
-                      <div className="icon-wrapper">
-                        <i className="fa-regular fa-envelope"></i>
-                      </div>
-                      <div className="row-content">
-                        <div className="row-title">RSVP</div>
-                        <div className="row-subtitle">{reservation.rawItem?.rvsp || "No"}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Selected Summary Section */}
-                  <div className="summary-section">
-                    <h4 className="section-heading">Selected Summary</h4>
-                    
-                    <div className="summary-item">
-                      <div className="summary-label">Invites</div>
-                      <div className="summary-value">
-                        {reservation.contactList && reservation.contactList.length > 0
-                          ? reservation.contactList.map(c => c.fullName || c.name).join(", ")
-                          : reservation.invitedUsers && reservation.invitedUsers.length > 0
-                            ? reservation.invitedUsers.map(u => u.userId?.fullName || u.userId?.name || u.email).filter(Boolean).join(", ")
-                            : "None"}
-                      </div>
-                    </div>
-
-                    <div className="summary-item">
-                      <div className="summary-label">Selected Notes</div>
-                      <div className="summary-value">
-                        {reservation.rawItem?.noteId && reservation.rawItem.noteId.length > 0
-                          ? reservation.rawItem.noteId.map(n => n.notes || n).join(", ")
-                          : "None"}
-                      </div>
-                    </div>
-
-                    <div className="summary-item">
-                      <div className="summary-label">Gift registry URL</div>
-                      <div className="summary-value">
-                        {reservation.rawItem?.registryUrl
-                          ? (reservation.rawItem.registryUrl.registryName || reservation.rawItem.registryUrl.registryUrtl || "None")
-                          : "None"}
-                      </div>
-                    </div>
-
-                    <div className="summary-item">
-                      <div className="summary-label">Adult seats requested</div>
-                      <div className="summary-value">
-                        {reservation.rawItem?.makeReservation?.adultCount || reservation.rawItem?.adultCount || "35"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Additional Services Section */}
-                  <div className="services-section">
-                    <h4 className="services-heading">Additional Services</h4>
-                    {getMappedServices().map((srv, index) => {
-                      const statusInfo = getServiceStatusDisplay(srv.status);
-                      return (
-                        <div className="service-card" key={index}>
-                          <img src={srv.img} alt={srv.name} className="service-img" />
-                          <div className="service-details">
-                            <div className="service-name">{srv.name}</div>
-                            <div className="service-status" style={{ color: statusInfo.color }}>
-                              {statusInfo.text}
+                        {/* Venue Row */}
+                        <div className="web-info-row">
+                          <div className="web-icon-wrapper">
+                            <i className="fa-solid fa-location-dot"></i>
+                          </div>
+                          <div className="web-row-content">
+                            <div className="web-row-title">{reservation.venue?.split(" - ")?.[0] || "Venue"}</div>
+                            <div className="web-row-subtitle">
+                              {reservation.venue?.split(" - ")?.[1] || reservation.venue || "TBD"}
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
+
+                        {/* Organizer Row with Dynamic Avatar */}
+                        <div className="web-info-row">
+                          <div className="web-icon-wrapper" style={{ background: "transparent" }}>
+                            {reservation.organizerName ? (
+                              <div 
+                                style={{ 
+                                  width: "44px", 
+                                  height: "44px", 
+                                  borderRadius: "50%", 
+                                  background: "#3e56f0", 
+                                  color: "#fff", 
+                                  display: "grid", 
+                                  placeItems: "center", 
+                                  fontSize: "16px", 
+                                  fontWeight: "700" 
+                                }}
+                              >
+                                {reservation.organizerName.charAt(0).toUpperCase()}
+                              </div>
+                            ) : (
+                              <div className="web-icon-wrapper">
+                                <i className="fa-solid fa-user"></i>
+                              </div>
+                            )}
+                          </div>
+                          <div className="web-row-content">
+                            <div className="web-row-title" style={{ fontSize: "12px", color: "#888", fontWeight: "500", textTransform: "uppercase" }}>Organizer</div>
+                            <div className="web-row-title">{reservation.organizerName}</div>
+                            <div className="web-row-subtitle">
+                              Mobile: {reservation.organizerPhone || "-"}
+                            </div>
+                          </div>
+                          <button className="web-row-action-btn" style={{ background: "#5b5fc7" }}>Attend.</button>
+                        </div>
+
+                        {/* Can Bring Additional Guest Row */}
+                        <div className="web-info-row">
+                          <div className="web-icon-wrapper">
+                            <i className="fa-solid fa-user-plus"></i>
+                          </div>
+                          <div className="web-row-content">
+                            <div className="web-row-title">Can Bring Additional Guest</div>
+                            <div className="web-row-subtitle">{reservation.rawItem?.bringaLongGuest || "No"}</div>
+                          </div>
+                        </div>
+
+                        {/* RSVP Row */}
+                        <div className="web-info-row">
+                          <div className="web-icon-wrapper">
+                            <i className="fa-regular fa-envelope"></i>
+                          </div>
+                          <div className="web-row-content">
+                            <div className="web-row-title">RSVP</div>
+                            <div className="web-row-subtitle">{reservation.rawItem?.rvsp || "No"}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Sidebar Summary column (col-lg-5) */}
+                      <div className="col-lg-5">
+                        {/* Selected Summary Section */}
+                        <div className="web-sidebar-box">
+                          <h4 className="web-sidebar-heading">Selected Summary</h4>
+                          
+                          <div className="web-summary-item">
+                            <div className="web-summary-label">Invites</div>
+                            <div className="web-summary-value">
+                              {reservation.contactList && reservation.contactList.length > 0
+                                ? reservation.contactList.map(c => c.fullName || c.name).join(", ")
+                                : reservation.invitedUsers && reservation.invitedUsers.length > 0
+                                  ? reservation.invitedUsers.map(u => u.userId?.fullName || u.userId?.name || u.email).filter(Boolean).join(", ")
+                                  : "None"}
+                            </div>
+                          </div>
+
+                          <div className="web-summary-item">
+                            <div className="web-summary-label">Selected Notes</div>
+                            <div className="web-summary-value">
+                              {reservation.rawItem?.noteId && reservation.rawItem.noteId.length > 0
+                                ? reservation.rawItem.noteId.map(n => n.notes || n).join(", ")
+                                : "None"}
+                            </div>
+                          </div>
+
+                          <div className="web-summary-item">
+                            <div className="web-summary-label">Gift registry URL</div>
+                            <div className="web-summary-value">
+                              {reservation.rawItem?.registryUrl
+                                ? (reservation.rawItem.registryUrl.registryName || reservation.rawItem.registryUrl.registryUrtl || "None")
+                                : "None"}
+                            </div>
+                          </div>
+
+                          <div className="web-summary-item">
+                            <div className="web-summary-label">Adult seats requested</div>
+                            <div className="web-summary-value">
+                              {reservation.rawItem?.makeReservation?.adultCount || reservation.rawItem?.adultCount || "0"}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dynamic Additional Services Section */}
+                        {getMappedServices().length > 0 && (
+                          <div className="web-sidebar-box">
+                            <h4 className="web-services-heading">Additional Services</h4>
+                            {getMappedServices().map((srv, index) => {
+                              const statusInfo = getServiceStatusDisplay(srv.status);
+                              return (
+                                <div className="web-service-card" key={index}>
+                                  <img src={srv.img} alt={srv.name} className="web-service-img" />
+                                  <div className="service-details">
+                                    <div className="web-service-name">{srv.name}</div>
+                                    <div className="web-service-status" style={{ color: statusInfo.color }}>
+                                      {statusInfo.text}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
