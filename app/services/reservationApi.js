@@ -41,12 +41,20 @@ export const getCancelReasonsApi = async () => {
   });
 };
 
+// 6. Get Reservation Details By Id API
+export const getReservationDetailsByIdApi = async (eventId) => {
+  return await apiRequest(`/event/reservation-details-by-id?eventId=${eventId}`, {
+    method: "GET",
+  });
+};
+
 export const reservationApi = {
   getReservationDetails: getReservationDetailsApi,
   makeReservation: makeReservationApi,
   cancelReservation: cancelReservationApi,
   resendReservation: resendReservationApi,
   getCancelReasons: getCancelReasonsApi,
+  getReservationDetailsById: getReservationDetailsByIdApi,
 };
 
 export default reservationApi;

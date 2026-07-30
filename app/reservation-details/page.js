@@ -5,13 +5,87 @@ import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { authService } from "../services/authService";
+import { getReservationDetailsByIdApi } from "../services/reservationApi";
 
 export default function ReservationDetailsPage() {
   const [profile, setProfile] = useState(null);
   const [reservation, setReservation] = useState(null);
   const [detailsLoaded, setDetailsLoaded] = useState(false);
 
-  // Load profile and reservation info from storage
+  const mapReservationItem = (item) => {
+    let formattedDate = item.eventDate || "Date TBD";
+    try {
+      if (item.eventDate) {
+        const parts = item.eventDate.split('-');
+        if (parts.length === 3) {
+          const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const monthStr = monthNames[parseInt(parts[1]) - 1] || parts[1];
+          formattedDate = `${parts[0]} ${monthStr} ${parts[2]}`;
+        }
+      }
+    } catch (e) { }
+
+    const resObj = item.makeReservation || {};
+    const merchantObj = resObj.merchantId || {};
+    const locationObj = resObj.serviceLocationId || item.serviceLocationId || {};
+
+    let venueAddress = "Location TBD";
+    if (locationObj.addressName || locationObj.address) {
+      venueAddress = locationObj.addressName && locationObj.address
+        ? `${locationObj.addressName} - ${locationObj.address}`
+        : (locationObj.address || locationObj.addressName);
+    }
+
+    const rawStatus = (resObj.status || item.status || "Confirmed").toLowerCase();
+    let displayStatus = "Confirmed";
+    if (rawStatus === "pending" || rawStatus === "requested" || rawStatus === "waiting") {
+      displayStatus = "Pending";
+    } else if (rawStatus === "cancelled" || rawStatus === "rejected") {
+      displayStatus = "Cancelled";
+    } else if (rawStatus === "completed" || rawStatus === "finished") {
+      displayStatus = "Completed";
+    } else if (rawStatus === "accepted" || rawStatus === "confirmed" || rawStatus === "ongoingevent") {
+      displayStatus = "Confirmed";
+    }
+
+    const guests = resObj.adultCount ? `${resObj.adultCount.padStart(2, '0')} Guests` : "01 Guest";
+
+    let totalAmount = 0;
+    if (Array.isArray(item.serviceBookings) && item.serviceBookings.length > 0) {
+      totalAmount = item.serviceBookings.reduce((sum, sb) => sum + (sb.finalAmount || 0), 0);
+    }
+
+    return {
+      id: item._id,
+      reservationId: resObj._id || item._id,
+      eventTitle: item.eventTitle || merchantObj.serviceName || "Event Reservation",
+      eventDate: formattedDate,
+      eventStartTime: item.eventStartTime || "12:00 PM",
+      eventEndTime: item.eventEndTime || "04:00 PM",
+      venue: venueAddress,
+      status: displayStatus,
+      rawStatus: resObj.status || item.status,
+      guestsCount: guests,
+      reservedOn: item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' }) : "Recently",
+      img: item.image || merchantObj.bannerImage || "",
+      eventId: item._id,
+      packagePrice: totalAmount || 35,
+      tax: 5,
+      discount: 5,
+      totalPaid: totalAmount || 35,
+      tableNumber: resObj.instruction || "Table-Standard",
+      organizerName: item.eventcreator?.fullName || merchantObj.serviceName || "Event Host",
+      organizerEmail: item.eventcreator?.email || merchantObj.email || "support@eventuna.com",
+      organizerPhone: merchantObj.mobile || merchantObj.phone || "+91 810300655",
+      attendanceQr: resObj.attendanceQr || null,
+      serviceBookings: item.serviceBookings || [],
+      contactList: item.contactList || [],
+      invitedUsers: item.invitedUsers || [],
+      rawItem: item
+    };
+  };
+
+  // Load profile and reservation info
   useEffect(() => {
     const initializeData = async () => {
       // Profile load
@@ -29,9 +103,26 @@ export default function ReservationDetailsPage() {
 
       // Reservation load
       try {
-        const stored = localStorage.getItem("eventuna-latest-reservation");
-        if (stored) {
-          setReservation(JSON.parse(stored));
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get("id") || urlParams.get("eventId");
+
+        if (id) {
+          const res = await getReservationDetailsByIdApi(id);
+          if (res && res.status && Array.isArray(res.data) && res.data.length > 0) {
+            const item = res.data.find(d => d._id === id) || res.data[0];
+            const mapped = mapReservationItem(item);
+            setReservation(mapped);
+          } else {
+            const stored = localStorage.getItem("eventuna-latest-reservation");
+            if (stored) {
+              setReservation(JSON.parse(stored));
+            }
+          }
+        } else {
+          const stored = localStorage.getItem("eventuna-latest-reservation");
+          if (stored) {
+            setReservation(JSON.parse(stored));
+          }
         }
       } catch (e) {
         console.error(e);
