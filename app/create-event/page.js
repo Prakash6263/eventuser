@@ -1892,8 +1892,19 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
               >
                 Edit
               </button>
-              <span className="text-muted" style={{ fontSize: "9px" }}>|</span>
-              <button type="button">View all</button>
+              {invitedGuests.length > 4 && (
+                <>
+                  <span className="text-muted" style={{ fontSize: "9px" }}>|</span>
+                  <button 
+                    type="button"
+                    onClick={() => onEditStep("guests")}
+                    className="btn btn-link text-decoration-none p-0 text-primary fw-semibold"
+                    style={{ fontSize: "11px" }}
+                  >
+                    View all
+                  </button>
+                </>
+              )}
             </div>
           </div>
           {invitedGuests.length ? (
