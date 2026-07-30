@@ -7,7 +7,7 @@ import SiteHeader from "../components/Header";
 import Footer from "../components/Footer";
 import styles from "./create-event.module.css";
 import { getEventTypesApi, getEventCategoriesByTypeIdApi, getPlacePreferencesApi, getMerchantsByServiceApi, getEventNotesApi, createEventApi, getMyCreatedEventsApi } from "../services/eventApi";
-import { syncContactsApi, getAllUsersApi } from "../services/authApi";
+import { syncContactsApi, getAllUsersApi, getAddressesApi, addAddressApi } from "../services/authApi";
 import { makeReservationApi } from "../services/reservationApi";
 import CountryCodePicker from "../components/CountryCodePicker";
 import { isLoggedIn } from "../services/apiClient";
@@ -123,6 +123,73 @@ export default function CreateEventPage() {
   const [eventNotesList, setEventNotesList] = useState([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
 
+  // Private address state variables
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [isPrivateLocationCheckbox, setIsPrivateLocationCheckbox] = useState(true);
+  
+  // New private address inputs
+  const [newPrivateAddress, setNewPrivateAddress] = useState({
+    addressName: "",
+    address1: "",
+    address2: "",
+    postcode: ""
+  });
+  const [addAddressError, setAddAddressError] = useState("");
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+
+  const fetchSavedAddresses = async () => {
+    setLoadingAddresses(true);
+    try {
+      const res = await getAddressesApi();
+      if (res && res.status && Array.isArray(res.addresses)) {
+        const mappedAddresses = res.addresses.map(addr => ({
+          ...addr,
+          address: `${addr.address1 || ""}, ${addr.address2 || ""}, ${addr.postcode || ""}`.replace(/^,\s*|,\s*$/g, '')
+        }));
+        setSavedAddresses(mappedAddresses);
+        // Automatically select the first address if none is selected
+        if (mappedAddresses.length > 0 && !selectedLocation) {
+          setSelectedLocation(mappedAddresses[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load saved addresses:", err);
+    } finally {
+      setLoadingAddresses(false);
+    }
+  };
+
+  const handleAddPrivateAddress = async () => {
+    const { addressName, address1, address2, postcode } = newPrivateAddress;
+    if (!addressName.trim() || !address1.trim() || !address2.trim() || !postcode.trim()) {
+      setAddAddressError("All address fields are required.");
+      return;
+    }
+
+    setIsAddingAddress(true);
+    setAddAddressError("");
+    try {
+      const res = await addAddressApi({ addressName, address1, address2, postcode });
+      if (res && res.status) {
+        setNewPrivateAddress({ addressName: "", address1: "", address2: "", postcode: "" });
+        const newAddr = res.address || res.data;
+        await fetchSavedAddresses();
+        if (newAddr && newAddr._id) {
+          newAddr.address = `${newAddr.address1 || ""}, ${newAddr.address2 || ""}, ${newAddr.postcode || ""}`.replace(/^,\s*|,\s*$/g, '');
+          setSelectedLocation(newAddr);
+        }
+        setSubview("private-address");
+      } else {
+        throw new Error(res?.message || "Failed to add address.");
+      }
+    } catch (err) {
+      setAddAddressError(err.message || "An error occurred while adding the address.");
+    } finally {
+      setIsAddingAddress(false);
+    }
+  };
+
   useEffect(() => {
     if (!isLoggedIn()) {
       router.push("/login");
@@ -206,6 +273,7 @@ export default function CreateEventPage() {
     loadPlacePreferences();
     loadMerchants();
     loadEventNotes();
+    fetchSavedAddresses();
   }, []);
 
   const handleEventTypeChange = async (typeId) => {
@@ -707,7 +775,17 @@ export default function CreateEventPage() {
       setStep("place");
     } else if (step === "place") {
       const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006";
-      setStep(isRestaurantOption ? "restaurants" : "guests");
+      if (place === "Private location") {
+        if (subview !== "private-address") {
+          setSubview("private-address");
+          fetchSavedAddresses();
+        } else if (selectedLocation) {
+          setStep("guests");
+          setSubview(null);
+        }
+      } else {
+        setStep(isRestaurantOption ? "restaurants" : "guests");
+      }
     } else if (step === "restaurants") {
       setStep("guests");
     } else if (step === "guests") {
@@ -722,6 +800,14 @@ export default function CreateEventPage() {
   };
 
   const goBack = () => {
+    if (subview === "add-private-address") {
+      setSubview("private-address");
+      return;
+    }
+    if (subview === "private-address") {
+      setSubview(null);
+      return;
+    }
     if (subview) {
       setSubview(null);
       return;
@@ -730,7 +816,14 @@ export default function CreateEventPage() {
     if (step === "category") setStep("date");
     else if (step === "place") setStep("category");
     else if (step === "restaurants") setStep("place");
-    else if (step === "guests") setStep(isRestaurantOption ? "restaurants" : "place");
+    else if (step === "guests") {
+      if (place === "Private location") {
+        setStep("place");
+        setSubview("private-address");
+      } else {
+        setStep(isRestaurantOption ? "restaurants" : "place");
+      }
+    }
     else if (step === "guestInfo") setStep("guests");
     else if (step === "registry") setStep("guestInfo");
     else if (step === "notes") setStep("registry");
@@ -944,7 +1037,7 @@ export default function CreateEventPage() {
                       </div>
                     )}
 
-                    {step === "place" && (
+                    {step === "place" && !subview && (
                       <div className={styles.optionList}>
                         {loadingPlaces ? (
                           <div className="text-center py-4 text-muted">
@@ -985,6 +1078,30 @@ export default function CreateEventPage() {
                           <div className="text-center py-4 text-muted">No place preferences available</div>
                         )}
                       </div>
+                    )}
+
+                    {step === "place" && subview === "private-address" && (
+                      <PrivateAddressView
+                        savedAddresses={savedAddresses}
+                        selectedLocation={selectedLocation}
+                        setSelectedLocation={setSelectedLocation}
+                        isPrivateLocationCheckbox={isPrivateLocationCheckbox}
+                        setIsPrivateLocationCheckbox={setIsPrivateLocationCheckbox}
+                        onAddAddressClick={() => setSubview("add-private-address")}
+                        onNext={advance}
+                        loading={loadingAddresses}
+                      />
+                    )}
+
+                    {step === "place" && subview === "add-private-address" && (
+                      <AddPrivateAddressView
+                        newPrivateAddress={newPrivateAddress}
+                        setNewPrivateAddress={setNewPrivateAddress}
+                        onAdd={handleAddPrivateAddress}
+                        onCancel={() => setSubview("private-address")}
+                        error={addAddressError}
+                        submitting={isAddingAddress}
+                      />
                     )}
 
                     {step === "restaurants" && !subview && (
@@ -1116,7 +1233,8 @@ export default function CreateEventPage() {
                     )}
                   </div>
 
-                  <div className={styles.formActions}>
+                  {subview !== "private-address" && subview !== "add-private-address" && (
+                    <div className={styles.formActions}>
                     <button 
                       className={styles.secondaryButton} 
                       onClick={goBack} 
@@ -1172,6 +1290,7 @@ export default function CreateEventPage() {
                       </div>
                     )}
                   </div>
+                  )}
                 </section>
               </div>
             )}
@@ -1376,6 +1495,8 @@ function getViewTitle(step, subview) {
   if (subview === "detail" || subview === "review-detail") return "Restaurant details";
   if (subview === "locations") return "Available locations";
   if (subview === "search") return "Search places";
+  if (subview === "private-address") return "Event at private place";
+  if (subview === "add-private-address") return "Add Address";
   return {
     date: "When is your event?",
     category: "What kind of event is it?",
@@ -1391,6 +1512,8 @@ function getViewTitle(step, subview) {
 }
 
 function getViewDescription(step, subview) {
+  if (subview === "private-address") return "Confirm the event is at your private location and select a saved address.";
+  if (subview === "add-private-address") return "Enter the details to save a new private address.";
   if (subview) return "Review the venue information before making your selection.";
   return {
     date: "Select the event date, start time, and end time.",
@@ -1768,6 +1891,8 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
     } else {
       venueDisplay = "Participating restaurant";
     }
+  } else if (place === "Private location" && selectedLocation) {
+    venueDisplay = `${selectedLocation.addressName || "Private Address"}: ${selectedLocation.address1 || ""}, ${selectedLocation.address2 || ""}, ${selectedLocation.postcode || ""}`.replace(/,\s*$/, "");
   } else if (place) {
     venueDisplay = place;
   }
@@ -2038,6 +2163,238 @@ function GuestsStep({ guests: guestResults, search, setSearch, selectedGuests, t
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function PrivateAddressView({
+  savedAddresses,
+  selectedLocation,
+  setSelectedLocation,
+  isPrivateLocationCheckbox,
+  setIsPrivateLocationCheckbox,
+  onAddAddressClick,
+  onNext,
+  loading
+}) {
+  return (
+    <div className="mx-auto" style={{ maxWidth: "480px", padding: "10px" }}>
+      <div className="mb-4 d-flex align-items-center gap-2.5">
+        <label className="d-flex align-items-center gap-2 cursor-pointer w-100">
+          <input
+            type="checkbox"
+            checked={isPrivateLocationCheckbox}
+            onChange={(e) => setIsPrivateLocationCheckbox(e.target.checked)}
+            style={{ width: "20px", height: "20px", cursor: "pointer" }}
+            className="form-check-input mt-0"
+          />
+          <span style={{ fontSize: "14.5px", color: "#374151", fontWeight: "500" }}>The event is my private location</span>
+        </label>
+      </div>
+
+      <div className="mb-4">
+        <label className="form-label text-dark fw-bold mb-2.5" style={{ fontSize: "15px" }}>
+          Select Saved Address
+        </label>
+        {loading ? (
+          <div className="text-center py-4 text-muted">
+            <i className="fa-solid fa-spinner fa-spin me-2"></i> Loading saved addresses...
+          </div>
+        ) : savedAddresses.length > 0 ? (
+          <div className="position-relative">
+            <select
+              value={selectedLocation ? selectedLocation._id : ""}
+              onChange={(e) => {
+                const matched = savedAddresses.find(addr => addr._id === e.target.value);
+                setSelectedLocation(matched || null);
+              }}
+              className="form-select border-light-subtle shadow-sm px-3.5"
+              style={{
+                width: "100%",
+                height: "50px",
+                borderRadius: "10px",
+                fontSize: "14px",
+                background: "#fff",
+                appearance: "none",
+                borderColor: "#e5e7eb"
+              }}
+            >
+              {savedAddresses.map((addr) => (
+                <option key={addr._id} value={addr._id}>
+                  {addr.addressName} ({addr.address1}, {addr.address2})
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <p className="text-muted small">No saved addresses found.</p>
+        )}
+      </div>
+
+      <div className="mb-5">
+        <button
+          type="button"
+          onClick={onAddAddressClick}
+          className="btn btn-link text-decoration-none p-0 d-flex align-items-center gap-1.5 fw-semibold"
+          style={{
+            color: "#3e56f0",
+            fontSize: "14.5px",
+            cursor: "pointer"
+          }}
+        >
+          <span style={{ fontSize: "18px" }}>+</span> Add New Address
+        </button>
+      </div>
+
+      <div style={{ marginTop: "40px" }}>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!selectedLocation}
+          className="btn btn-primary rounded-pill py-3 fw-bold w-100 text-white"
+          style={{
+            background: "#5b5fc7",
+            border: "none",
+            fontSize: "15px",
+            boxShadow: "0 4px 12px rgba(91, 95, 199, 0.2)"
+          }}
+        >
+          NEXT
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AddPrivateAddressView({
+  newPrivateAddress,
+  setNewPrivateAddress,
+  onAdd,
+  onCancel,
+  error,
+  submitting
+}) {
+  return (
+    <div className="mx-auto" style={{ maxWidth: "480px", padding: "10px" }}>
+      <div className="mb-3">
+        <label className="form-label text-dark fw-bold mb-1.5" style={{ fontSize: "14px" }}>
+          Address Name
+        </label>
+        <input
+          type="text"
+          value={newPrivateAddress.addressName}
+          onChange={(e) => setNewPrivateAddress(prev => ({ ...prev, addressName: e.target.value }))}
+          placeholder="Address"
+          className="form-control border-light-subtle shadow-sm px-3.5"
+          style={{
+            width: "100%",
+            height: "48px",
+            borderRadius: "10px",
+            fontSize: "14px",
+            borderColor: "#e5e7eb"
+          }}
+        />
+      </div>
+
+      <div className="mb-3">
+        <label className="form-label text-dark fw-bold mb-1.5" style={{ fontSize: "14px" }}>
+          Address 1
+        </label>
+        <input
+          type="text"
+          value={newPrivateAddress.address1}
+          onChange={(e) => setNewPrivateAddress(prev => ({ ...prev, address1: e.target.value }))}
+          placeholder="Flat No. House"
+          className="form-control border-light-subtle shadow-sm px-3.5"
+          style={{
+            width: "100%",
+            height: "48px",
+            borderRadius: "10px",
+            fontSize: "14px",
+            borderColor: "#e5e7eb"
+          }}
+        />
+      </div>
+
+      <div className="mb-3">
+        <label className="form-label text-dark fw-bold mb-1.5" style={{ fontSize: "14px" }}>
+          Address 2
+        </label>
+        <input
+          type="text"
+          value={newPrivateAddress.address2}
+          onChange={(e) => setNewPrivateAddress(prev => ({ ...prev, address2: e.target.value }))}
+          placeholder="Locality"
+          className="form-control border-light-subtle shadow-sm px-3.5"
+          style={{
+            width: "100%",
+            height: "48px",
+            borderRadius: "10px",
+            fontSize: "14px",
+            borderColor: "#e5e7eb"
+          }}
+        />
+      </div>
+
+      <div className="mb-4">
+        <label className="form-label text-dark fw-bold mb-1.5" style={{ fontSize: "14px" }}>
+          Post Code
+        </label>
+        <input
+          type="text"
+          value={newPrivateAddress.postcode}
+          onChange={(e) => setNewPrivateAddress(prev => ({ ...prev, postcode: e.target.value }))}
+          placeholder="Post Code"
+          className="form-control border-light-subtle shadow-sm px-3.5"
+          style={{
+            width: "100%",
+            height: "48px",
+            borderRadius: "10px",
+            fontSize: "14px",
+            borderColor: "#e5e7eb"
+          }}
+        />
+      </div>
+
+      {error && (
+        <div className="alert alert-danger py-2 px-3 small border-0 shadow-sm d-flex align-items-center gap-2 mb-4" style={{ borderRadius: "8px" }}>
+          <i className="fa-solid fa-circle-exclamation text-danger"></i>
+          <span className="fw-medium text-danger">{error}</span>
+        </div>
+      )}
+
+      <div className="d-flex gap-3 mt-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          className="btn btn-outline-secondary rounded-pill py-2.5 fw-bold flex-grow-1 border-light-subtle"
+          style={{ fontSize: "14px", background: "#f9fafb" }}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onAdd}
+          disabled={submitting}
+          className="btn btn-primary rounded-pill py-2.5 fw-bold flex-grow-1 text-white"
+          style={{
+            background: "#5b5fc7",
+            border: "none",
+            fontSize: "14px",
+            boxShadow: "0 4px 12px rgba(91, 95, 199, 0.2)"
+          }}
+        >
+          {submitting ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-1.5" role="status" aria-hidden="true"></span>
+              Adding...
+            </>
+          ) : (
+            "ADD"
+          )}
+        </button>
+      </div>
     </div>
   );
 }

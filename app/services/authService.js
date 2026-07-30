@@ -11,6 +11,8 @@ import {
   changePasswordApi,
   getUserProfileApi,
   updateProfileApi,
+  getAddressesApi,
+  addAddressApi,
 } from "./authApi";
 
 export {
@@ -30,6 +32,8 @@ export {
   changePasswordApi,
   getUserProfileApi,
   updateProfileApi,
+  getAddressesApi,
+  addAddressApi,
 };
 
 export const authService = {
@@ -48,6 +52,8 @@ export const authService = {
   changePassword: changePasswordApi,
   getUserProfile: getUserProfileApi,
   updateProfile: updateProfileApi,
+  getAddresses: getAddressesApi,
+  addAddress: addAddressApi,
 };
 
 export default authApi;

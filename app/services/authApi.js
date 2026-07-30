@@ -170,6 +170,21 @@ export const getAllUsersApi = async () => {
   });
 };
 
+// 13. Get Addresses API
+export const getAddressesApi = async () => {
+  return await apiRequest("/auth/address", {
+    method: "GET",
+  });
+};
+
+// 14. Add Address API
+export const addAddressApi = async ({ addressName, address1, address2, postcode }) => {
+  return await apiRequest("/auth/add-address", {
+    method: "POST",
+    body: JSON.stringify({ addressName, address1, address2, postcode }),
+  });
+};
+
 export const authApi = {
   signup: signupApi,
   verifyOtp: verifyOtpApi,
@@ -183,4 +198,6 @@ export const authApi = {
   updateProfile: updateProfileApi,
   syncContacts: syncContactsApi,
   getAllUsers: getAllUsersApi,
+  getAddresses: getAddressesApi,
+  addAddress: addAddressApi,
 };
