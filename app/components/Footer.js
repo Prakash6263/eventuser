@@ -11,7 +11,7 @@ export default function Footer() {
                 <h4>Company</h4>
                 <ul className="footer-link-list">
                   <li>
-                    <Link href="#" className="footer-link">
+                    <Link href="https://eventuna.com/about" className="footer-link">
                       About Us
                     </Link>
                   </li>
@@ -48,12 +48,12 @@ export default function Footer() {
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="footer-link">
+                    <Link href="https://eventuna.com/privacy" className="footer-link">
                       Privacy Policy
                     </Link>
                   </li>
                   <li>
-                    <Link href="#" className="footer-link">
+                    <Link href="https://eventuna.com/terms" className="footer-link">
                       Terms & Conditions
                     </Link>
                   </li>

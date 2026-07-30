@@ -99,7 +99,7 @@ export default function Header() {
                   <li className="nav-item">
                     <Link
                       className={`nav-link ${isActive("/about") ? "active" : ""}`}
-                      href="#"
+                      href="https://eventuna.com/about"
                       onClick={() => setOffcanvasOpen(false)}
                     >
                       About Us
