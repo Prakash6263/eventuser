@@ -57,6 +57,7 @@ function getCalendarDays(month) {
 export default function CreateEventPage() {
   const router = useRouter();
   const [step, setStep] = useState("date");
+  const [isEditingFromReview, setIsEditingFromReview] = useState(false);
   const [month, setMonth] = useState(6);
   const [selectedDate, setSelectedDate] = useState(14);
   const [startTime, setStartTime] = useState("");
@@ -714,7 +715,10 @@ export default function CreateEventPage() {
     } else if (step === "guestInfo") setStep("registry");
     else if (step === "registry") setStep("notes");
     else if (step === "notes") setStep("content");
-    else if (step === "content") setStep("review");
+    else if (step === "content") {
+      setStep("review");
+      setIsEditingFromReview(false);
+    }
   };
 
   const goBack = () => {
@@ -1095,7 +1099,10 @@ export default function CreateEventPage() {
                         category={category}
                         eventType={eventType}
                         onViewDetail={() => setSubview("review-detail")}
-                        onEditStep={(targetStep) => setStep(targetStep)}
+                        onEditStep={(targetStep) => {
+                          setStep(targetStep);
+                          setIsEditingFromReview(true);
+                        }}
                       />
                     )}
 
@@ -1118,9 +1125,25 @@ export default function CreateEventPage() {
                       <i className="fa-solid fa-arrow-left"></i> Back
                     </button>
                     {!subview && step !== "review" && (
-                      <button className={styles.primaryButton} onClick={advance} disabled={!canContinue}>
-                        Continue <i className="fa-solid fa-arrow-right"></i>
-                      </button>
+                      <div className="d-flex align-items-center gap-2">
+                        {isEditingFromReview && (
+                          <button
+                            type="button"
+                            className={styles.primaryButton}
+                            style={{ background: "#10b981", borderColor: "#10b981" }}
+                            onClick={() => {
+                              setStep("review");
+                              setIsEditingFromReview(false);
+                            }}
+                            disabled={!canContinue}
+                          >
+                            Save & Return to Review <i className="fa-solid fa-check-double"></i>
+                          </button>
+                        )}
+                        <button className={styles.primaryButton} onClick={advance} disabled={!canContinue}>
+                          Continue <i className="fa-solid fa-arrow-right"></i>
+                        </button>
+                      </div>
                     )}
                     {step === "review" && !subview && (
                       <div className={styles.reviewActions}>
