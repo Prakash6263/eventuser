@@ -112,16 +112,6 @@ export default function ReservationDetailsPage() {
             const item = res.data.find(d => d._id === id) || res.data[0];
             const mapped = mapReservationItem(item);
             setReservation(mapped);
-          } else {
-            const stored = localStorage.getItem("eventuna-latest-reservation");
-            if (stored) {
-              setReservation(JSON.parse(stored));
-            }
-          }
-        } else {
-          const stored = localStorage.getItem("eventuna-latest-reservation");
-          if (stored) {
-            setReservation(JSON.parse(stored));
           }
         }
       } catch (e) {

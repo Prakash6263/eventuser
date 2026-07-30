@@ -235,7 +235,6 @@ export default function MyReservationsPage() {
   };
 
   const handleViewDetails = (res) => {
-    localStorage.setItem("eventuna-latest-reservation", JSON.stringify(res));
     router.push(`/reservation-details?id=${res.id}`);
   };
 
