@@ -9,7 +9,7 @@ import { getMerchantsByServiceApi } from "../services/eventApi";
 import { apiRequest } from "../services/apiClient";
 import Swal from "sweetalert2";
 
-const mapEventData = (data) => {
+const mapEventData = (data, loggedInUser) => {
   if (!data) return null;
   
   let selectedDate = 15;
@@ -43,6 +43,18 @@ const mapEventData = (data) => {
     };
   });
 
+  const isMyEvent = loggedInUser && data.eventcreator && (
+    (data.eventcreator._id && (data.eventcreator._id === loggedInUser.userId || data.eventcreator._id === loggedInUser._id || data.eventcreator._id === loggedInUser.id)) ||
+    (data.eventcreator.id && (data.eventcreator.id === loggedInUser.userId || data.eventcreator.id === loggedInUser._id || data.eventcreator.id === loggedInUser.id)) ||
+    (typeof data.eventcreator === "string" && (data.eventcreator === loggedInUser.userId || data.eventcreator === loggedInUser._id || data.eventcreator === loggedInUser.id))
+  );
+
+  let rawStatus = data.myInvitationStatus || data.status || data.eventCurrentStatus || "pending";
+  const statusLower = rawStatus.toLowerCase();
+  if (statusLower === "ongoingevent" || statusLower === "ongoing") {
+    rawStatus = "Upcoming";
+  }
+
   return {
     eventId: data._id,
     eventTitle: data.eventTitle || "Untitled Event",
@@ -73,7 +85,8 @@ const mapEventData = (data) => {
     eventType: data.eventType?.eventType || "",
     organizerName: data.eventcreator?.fullName || "Organizer",
     eventAttendanceQr: data.eventAttendanceQr || data.attendanceQrToken || null,
-    status: data.myInvitationStatus || data.status || data.eventCurrentStatus || "pending",
+    status: rawStatus,
+    isMyEvent: !!isMyEvent,
   };
 };
 
@@ -126,7 +139,8 @@ function EventDetailsContent() {
         setDetailsLoaded(false);
         const res = await apiRequest(`/event/eventbyId?id=${eventId}`);
         if (res && res.status && res.data) {
-          const mapped = mapEventData(res.data);
+          const userObj = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user_info")) : null;
+          const mapped = mapEventData(res.data, userObj);
           setEvent(mapped);
         } else {
           setApiMessage({ type: "danger", text: res?.message || "Failed to load event details." });
@@ -502,6 +516,15 @@ function EventDetailsContent() {
                 <div className="card-body p-4">
                   {/* Category and Type Badges */}
                   <div className="d-flex flex-wrap gap-2 mb-3">
+                    {event.status && (
+                      <span className={`badge px-3 py-2 rounded-pill fw-semibold text-white ${
+                        event.status.toLowerCase() === "upcoming" ? "bg-info" :
+                        event.status.toLowerCase() === "accepted" ? "bg-success" :
+                        event.status.toLowerCase() === "declined" ? "bg-danger" : "bg-warning text-dark"
+                      }`}>
+                        Status: {event.status}
+                      </span>
+                    )}
                     {event.category && (
                       <span className="badge px-3 py-2 rounded-pill fw-semibold" style={{ color: "#4f46e5", background: "#e0e7ff" }}>
                         <i className="fa-solid fa-tag me-1"></i> {event.category}
@@ -762,58 +785,60 @@ function EventDetailsContent() {
                   </div>
 
                   {/* Invitation Action Buttons */}
-                  <div className="border-top pt-3 mt-2">
-                    {["accepted", "ongoing", "approved", "ongoingevent"].includes(event.status?.toLowerCase()) && (
-                      <div className="d-grid gap-2">
-                        <button 
-                          type="button" 
-                          className="btn btn-danger rounded-pill py-2 fw-semibold"
-                          onClick={() => setShowDeclineModal(true)}
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    )}
-                    {event.status?.toLowerCase() === "declined" && (
-                      <div className="d-grid gap-2">
-                        <button 
-                          type="button" 
-                          className="btn btn-success rounded-pill py-2 fw-semibold text-white animate__animated animate__fadeIn"
-                          style={{ background: "#4f46e5", border: "none" }}
-                          onClick={() => setShowAcceptModal(true)}
-                        >
-                          Accept
-                        </button>
-                      </div>
-                    )}
-                    {(!event.status || ["pending", "not_invited"].includes(event.status.toLowerCase())) && (
-                      <div className="d-flex gap-2 justify-content-between animate__animated animate__fadeIn">
-                        <button 
-                          type="button" 
-                          className="btn btn-primary rounded-pill flex-grow-1 py-2 fw-semibold text-white" 
-                          style={{ background: "#4f46e5", border: "none" }}
-                          onClick={() => setShowAcceptModal(true)}
-                        >
-                          Accept
-                        </button>
-                        <button 
-                          type="button" 
-                          className="btn btn-outline-danger rounded-pill flex-grow-1 py-2 fw-semibold"
-                          onClick={() => setShowDeclineModal(true)}
-                        >
-                          Decline
-                        </button>
-                        <button 
-                          type="button" 
-                          className="btn btn-outline-primary rounded-pill flex-grow-1 py-2 fw-semibold"
-                          onClick={handleSetReminder}
-                          disabled={submitting}
-                        >
-                          Remind Me
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {!event.isMyEvent && (
+                    <div className="border-top pt-3 mt-2">
+                      {["accepted", "ongoing", "approved", "ongoingevent", "upcoming"].includes(event.status?.toLowerCase()) && (
+                        <div className="d-grid gap-2">
+                          <button 
+                            type="button" 
+                            className="btn btn-danger rounded-pill py-2 fw-semibold"
+                            onClick={() => setShowDeclineModal(true)}
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                      {event.status?.toLowerCase() === "declined" && (
+                        <div className="d-grid gap-2">
+                          <button 
+                            type="button" 
+                            className="btn btn-success rounded-pill py-2 fw-semibold text-white animate__animated animate__fadeIn"
+                            style={{ background: "#4f46e5", border: "none" }}
+                            onClick={() => setShowAcceptModal(true)}
+                          >
+                            Accept
+                          </button>
+                        </div>
+                      )}
+                      {(!event.status || ["pending", "not_invited"].includes(event.status.toLowerCase())) && (
+                        <div className="d-flex gap-2 justify-content-between animate__animated animate__fadeIn">
+                          <button 
+                            type="button" 
+                            className="btn btn-primary rounded-pill flex-grow-1 py-2 fw-semibold text-white" 
+                            style={{ background: "#4f46e5", border: "none" }}
+                            onClick={() => setShowAcceptModal(true)}
+                          >
+                            Accept
+                          </button>
+                          <button 
+                            type="button" 
+                            className="btn btn-outline-danger rounded-pill flex-grow-1 py-2 fw-semibold"
+                            onClick={() => setShowDeclineModal(true)}
+                          >
+                            Decline
+                          </button>
+                          <button 
+                            type="button" 
+                            className="btn btn-outline-primary rounded-pill flex-grow-1 py-2 fw-semibold"
+                            onClick={handleSetReminder}
+                            disabled={submitting}
+                          >
+                            Remind Me
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                 </div>
               </div>

@@ -111,6 +111,12 @@ export default function EventsPage() {
             locationStr = evt.placeId.preferences;
           }
 
+          let rawStatus = evt.myInvitationStatus || evt.status || evt.eventCurrentStatus || "pending";
+          const statusLower = rawStatus.toLowerCase();
+          if (statusLower === "ongoingevent" || statusLower === "ongoing") {
+            rawStatus = "Upcoming";
+          }
+
           return {
             id: evt._id,
             title: evt.eventTitle || "Untitled Event",
@@ -120,7 +126,7 @@ export default function EventsPage() {
             date: formattedMonthDay,
             filterDateStr: rawDateString,
             time: evt.eventStartTime || "",
-            status: evt.myInvitationStatus || evt.status || evt.eventCurrentStatus || "pending",
+            status: rawStatus,
             rawEvent: evt
           };
         });
@@ -301,7 +307,7 @@ export default function EventsPage() {
 
   const getStatusBadge = (status = "") => {
     const s = status.toString().toLowerCase();
-    if (s === "accepted" || s === "ongoingevent" || s === "ongoing" || s === "approved") {
+    if (s === "accepted" || s === "approved") {
       return <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Accepted</span>;
     }
     if (s === "pending" || s === "waiting for action" || s === "waiting") {
@@ -309,6 +315,9 @@ export default function EventsPage() {
     }
     if (s === "rejected" || s === "cancelled") {
       return <span className="badge bg-danger-subtle text-danger rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Cancelled</span>;
+    }
+    if (s === "ongoingevent" || s === "ongoing" || s === "upcoming") {
+      return <span className="badge bg-info-subtle text-info rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Upcoming</span>;
     }
     // Fallback display for dynamic status
     return <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px", textTransform: "capitalize" }}>{status || "Pending"}</span>;

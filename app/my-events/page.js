@@ -77,7 +77,7 @@ export default function MyEventsPage() {
               locationStr = evt.placeId.preferences;
             }
 
-            // Status mapping to "Accepted" | "Waiting for Action" | "Completed" | "Ongoing"
+            // Status mapping to "Accepted" | "Waiting for Action" | "Completed" | "Upcoming" | "Ongoing"
             let uiStatus = "Ongoing";
             let badgeClass = "bg-primary";
             const rawStatus = (evt.status || evt.eventCurrentStatus || "").toLowerCase();
@@ -91,6 +91,9 @@ export default function MyEventsPage() {
             } else if (rawStatus === "accepted") {
               uiStatus = "Accepted";
               badgeClass = "bg-success";
+            } else if (rawStatus === "ongoingevent" || rawStatus === "ongoing") {
+              uiStatus = "Upcoming";
+              badgeClass = "bg-info text-dark";
             }
 
             return {
@@ -207,7 +210,7 @@ export default function MyEventsPage() {
                     <h4 className="user-profile-card-title fw-bold m-0">My Events</h4>
                     {/* Status Tabs Filter */}
                     <div className="btn-group btn-group-sm" role="group">
-                      {["All", "Accepted", "Completed", "Ongoing"].map((tab) => (
+                      {["All", "Accepted", "Completed", "Upcoming", "Ongoing"].map((tab) => (
                         <button
                           key={tab}
                           type="button"
