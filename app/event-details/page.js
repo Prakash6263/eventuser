@@ -1,12 +1,86 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { getMerchantsByServiceApi } from "../services/eventApi";
+import { apiRequest } from "../services/apiClient";
+import Swal from "sweetalert2";
 
-export default function EventDetailsPage() {
+const mapEventData = (data) => {
+  if (!data) return null;
+  
+  let selectedDate = 15;
+  let month = 6;
+  try {
+    if (data.eventDate) {
+      const parts = data.eventDate.split('-');
+      if (parts.length === 3) {
+        selectedDate = parseInt(parts[0], 10);
+        month = parseInt(parts[1], 10) - 1; // 0-indexed month
+      } else {
+        const d = new Date(data.eventDate);
+        if (!isNaN(d.getTime())) {
+          selectedDate = d.getDate();
+          month = d.getMonth();
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing eventDate:", e);
+  }
+
+  const selectedGuests = (data.invitedUsers || []).map((guest, idx) => {
+    return {
+      id: guest.userId?._id || idx.toString(),
+      name: guest.userId?.fullName || "Guest",
+      profilePic: guest.userId?.profilePic || null,
+      status: guest.status || "pending",
+      email: guest.userId?.email || null,
+      mobile: guest.userId?.mobile || null,
+    };
+  });
+
+  return {
+    eventId: data._id,
+    eventTitle: data.eventTitle || "Untitled Event",
+    invitationMessage: data.description || "No description provided.",
+    eventImage: data.image || null,
+    selectedDate: selectedDate,
+    month: month,
+    startTime: data.eventStartTime || "",
+    endTime: data.eventEndTime || "",
+    selectedRestaurant: data.merchantId?._id || data.merchantId || (data.serviceLocationId?.merchantId?._id || data.serviceLocationId?.merchantId || ""),
+    selectedGuests: selectedGuests,
+    bringGuests: data.bringaLongGuest || "No",
+    maxGuests: data.bringaLongNumber || "0",
+    rsvp: data.rvsp || "No",
+    rsvpBy: data.eventDate || "",
+    selectedNotes: (data.noteId || []).map((n) => n.notes || n),
+    registryUrl: typeof data.registryUrl === "object" && data.registryUrl !== null
+      ? (data.registryUrl.registryUrl || data.registryUrl.registryName || "")
+      : (data.registryUrl || ""),
+    place: data.placeId?.preferences || "At a participating restaurant",
+    selectedLocation: data.serviceLocationId
+      ? {
+          addressName: data.serviceLocationId.addressName || "",
+          address: data.serviceLocationId.address || "",
+        }
+      : null,
+    category: data.eventCategory?.category || "",
+    eventType: data.eventType?.eventType || "",
+    organizerName: data.eventcreator?.fullName || "Organizer",
+    eventAttendanceQr: data.eventAttendanceQr || data.attendanceQrToken || null,
+    status: data.myInvitationStatus || data.status || data.eventCurrentStatus || "pending",
+  };
+};
+
+function EventDetailsContent() {
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("id");
+
   const [event, setEvent] = useState(null);
   const [detailsLoaded, setDetailsLoaded] = useState(false);
   const [merchants, setMerchants] = useState([]);
@@ -14,8 +88,26 @@ export default function EventDetailsPage() {
   const [backUrl, setBackUrl] = useState("/my-events");
   const [backLabel, setBackLabel] = useState("Back to My Events");
 
+  // Accept Invitation Modal inputs & loading
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [thanksMessage, setThanksMessage] = useState("");
+  const [suggestionMessage, setSuggestionMessage] = useState("");
+  const [alongGuest, setAlongGuest] = useState("ye");
+
+  // Decline Invitation Modal inputs & loading
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [declineSuggestion, setDeclineSuggestion] = useState("");
+  const [forceDetailsView, setForceDetailsView] = useState(false);
+  const [hasJustDeclined, setHasJustDeclined] = useState(false);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [apiMessage, setApiMessage] = useState({ type: "", text: "" });
+
   // Load event details that were selected from an event list or created event flow.
   useEffect(() => {
+    setForceDetailsView(false);
+    setHasJustDeclined(false);
     try {
       const savedUrl = window.localStorage.getItem("event-details-back-url");
       const savedLabel = window.localStorage.getItem("event-details-back-label");
@@ -25,18 +117,29 @@ export default function EventDetailsPage() {
       console.error("Error reading back redirection url:", e);
     }
 
-    let savedEvent = null;
-    try {
-      const data = window.localStorage.getItem("eventuna-latest-event");
-      if (data) {
-        savedEvent = JSON.parse(data);
+    const fetchEventDetails = async () => {
+      if (!eventId) {
+        setDetailsLoaded(true);
+        return;
       }
-    } catch (e) {
-      console.error("Error reading event details from localStorage:", e);
-    }
+      try {
+        setDetailsLoaded(false);
+        const res = await apiRequest(`/event/eventbyId?id=${eventId}`);
+        if (res && res.status && res.data) {
+          const mapped = mapEventData(res.data);
+          setEvent(mapped);
+        } else {
+          setApiMessage({ type: "danger", text: res?.message || "Failed to load event details." });
+        }
+      } catch (err) {
+        console.error("Failed to fetch event details:", err);
+        setApiMessage({ type: "danger", text: "Network error loading event details." });
+      } finally {
+        setDetailsLoaded(true);
+      }
+    };
 
-    setEvent(savedEvent);
-    setDetailsLoaded(true);
+    fetchEventDetails();
 
     // Load merchants list to display venue info details
     const fetchMerchants = async () => {
@@ -52,7 +155,134 @@ export default function EventDetailsPage() {
       }
     };
     fetchMerchants();
-  }, []);
+  }, [eventId]);
+
+  const handleConfirmAccept = async (e) => {
+    e.preventDefault();
+    if (!event || !event.eventId) {
+      setApiMessage({ type: "danger", text: "Error: Could not identify the event ID. Please reload and try again." });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setApiMessage({ type: "", text: "" });
+
+      const payload = {
+        status: "accepted",
+        along_guest: String(alongGuest || "ye").toLowerCase(),
+        thanks_message: thanksMessage || "",
+        suggestion_message: suggestionMessage || "",
+        eventId: event.eventId
+      };
+
+      const res = await apiRequest("/event/respond-to-invitation", {
+        method: "POST",
+        body: payload
+      });
+
+      if (res && res.status) {
+        setApiMessage({ type: "success", text: res.message || "Invitation accepted successfully!" });
+        // Update local event status state to trigger UI update
+        const updatedEvent = { ...event, status: "accepted" };
+        setEvent(updatedEvent);
+        
+        setTimeout(() => {
+          setShowAcceptModal(false);
+          setApiMessage({ type: "", text: "" });
+        }, 2000);
+      } else {
+        setApiMessage({ type: "danger", text: res?.message || "Failed to respond to invitation." });
+      }
+    } catch (err) {
+      setApiMessage({ type: "danger", text: err.message || "Network error. Please try again." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmDecline = async (e) => {
+    e.preventDefault();
+    if (!event || !event.eventId) {
+      setApiMessage({ type: "danger", text: "Error: Could not identify the event ID. Please reload and try again." });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setApiMessage({ type: "", text: "" });
+
+      const payload = {
+        status: "declined",
+        along_guest: "",
+        thanks_message: declineReason || "",
+        suggestion_message: declineSuggestion || "",
+        eventId: event.eventId
+      };
+
+      const res = await apiRequest("/event/respond-to-invitation", {
+        method: "POST",
+        body: payload
+      });
+
+      if (res && res.status) {
+        setApiMessage({ type: "success", text: res.message || "Invitation declined successfully!" });
+        // Update local event status state to trigger UI update
+        const updatedEvent = { ...event, status: "declined" };
+        setEvent(updatedEvent);
+        setHasJustDeclined(true);
+        
+        setTimeout(() => {
+          setShowDeclineModal(false);
+          setApiMessage({ type: "", text: "" });
+        }, 2000);
+      } else {
+        setApiMessage({ type: "danger", text: res?.message || "Failed to respond to invitation." });
+      }
+    } catch (err) {
+      setApiMessage({ type: "danger", text: err.message || "Network error. Please try again." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSetReminder = async () => {
+    if (!event || !event.eventId) {
+      setApiMessage({ type: "danger", text: "Error: Could not identify the event ID." });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setApiMessage({ type: "", text: "" });
+
+      const res = await apiRequest("/event/set-reminder", {
+        method: "POST",
+        body: { eventId: event.eventId }
+      });
+
+      if (res && res.status) {
+        setApiMessage({ type: "success", text: res.message || "Reminder set successfully" });
+        Swal.fire({
+          title: "Event UNA",
+          text: "Set reminder successfully",
+          icon: "success",
+          confirmButtonText: "Ok",
+          confirmButtonColor: "#4f46e5",
+          customClass: {
+            popup: "rounded-4 border-0 shadow",
+            confirmButton: "btn btn-primary rounded-pill px-4"
+          }
+        });
+      } else {
+        setApiMessage({ type: "danger", text: res?.message || "Failed to set reminder." });
+      }
+    } catch (err) {
+      setApiMessage({ type: "danger", text: err.message || "Network error. Please try again." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (!detailsLoaded) {
     return (
@@ -87,6 +317,91 @@ export default function EventDetailsPage() {
               <i className="fa-solid fa-arrow-left"></i>
               Go to My Events
             </Link>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  // If user declined the invitation, show the sad state screen
+  if (hasJustDeclined && !forceDetailsView) {
+    return (
+      <>
+        <Header />
+        <div className="bg-white min-vh-100 d-flex align-items-center justify-content-center py-5" style={{ minHeight: "calc(100vh - 120px)" }}>
+          <div className="container px-3" style={{ maxWidth: "480px" }}>
+            
+            {/* Top Navigation Header mimicking mobile screen */}
+            <div className="d-flex align-items-center mb-4 pb-2 border-bottom">
+              <button 
+                onClick={() => { setForceDetailsView(true); setHasJustDeclined(false); }} 
+                className="btn border-0 p-0 bg-transparent text-dark fs-4 me-3"
+                title="Go back"
+              >
+                <i className="fa-solid fa-arrow-left"></i>
+              </button>
+              <h5 className="fw-bold text-dark m-0 text-center flex-grow-1 pe-4" style={{ fontSize: "18px" }}>
+                Reservation
+              </h5>
+            </div>
+
+            <div className="text-center px-2">
+              {/* Event Title */}
+              <div className="text-muted small fw-bold text-uppercase mb-2" style={{ letterSpacing: "1px" }}>
+                {event.eventTitle || "dr"}
+              </div>
+
+              {/* Decline Headers */}
+              <h2 className="fw-bold text-dark mb-3" style={{ fontSize: "28px", letterSpacing: "-0.5px", lineHeight: "1.25" }}>
+                We&apos;re sad that you can&apos;t attend this.
+              </h2>
+              
+              <p className="text-muted mb-5 mx-auto" style={{ fontSize: "14.5px", maxWidth: "400px", lineHeight: "1.6" }}>
+                If you change you mind you could access the invitation again and accept the invitation.
+              </p>
+
+              {/* Vector Bell-Slash Illustration */}
+              <div className="my-5 d-flex justify-content-center">
+                <div className="position-relative d-flex align-items-center justify-content-center bg-light rounded-circle shadow-sm" style={{ width: "120px", height: "120px", background: "#f8fafc" }}>
+                  <i className="fa-regular fa-bell-slash text-secondary opacity-75" style={{ fontSize: "42px" }}></i>
+                  {/* Sad Emoji Eyes */}
+                  <span className="position-absolute text-secondary fw-bold" style={{ bottom: "25px", fontSize: "14px", letterSpacing: "1px" }}>:(</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="d-flex flex-column gap-3 mt-5">
+                <button 
+                  type="button" 
+                  className="btn btn-outline-primary rounded-pill py-3 fw-bold"
+                  style={{
+                    borderColor: "#3b82f6",
+                    color: "#3b82f6",
+                    borderWidth: "1.5px",
+                    fontSize: "14px",
+                    letterSpacing: "0.5px"
+                  }}
+                  onClick={() => { setForceDetailsView(true); setHasJustDeclined(false); }}
+                >
+                  ACCESS EVENT
+                </button>
+                <Link 
+                  href="/" 
+                  className="btn btn-primary rounded-pill py-3 fw-bold text-white"
+                  style={{
+                    background: "#4f46e5",
+                    border: "none",
+                    fontSize: "14px",
+                    letterSpacing: "0.5px",
+                    boxShadow: "0 4px 12px rgba(79, 70, 229, 0.15)"
+                  }}
+                >
+                  HOME
+                </Link>
+              </div>
+            </div>
+
           </div>
         </div>
         <Footer />
@@ -148,6 +463,14 @@ export default function EventDetailsPage() {
               Event Details
             </span>
           </div>
+
+          {apiMessage.text && !showAcceptModal && (
+            <div className={`alert alert-${apiMessage.type} alert-dismissible fade show mb-4`} role="alert">
+              <i className={`fa-solid ${apiMessage.type === "success" ? "fa-circle-check" : "fa-circle-exclamation"} me-2`}></i>
+              {apiMessage.text}
+              <button type="button" className="btn-close" onClick={() => setApiMessage({ type: "", text: "" })}></button>
+            </div>
+          )}
 
           <div className="row g-4">
 
@@ -425,7 +748,7 @@ export default function EventDetailsPage() {
                   )}
 
                   {/* Organizer Details */}
-                  <div className="d-flex align-items-start gap-3 border-top pt-3">
+                  <div className="d-flex align-items-start gap-3 border-top pt-3 mb-3">
                     <div
                       className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                       style={{ width: "36px", height: "36px", background: "#f3f4f6", color: "#374151", fontSize: "16px" }}
@@ -436,6 +759,60 @@ export default function EventDetailsPage() {
                       <span className="text-muted small d-block">Event Organizer</span>
                       <strong className="text-dark small">{event.organizerName || "Organizer"}</strong>
                     </div>
+                  </div>
+
+                  {/* Invitation Action Buttons */}
+                  <div className="border-top pt-3 mt-2">
+                    {["accepted", "ongoing", "approved", "ongoingevent"].includes(event.status?.toLowerCase()) && (
+                      <div className="d-grid gap-2">
+                        <button 
+                          type="button" 
+                          className="btn btn-danger rounded-pill py-2 fw-semibold"
+                          onClick={() => setShowDeclineModal(true)}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
+                    {event.status?.toLowerCase() === "declined" && (
+                      <div className="d-grid gap-2">
+                        <button 
+                          type="button" 
+                          className="btn btn-success rounded-pill py-2 fw-semibold text-white animate__animated animate__fadeIn"
+                          style={{ background: "#4f46e5", border: "none" }}
+                          onClick={() => setShowAcceptModal(true)}
+                        >
+                          Accept
+                        </button>
+                      </div>
+                    )}
+                    {(!event.status || ["pending", "not_invited"].includes(event.status.toLowerCase())) && (
+                      <div className="d-flex gap-2 justify-content-between animate__animated animate__fadeIn">
+                        <button 
+                          type="button" 
+                          className="btn btn-primary rounded-pill flex-grow-1 py-2 fw-semibold text-white" 
+                          style={{ background: "#4f46e5", border: "none" }}
+                          onClick={() => setShowAcceptModal(true)}
+                        >
+                          Accept
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn btn-outline-danger rounded-pill flex-grow-1 py-2 fw-semibold"
+                          onClick={() => setShowDeclineModal(true)}
+                        >
+                          Decline
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn btn-outline-primary rounded-pill flex-grow-1 py-2 fw-semibold"
+                          onClick={handleSetReminder}
+                          disabled={submitting}
+                        >
+                          Remind Me
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                 </div>
@@ -603,7 +980,254 @@ export default function EventDetailsPage() {
         </div>
       )}
 
+      {/* Accept Invitation Modal dialog */}
+      {showAcceptModal && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ background: "rgba(10, 6, 80, 0.65)", backdropFilter: "blur(6px)", zIndex: 1050 }}
+          onClick={() => !submitting && setShowAcceptModal(false)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered modal-dialog-scrollable px-3"
+            style={{ maxWidth: "480px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <form className="modal-content border-0 rounded-4 overflow-hidden shadow-lg bg-white" onSubmit={handleConfirmAccept}>
+              {/* Modern Header */}
+              <div className="modal-header border-bottom-0 py-3 px-4 d-flex justify-content-between align-items-center bg-primary text-white">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="rounded-circle bg-white bg-opacity-20 d-flex align-items-center justify-content-center" style={{ width: "32px", height: "32px" }}>
+                    <i className="fa-regular fa-envelope-open text-white"></i>
+                  </div>
+                  <h5 className="modal-title fw-bold text-white m-0" style={{ fontSize: "16px", letterSpacing: "0.2px" }}>Accept Invitation</h5>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white opacity-75 border-0 bg-transparent text-white fs-5"
+                  aria-label="Close"
+                  disabled={submitting}
+                  onClick={() => setShowAcceptModal(false)}
+                  style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="modal-body p-4 bg-light bg-opacity-50">
+                <div className="text-center mb-4">
+                  <div className="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success rounded-circle mb-2" style={{ width: "50px", height: "50px" }}>
+                    <i className="fa-solid fa-circle-check fs-4"></i>
+                  </div>
+                  <h6 className="fw-bold text-dark mb-1" style={{ fontSize: "16px" }}>We&apos;re happy that you will attend this!</h6>
+                  <p className="text-muted small mb-0">Please fill in the optional details below to confirm.</p>
+                </div>
+
+                {apiMessage.text && (
+                  <div className={`alert alert-${apiMessage.type} small border-0 shadow-sm py-2 px-3 mb-3 d-flex align-items-center gap-2`} role="alert" style={{ borderRadius: "10px" }}>
+                    <i className={`fa-solid ${apiMessage.type === "success" ? "fa-circle-check" : "fa-circle-exclamation"}`}></i>
+                    {apiMessage.text}
+                  </div>
+                )}
+
+                {/* Optional Thank You message */}
+                <div className="mb-3">
+                  <label className="form-label text-dark small fw-bold mb-1.5">Optional Thank You Message</label>
+                  <textarea
+                    className="form-control border-light-subtle shadow-sm rounded-3 px-3 py-2"
+                    rows="2.5"
+                    placeholder="Write a thank you note..."
+                    value={thanksMessage}
+                    onChange={(e) => setThanksMessage(e.target.value)}
+                    style={{ fontSize: "13.5px", resize: "none", borderColor: "#e5e7eb" }}
+                  ></textarea>
+                </div>
+
+                {/* Optional Suggestion message */}
+                <div className="mb-3">
+                  <label className="form-label text-dark small fw-bold mb-1.5">Optional Suggestions</label>
+                  <textarea
+                    className="form-control border-light-subtle shadow-sm rounded-3 px-3 py-2"
+                    rows="2.5"
+                    placeholder="Any specific preference or suggestion..."
+                    value={suggestionMessage}
+                    onChange={(e) => setSuggestionMessage(e.target.value)}
+                    style={{ fontSize: "13.5px", resize: "none", borderColor: "#e5e7eb" }}
+                  ></textarea>
+                </div>
+
+                {/* Can bring along guests text input */}
+                <div className="mb-2">
+                  <label className="form-label text-dark small fw-bold mb-1.5">Can bring along guests</label>
+                  <input
+                    type="text"
+                    className="form-control border-light-subtle shadow-sm rounded-pill px-4"
+                    placeholder="ye"
+                    value={alongGuest}
+                    onChange={(e) => setAlongGuest(e.target.value)}
+                    style={{ fontSize: "14px", height: "42px", borderColor: "#e5e7eb" }}
+                  />
+                </div>
+              </div>
+
+              {/* Modern Action Footer */}
+              <div className="modal-footer border-top-0 py-3 px-4 bg-white d-flex gap-3">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-pill px-4 flex-grow-1 py-2.5 fw-bold text-muted border-light-subtle"
+                  disabled={submitting}
+                  onClick={() => setShowAcceptModal(false)}
+                  style={{ fontSize: "13.5px", background: "#f9fafb" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary rounded-pill px-4 flex-grow-1 py-2.5 fw-bold text-white"
+                  style={{ background: "#4f46e5", border: "none", fontSize: "13.5px" }}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Submitting...
+                    </>
+                  ) : (
+                    "Confirm Attendance"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Decline Invitation Modal dialog */}
+      {showDeclineModal && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ background: "rgba(10, 6, 80, 0.65)", backdropFilter: "blur(6px)", zIndex: 1050 }}
+          onClick={() => !submitting && setShowDeclineModal(false)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered modal-dialog-scrollable px-3"
+            style={{ maxWidth: "480px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <form className="modal-content border-0 rounded-4 overflow-hidden shadow-lg bg-white" onSubmit={handleConfirmDecline}>
+              {/* Modern Header */}
+              <div className="modal-header border-bottom-0 py-3 px-4 d-flex justify-content-between align-items-center bg-danger text-white">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="rounded-circle bg-white bg-opacity-20 d-flex align-items-center justify-content-center" style={{ width: "32px", height: "32px" }}>
+                    <i className="fa-regular fa-bell-slash text-white"></i>
+                  </div>
+                  <h5 className="modal-title fw-bold text-white m-0" style={{ fontSize: "16px", letterSpacing: "0.2px" }}>Decline Invitation</h5>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white opacity-75 border-0 bg-transparent text-white fs-5"
+                  aria-label="Close"
+                  disabled={submitting}
+                  onClick={() => setShowDeclineModal(false)}
+                  style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="modal-body p-4 bg-light bg-opacity-50">
+                <div className="text-center mb-4">
+                  <div className="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle mb-2" style={{ width: "50px", height: "50px" }}>
+                    <i className="fa-solid fa-face-frown fs-4"></i>
+                  </div>
+                  <h6 className="fw-bold text-dark mb-1" style={{ fontSize: "16px" }}>We&apos;re sad that you can&apos;t attend this.</h6>
+                  <p className="text-muted small mb-0">Please tell us why you won&apos;t be able to make it.</p>
+                </div>
+
+                {apiMessage.text && (
+                  <div className={`alert alert-${apiMessage.type} small border-0 shadow-sm py-2 px-3 mb-3 d-flex align-items-center gap-2`} role="alert" style={{ borderRadius: "10px" }}>
+                    <i className={`fa-solid ${apiMessage.type === "success" ? "fa-circle-check" : "fa-circle-exclamation"}`}></i>
+                    {apiMessage.text}
+                  </div>
+                )}
+
+                {/* Reason to Decline */}
+                <div className="mb-3">
+                  <label className="form-label text-dark small fw-bold mb-1.5">Do you like to share the reason?</label>
+                  <textarea
+                    className="form-control border-light-subtle shadow-sm rounded-3 px-3 py-2"
+                    rows="3"
+                    placeholder="Reason Details"
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    style={{ fontSize: "13.5px", resize: "none", borderColor: "#e5e7eb" }}
+                  ></textarea>
+                </div>
+
+                {/* Optional Suggestion message */}
+                <div className="mb-2">
+                  <label className="form-label text-dark small fw-bold mb-1.5">Provide Suggestion</label>
+                  <textarea
+                    className="form-control border-light-subtle shadow-sm rounded-3 px-3 py-2"
+                    rows="3"
+                    placeholder="Suggestion Details"
+                    value={declineSuggestion}
+                    onChange={(e) => setDeclineSuggestion(e.target.value)}
+                    style={{ fontSize: "13.5px", resize: "none", borderColor: "#e5e7eb" }}
+                  ></textarea>
+                </div>
+              </div>
+
+              {/* Modern Action Footer */}
+              <div className="modal-footer border-top-0 py-3 px-4 bg-white d-flex gap-3">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-pill px-4 flex-grow-1 py-2.5 fw-bold text-muted border-light-subtle"
+                  disabled={submitting}
+                  onClick={() => setShowDeclineModal(false)}
+                  style={{ fontSize: "13.5px", background: "#f9fafb" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-danger rounded-pill px-4 flex-grow-1 py-2.5 fw-bold text-white"
+                  style={{ border: "none", fontSize: "13.5px" }}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Submitting...
+                    </>
+                  ) : (
+                    "Confirm Decline"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <Footer />
     </>
+  );
+}
+
+export default function EventDetailsPage() {
+  return (
+    <Suspense fallback={
+      <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+        <div className="text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading event...</span>
+          </div>
+        </div>
+      </div>
+    }>
+      <EventDetailsContent />
+    </Suspense>
   );
 }

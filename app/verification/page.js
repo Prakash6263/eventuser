@@ -115,7 +115,7 @@ function VerificationForm() {
         Verification
       </h2>
       <p className="text-muted small mb-4" style={{ fontSize: "15px", lineHeight: "1.5" }}>
-        We've sent you the verification code on <strong className="text-dark">{mobileFromQuery}</strong>
+        We&apos;ve sent you the verification code on <strong className="text-dark">{mobileFromQuery}</strong>
       </p>
 
       {errorMsg && (

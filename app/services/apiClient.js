@@ -93,8 +93,15 @@ export const apiRequest = async (endpoint, options = {}) => {
       defaultHeaders["Authorization"] = `Bearer ${token}`;
     }
 
+    // Automatically stringify body if it's an object and not FormData
+    let requestBody = options.body;
+    if (requestBody && !isFormData && typeof requestBody === "object") {
+      requestBody = JSON.stringify(requestBody);
+    }
+
     const config = {
       ...options,
+      body: requestBody,
       headers: {
         ...defaultHeaders,
         ...(options.headers || {}),

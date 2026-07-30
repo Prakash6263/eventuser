@@ -61,7 +61,7 @@ export default function MyReservationsPage() {
             formattedDate = `${parts[0]} ${monthStr} ${parts[2]}`;
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       const resObj = item.makeReservation || {};
       const merchantObj = resObj.merchantId || {};
@@ -69,8 +69,8 @@ export default function MyReservationsPage() {
 
       let venueAddress = "Location TBD";
       if (locationObj.addressName || locationObj.address) {
-        venueAddress = locationObj.addressName && locationObj.address 
-          ? `${locationObj.addressName} - ${locationObj.address}` 
+        venueAddress = locationObj.addressName && locationObj.address
+          ? `${locationObj.addressName} - ${locationObj.address}`
           : (locationObj.address || locationObj.addressName);
       }
 
@@ -210,7 +210,7 @@ export default function MyReservationsPage() {
         cancelReason: cancelModal.reason,
         comment: cancelModal.comment
       };
-      
+
       const response = await cancelReservationApi(payload);
       if (response && response.status === true) {
         const updated = reservations.map((r) => {
@@ -366,7 +366,7 @@ export default function MyReservationsPage() {
               {/* Main Content Dashboard */}
               <div className="col-lg-9">
                 <div className="user-profile-wrapper">
-                  
+
                   {/* Success Alert Banner */}
                   {successMessage && (
                     <div className="alert alert-success border-0 shadow-sm rounded-3 p-3 mb-4 d-flex align-items-center justify-content-between" role="alert">
@@ -578,7 +578,7 @@ export default function MyReservationsPage() {
                   <select
                     className="form-select form-select-sm mb-2"
                     value={cancelModal.reason}
-                    onChange={(e) => setCancelModal({...cancelModal, reason: e.target.value})}
+                    onChange={(e) => setCancelModal({ ...cancelModal, reason: e.target.value })}
                   >
                     <option value="">Select a reason</option>
                     {cancelReasonsList.map((r) => (
@@ -586,11 +586,11 @@ export default function MyReservationsPage() {
                     ))}
                   </select>
                   <label className="form-label small fw-semibold text-muted mb-1">Comments</label>
-                  <textarea 
-                    className="form-control form-select-sm" 
-                    rows="2" 
-                    value={cancelModal.comment} 
-                    onChange={(e) => setCancelModal({...cancelModal, comment: e.target.value})} 
+                  <textarea
+                    className="form-control form-select-sm"
+                    rows="2"
+                    value={cancelModal.comment}
+                    onChange={(e) => setCancelModal({ ...cancelModal, comment: e.target.value })}
                     placeholder="Add a comment (optional)..."
                   />
                 </div>

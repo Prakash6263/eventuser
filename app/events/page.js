@@ -157,67 +157,26 @@ export default function EventsPage() {
 
   const handleViewEventDetails = (evt) => {
     const rawEvent = evt.rawEvent;
-    let selectedDate = 15;
-    let month = 6;
-    try {
-      if (rawEvent.eventDate) {
-        const d = new Date(rawEvent.eventDate);
-        selectedDate = d.getDate();
-        month = d.getMonth();
-      }
-    } catch (e) {
-      console.error("Error parsing date:", e);
-    }
-
-    const selectedGuests = (rawEvent.invitedUsers || []).map((guest, idx) => {
-      return {
-        id: guest.userId?._id || idx.toString(),
-        name: guest.userId?.fullName || "Guest",
-        profilePic: guest.userId?.profilePic || null,
-        status: guest.status || "pending",
-        email: guest.userId?.email || null,
-        mobile: guest.userId?.mobile || null,
-      };
-    });
-
-    const detailEvent = {
-      eventTitle: rawEvent.eventTitle || "Untitled Event",
-      invitationMessage: rawEvent.description || "No description provided.",
-      eventImage: rawEvent.image || null,
-      selectedDate: selectedDate,
-      month: month,
-      startTime: rawEvent.eventStartTime || "",
-      endTime: rawEvent.eventEndTime || "",
-      selectedRestaurant: rawEvent.merchantId?._id || rawEvent.serviceLocationId?.merchantId?._id || "",
-      selectedGuests: selectedGuests,
-      bringGuests: rawEvent.bringaLongGuest || "No",
-      maxGuests: rawEvent.bringaLongNumber || "0",
-      rsvp: rawEvent.rvsp || "No",
-      rsvpBy: rawEvent.eventDate || "",
-      selectedNotes: (rawEvent.noteId || []).map((n) => n.notes || n),
-      registryUrl: typeof rawEvent.registryUrl === "object" && rawEvent.registryUrl !== null
-        ? (rawEvent.registryUrl.registryUrl || rawEvent.registryUrl.registryName || "")
-        : (rawEvent.registryUrl || ""),
-      place: rawEvent.placeId?.preferences || "At a participating restaurant",
-      selectedLocation: rawEvent.serviceLocationId
-        ? {
-          addressName: rawEvent.serviceLocationId.addressName || "",
-          address: rawEvent.serviceLocationId.address || "",
-        }
-        : null,
-      category: rawEvent.eventCategory?.category || "",
-      eventType: rawEvent.eventType?.eventType || "",
-      organizerName: rawEvent.eventcreator?.fullName || "Organizer",
-      eventAttendanceQr: rawEvent.eventAttendanceQr || null,
-    };
-
-    localStorage.setItem("eventuna-latest-event", JSON.stringify(detailEvent));
-    router.push("/event-details");
+    localStorage.setItem("event-details-back-url", "/events");
+    localStorage.setItem("event-details-back-label", "Back to Events");
+    router.push(`/event-details?id=${rawEvent._id || evt.id}`);
   };
 
   // Group Chat Fetch & Simulation Flow
   const handleOpenChat = async (evt, e) => {
     e.stopPropagation();
+    const userStatus = evt.status?.toLowerCase();
+    const isAccepted = ["accepted", "ongoing", "approved", "ongoingevent"].includes(userStatus);
+    
+    if (!isAccepted) {
+      setActiveChatEvent({
+        ...evt,
+        notAcceptedMessage: "You can only view chat discussions once your invitation has been accepted."
+      });
+      setChatLoading(false);
+      return;
+    }
+
     setActiveChatEvent(evt);
     setChatLoading(true);
     setChatMode("members");
@@ -298,6 +257,19 @@ export default function EventsPage() {
   // Gallery Integration
   const handleOpenGallery = async (evt, e) => {
     e.stopPropagation();
+    const userStatus = evt.status?.toLowerCase();
+    const isAccepted = ["accepted", "ongoing", "approved", "ongoingevent"].includes(userStatus);
+    
+    if (!isAccepted) {
+      setActiveGalleryEvent({
+        ...evt,
+        photos: [],
+        notAcceptedMessage: "You can only view event media files once your invitation has been accepted."
+      });
+      setGalleryLoading(false);
+      return;
+    }
+
     setActiveGalleryEvent(evt);
     setGalleryLoading(true);
     try {
@@ -395,8 +367,8 @@ export default function EventsPage() {
                         value={filterMyEvent}
                         onChange={(e) => setFilterMyEvent(e.target.value)}
                       >
-                        <option value="true">True</option>
-                        <option value="false">False</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
                       </select>
                     </div>
 
@@ -577,7 +549,13 @@ export default function EventsPage() {
 
               {/* Modal Body */}
               <div className="modal-body p-3 bg-light d-flex flex-column gap-3 overflow-y-auto" style={{ height: "380px" }}>
-                {chatLoading ? (
+                {activeChatEvent.notAcceptedMessage ? (
+                  <div className="text-center py-5 px-3">
+                    <i className="bi bi-lock-fill fs-1 text-warning mb-3 d-block"></i>
+                    <h5 className="fw-bold text-dark mb-2">Invitation Pending</h5>
+                    <p className="text-muted small mb-0">{activeChatEvent.notAcceptedMessage}</p>
+                  </div>
+                ) : chatLoading ? (
                   <div className="d-flex flex-column align-items-center justify-content-center h-100 py-5">
                     <div className="spinner-border text-primary" role="status">
                       <span className="visually-hidden">Loading group...</span>
@@ -733,7 +711,13 @@ export default function EventsPage() {
               </div>
 
               <div className="modal-body p-4 bg-light overflow-y-auto">
-                {galleryLoading ? (
+                {activeGalleryEvent.notAcceptedMessage ? (
+                  <div className="text-center py-5 px-3">
+                    <i className="bi bi-lock-fill fs-1 text-warning mb-3 d-block"></i>
+                    <h5 className="fw-bold text-dark mb-2">Access Restricted</h5>
+                    <p className="text-muted small mb-0">{activeGalleryEvent.notAcceptedMessage}</p>
+                  </div>
+                ) : galleryLoading ? (
                   <div className="text-center py-5">
                     <div className="spinner-border text-primary" role="status">
                       <span className="visually-hidden">Loading media...</span>

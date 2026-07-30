@@ -1095,6 +1095,7 @@ export default function CreateEventPage() {
                         category={category}
                         eventType={eventType}
                         onViewDetail={() => setSubview("review-detail")}
+                        onEditStep={(targetStep) => setStep(targetStep)}
                       />
                     )}
 
@@ -1717,7 +1718,7 @@ function NotesStep({ notesList, loading, selectedNotes, setSelectedNotes, custom
   );
 }
 
-function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, setEventImageFile, selectedDate, startTime, endTime, selectedRestaurant, selectedGuests, contacts, bringGuests, maxGuests, rsvp, rsvpBy, selectedNotes, customNote, registryUrl, restaurants, month, place, selectedLocation, category, eventType, onViewDetail }) {
+function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, setEventImageFile, selectedDate, startTime, endTime, selectedRestaurant, selectedGuests, contacts, bringGuests, maxGuests, rsvp, rsvpBy, selectedNotes, customNote, registryUrl, restaurants, month, place, selectedLocation, category, eventType, onViewDetail, onEditStep }) {
   const restaurant = Array.isArray(restaurants) ? restaurants.find((item) => (item._id || item.id) === selectedRestaurant) : null;
   const invitedGuests = contacts.filter((guest) => selectedGuests.includes(guest.id));
   const allNotes = [...selectedNotes, ...(customNote.trim() ? [customNote.trim()] : [])];
@@ -1748,48 +1749,186 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
     venueDisplay = place;
   }
 
-  return <div className={styles.reviewLayout}>
-    <section className={styles.reviewPrimary}>
-      <label className={styles.uploadArea} style={eventImage ? { backgroundImage: `url(${eventImage})` } : undefined}>
-        <input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) { setEventImage(URL.createObjectURL(file)); if (setEventImageFile) setEventImageFile(file); } }} />
-        <span><i className="fa-solid fa-cloud-arrow-up"></i><strong>{eventImage ? "Change event image" : "Upload event image"}</strong><small>Recommended size: 1200 x 675 px</small></span>
-      </label>
-      <div className={styles.reviewTitle}>
-        <span>Event preview • {category} ({eventType})</span>
-        <h3>{eventTitle || "Untitled event"}</h3>
-        <p>{invitationMessage || "No invitation message added."}</p>
-        {isRestaurantOption && restaurant && (
-          <button
-            type="button"
-            className="btn btn-primary rounded-pill py-2.5 px-4 mt-3 fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2"
-            onClick={onViewDetail}
-            style={{ background: "#4f46e5", border: "none", fontSize: "14px", width: "fit-content" }}
-          >
-            <i className="fa-solid fa-circle-info"></i>
-            Venue Details
-          </button>
-        )}
-      </div>
-      <div className={styles.reviewFacts}>
-        <div><i className="fa-regular fa-calendar"></i><span><small>Date and time</small><strong>{monthName} {selectedDate}, 2026 | {startTime || "--:--"} - {endTime || "--:--"}</strong></span></div>
-        <div>
-          <i className="fa-solid fa-location-dot"></i>
-          <span>
-            <small>Venue</small>
-            <strong>{venueDisplay}</strong>
-          </span>
+  return (
+    <div className={styles.reviewLayout}>
+      <section className={styles.reviewPrimary}>
+        <label className={styles.uploadArea} style={eventImage ? { backgroundImage: `url(${eventImage})` } : undefined}>
+          <input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) { setEventImage(URL.createObjectURL(file)); if (setEventImageFile) setEventImageFile(file); } }} />
+          <span><i className="fa-solid fa-cloud-arrow-up"></i><strong>{eventImage ? "Change event image" : "Upload event image"}</strong><small>Recommended size: 1200 x 675 px</small></span>
+        </label>
+        <div className={styles.reviewTitle}>
+          <div className="d-flex justify-content-between align-items-center">
+            <span>Event preview • {category} ({eventType})</span>
+            <button 
+              type="button" 
+              onClick={() => onEditStep("category")} 
+              className="btn btn-link text-decoration-none p-0 text-primary fw-semibold"
+              style={{ fontSize: "11px" }}
+            >
+              <i className="fa-solid fa-pen-to-square me-1"></i>Edit Category
+            </button>
+          </div>
+          <div className="d-flex justify-content-between align-items-start mt-2">
+            <h3 className="m-0 flex-grow-1">{eventTitle || "Untitled event"}</h3>
+            <button 
+              type="button" 
+              onClick={() => onEditStep("content")} 
+              className="btn btn-link text-decoration-none p-0 text-primary ms-3"
+              style={{ fontSize: "14px" }}
+              title="Edit title and invitation message"
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+            </button>
+          </div>
+          <p className="mt-2">{invitationMessage || "No invitation message added."}</p>
+          {isRestaurantOption && restaurant && (
+            <button
+              type="button"
+              className="btn btn-primary rounded-pill py-2.5 px-4 mt-3 fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2"
+              onClick={onViewDetail}
+              style={{ background: "#4f46e5", border: "none", fontSize: "14px", width: "fit-content" }}
+            >
+              <i className="fa-solid fa-circle-info"></i>
+              Venue Details
+            </button>
+          )}
         </div>
-        <div><i className="fa-solid fa-user-plus"></i><span><small>Additional guests</small><strong>{bringGuests === "Yes" ? `Allowed, maximum ${maxGuests || 1}` : "Not allowed"}</strong></span></div>
-        <div><i className="fa-regular fa-calendar-check"></i><span><small>RSVP</small><strong>{rsvp === "Yes" ? `Required${rsvpBy ? ` by ${rsvpBy}` : ""}` : "Not required"}</strong></span></div>
-      </div>
-    </section>
-    <aside className={styles.reviewSummary}>
-      <div className={styles.summaryBlock}><div className={styles.summaryHeading}><strong>Guests ({invitedGuests.length})</strong><button type="button">View all</button></div>{invitedGuests.length ? <div className={styles.guestAvatars}>{invitedGuests.slice(0, 4).map((guest) => <div key={guest.id}><span>{guest.name.slice(0, 1)}</span><small>{guest.name}</small></div>)}</div> : <p>No guests selected.</p>}</div>
-      <div className={styles.summaryBlock}><strong>Selected notes</strong>{allNotes.length ? <ul>{allNotes.map((note) => <li key={note}>{note}</li>)}</ul> : <p>No notes selected.</p>}</div>
-      <div className={styles.summaryBlock}><strong>Gift registry</strong><p>{registryUrl || "No gift registry added."}</p></div>
-      <div className={styles.summaryBlock}><strong>Additional services</strong><p>Furniture rentals</p></div>
-    </aside>
-  </div>;
+        <div className={styles.reviewFacts}>
+          <div style={{ position: "relative", paddingRight: "40px" }}>
+            <i className="fa-regular fa-calendar"></i>
+            <span>
+              <small>Date and time</small>
+              <strong>{monthName} {selectedDate}, 2026 | {startTime || "--:--"} - {endTime || "--:--"}</strong>
+            </span>
+            <button 
+              type="button" 
+              onClick={() => onEditStep("date")} 
+              className="btn btn-link text-decoration-none p-0 text-primary position-absolute end-0 top-50 translate-middle-y me-3"
+              title="Edit date and time"
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+            </button>
+          </div>
+          <div style={{ position: "relative", paddingRight: "40px" }}>
+            <i className="fa-solid fa-location-dot"></i>
+            <span>
+              <small>Venue</small>
+              <strong>{venueDisplay}</strong>
+            </span>
+            <button 
+              type="button" 
+              onClick={() => onEditStep("place")} 
+              className="btn btn-link text-decoration-none p-0 text-primary position-absolute end-0 top-50 translate-middle-y me-3"
+              title="Edit venue / location preference"
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+            </button>
+          </div>
+          <div style={{ position: "relative", paddingRight: "40px" }}>
+            <i className="fa-solid fa-user-plus"></i>
+            <span>
+              <small>Additional guests</small>
+              <strong>{bringGuests === "Yes" ? `Allowed, maximum ${maxGuests || 1}` : "Not allowed"}</strong>
+            </span>
+            <button 
+              type="button" 
+              onClick={() => onEditStep("guestInfo")} 
+              className="btn btn-link text-decoration-none p-0 text-primary position-absolute end-0 top-50 translate-middle-y me-3"
+              title="Edit guest options"
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+            </button>
+          </div>
+          <div style={{ position: "relative", paddingRight: "40px" }}>
+            <i className="fa-regular fa-calendar-check"></i>
+            <span>
+              <small>RSVP</small>
+              <strong>{rsvp === "Yes" ? `Required${rsvpBy ? ` by ${rsvpBy}` : ""}` : "Not required"}</strong>
+            </span>
+            <button 
+              type="button" 
+              onClick={() => onEditStep("guestInfo")} 
+              className="btn btn-link text-decoration-none p-0 text-primary position-absolute end-0 top-50 translate-middle-y me-3"
+              title="Edit RSVP options"
+            >
+              <i className="fa-solid fa-pen-to-square"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+      <aside className={styles.reviewSummary}>
+        <div className={styles.summaryBlock}>
+          <div className={styles.summaryHeading}>
+            <strong>Guests ({invitedGuests.length})</strong>
+            <div className="d-flex align-items-center gap-2">
+              <button 
+                type="button" 
+                onClick={() => onEditStep("guests")} 
+                className="btn btn-link text-decoration-none p-0 text-primary fw-semibold"
+                style={{ fontSize: "11px" }}
+              >
+                Edit
+              </button>
+              <span className="text-muted" style={{ fontSize: "9px" }}>|</span>
+              <button type="button">View all</button>
+            </div>
+          </div>
+          {invitedGuests.length ? (
+            <div className={styles.guestAvatars}>
+              {invitedGuests.slice(0, 4).map((guest) => (
+                <div key={guest.id}>
+                  <span>{guest.name.slice(0, 1)}</span>
+                  <small>{guest.name}</small>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>No guests selected.</p>
+          )}
+        </div>
+        <div className={styles.summaryBlock}>
+          <div className="d-flex justify-content-between align-items-center mb-1">
+            <strong>Selected notes</strong>
+            <button 
+              type="button" 
+              onClick={() => onEditStep("notes")} 
+              className="btn btn-link text-decoration-none p-0 text-primary fw-semibold"
+              style={{ fontSize: "11px" }}
+            >
+              <i className="fa-solid fa-pen-to-square me-1"></i>Edit
+            </button>
+          </div>
+          {allNotes.length ? (
+            <ul>
+              {allNotes.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>No notes selected.</p>
+          )}
+        </div>
+        <div className={styles.summaryBlock}>
+          <div className="d-flex justify-content-between align-items-center mb-1">
+            <strong>Gift registry</strong>
+            <button 
+              type="button" 
+              onClick={() => onEditStep("registry")} 
+              className="btn btn-link text-decoration-none p-0 text-primary fw-semibold"
+              style={{ fontSize: "11px" }}
+            >
+              <i className="fa-solid fa-pen-to-square me-1"></i>Edit
+            </button>
+          </div>
+          <p>{registryUrl || "No gift registry added."}</p>
+        </div>
+        <div className={styles.summaryBlock}>
+          <strong>Additional services</strong>
+          <p>Furniture rentals</p>
+        </div>
+      </aside>
+    </div>
+  );
 }
 
 function GuestsStep({ guests: guestResults, search, setSearch, selectedGuests, toggleGuest, markAll, openAddContact, loading }) {

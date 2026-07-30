@@ -46,7 +46,7 @@ export default function MyEventsPage() {
                   const day = parts[0];
                   const monthIndex = parseInt(parts[1]) - 1;
                   const year = parts[2];
-                  
+
                   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                   const monthStr = monthNames[monthIndex] || parts[1];
                   const timePart = evt.eventStartTime || "";
@@ -121,64 +121,9 @@ export default function MyEventsPage() {
   }, []);
 
   const handleViewDetails = (rawEvent) => {
-    // Parse date
-    let selectedDate = 15;
-    let month = 6; // July
-    try {
-      if (rawEvent.eventDate) {
-        const d = new Date(rawEvent.eventDate);
-        selectedDate = d.getDate();
-        month = d.getMonth();
-      }
-    } catch (e) {
-      console.error("Error parsing date:", e);
-    }
-
-    // Map guests list with contact info
-    const selectedGuests = (rawEvent.invitedUsers || []).map((guest, idx) => {
-      return {
-        id: guest.userId?._id || idx.toString(),
-        name: guest.userId?.fullName || "Guest",
-        profilePic: guest.userId?.profilePic || null,
-        status: guest.status || "pending",
-        email: guest.userId?.email || null,
-        mobile: guest.userId?.mobile || null,
-      };
-    });
-
-    const detailEvent = {
-      eventTitle: rawEvent.eventTitle || "Untitled Event",
-      invitationMessage: rawEvent.description || "No description provided.",
-      eventImage: rawEvent.image || null,
-      selectedDate: selectedDate,
-      month: month,
-      startTime: rawEvent.eventStartTime || "",
-      endTime: rawEvent.eventEndTime || "",
-      selectedRestaurant: rawEvent.merchantId?._id || rawEvent.serviceLocationId?.merchantId?._id || "",
-      selectedGuests: selectedGuests,
-      bringGuests: rawEvent.bringaLongGuest || "No",
-      maxGuests: rawEvent.bringaLongNumber || "0",
-      rsvp: rawEvent.rvsp || "No",
-      rsvpBy: rawEvent.eventDate || "",
-      selectedNotes: (rawEvent.noteId || []).map((n) => n.notes || n),
-      registryUrl: rawEvent.registryUrl || "",
-      place: rawEvent.placeId?.preferences || "At a participating restaurant",
-      selectedLocation: rawEvent.serviceLocationId
-        ? {
-          addressName: rawEvent.serviceLocationId.addressName || "",
-          address: rawEvent.serviceLocationId.address || "",
-        }
-        : null,
-      category: rawEvent.eventCategory?.category || "",
-      eventType: rawEvent.eventType?.eventType || "",
-      organizerName: rawEvent.eventcreator?.fullName || "Organizer",
-      eventAttendanceQr: rawEvent.eventAttendanceQr || null,
-    };
-
     localStorage.setItem("event-details-back-url", "/my-events");
     localStorage.setItem("event-details-back-label", "Back to My Events");
-    localStorage.setItem("eventuna-latest-event", JSON.stringify(detailEvent));
-    router.push("/event-details");
+    router.push(`/event-details?id=${rawEvent._id}`);
   };
 
   const filteredEvents =
@@ -262,7 +207,7 @@ export default function MyEventsPage() {
                     <h4 className="user-profile-card-title fw-bold m-0">My Events</h4>
                     {/* Status Tabs Filter */}
                     <div className="btn-group btn-group-sm" role="group">
-                      {["All", "Accepted", "Waiting for Action", "Completed", "Ongoing"].map((tab) => (
+                      {["All", "Accepted", "Completed", "Ongoing"].map((tab) => (
                         <button
                           key={tab}
                           type="button"

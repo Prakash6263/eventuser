@@ -13,8 +13,8 @@ export default function ReservationDetailsPage() {
 
   // Load profile and reservation info from storage
   useEffect(() => {
-    // Profile load
-    const loadProfile = async () => {
+    const initializeData = async () => {
+      // Profile load
       try {
         const profRes = await authService.getUserProfile();
         if (profRes && profRes.status && profRes.user) {
@@ -26,20 +26,21 @@ export default function ReservationDetailsPage() {
       } catch (err) {
         console.error("Profile load failed:", err);
       }
-    };
-    loadProfile();
 
-    // Reservation load
-    try {
-      const stored = localStorage.getItem("eventuna-latest-reservation");
-      if (stored) {
-        setReservation(JSON.parse(stored));
+      // Reservation load
+      try {
+        const stored = localStorage.getItem("eventuna-latest-reservation");
+        if (stored) {
+          setReservation(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setDetailsLoaded(true);
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setDetailsLoaded(true);
-    }
+    };
+
+    initializeData();
   }, []);
 
   if (!detailsLoaded) {
