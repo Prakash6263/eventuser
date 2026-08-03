@@ -22,12 +22,16 @@ export const getPlacePreferencesApi = async () => {
   });
 };
 
-// 4. Get Merchants by Service ID API (for Restaurants list)
-export const getMerchantsByServiceApi = async (serviceId) => {
+// 4. Get Merchants by Service ID API (for Restaurants / Facilities list)
+export const getMerchantsByServiceApi = async (serviceId, lat, long, radius = 100) => {
   if (!serviceId) {
     throw new Error("Service ID is required to fetch merchants.");
   }
-  return await apiRequest(`/merchant/merchants-by-service?serviceId=${serviceId}`, {
+  let url = `/merchant/merchants-by-service?serviceId=${serviceId}`;
+  if (lat !== undefined && lat !== null && long !== undefined && long !== null) {
+    url += `&lat=${lat}&long=${long}&radius=${radius}`;
+  }
+  return await apiRequest(url, {
     method: "GET",
   });
 };
@@ -67,6 +71,15 @@ export const getEventMediaApi = async (eventId) => {
   });
 };
 
+// 9. Rate Event API
+export const rateEventApi = async (payload) => {
+  return await apiRequest("/event/rate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+};
+
 export const eventApi = {
   getEventTypes: getEventTypesApi,
   getEventCategoriesByTypeId: getEventCategoriesByTypeIdApi,
@@ -77,6 +90,7 @@ export const eventApi = {
   getMyEvents: getMyEventsApi,
   getMyCreatedEvents: getMyCreatedEventsApi,
   getEventMedia: getEventMediaApi,
+  rateEvent: rateEventApi,
 };
 
 export default eventApi;

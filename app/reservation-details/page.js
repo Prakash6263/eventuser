@@ -11,6 +11,7 @@ export default function ReservationDetailsPage() {
   const [profile, setProfile] = useState(null);
   const [reservation, setReservation] = useState(null);
   const [detailsLoaded, setDetailsLoaded] = useState(false);
+  const [showGuestsModal, setShowGuestsModal] = useState(false);
 
   const mapReservationItem = (item) => {
     let formattedDate = item.eventDate || "Date TBD";
@@ -133,24 +134,57 @@ export default function ReservationDetailsPage() {
   };
 
   const getMappedServices = () => {
-    const rawServices = reservation.rawItem?.additionalServices || [];
+    const rawServices = reservation.rawItem?.additionalServices || reservation.rawItem?.makeReservation?.additionalServices || reservation.rawItem?.additionalService || [];
+    
     const serviceMap = {
+      // Map by database Object IDs
       "686fb723d46e9740ee8277f4": { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s" },
+      "686fb6edd46e9740ee8277f0": { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s" },
       "686fb7bad46e9740ee8277f8": { name: "Decoration & Lighting", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_1g&s" },
       "686fb714d46e9740ee8277f2": { name: "Furniture Rental", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtg-K5_J_9L9Z11o1R19Tj8a_V19v1K0G_2g&s" },
       "686fb788d46e9740ee8277f6": { name: "Music & DJ", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_3g&s" },
+      "686fb777d46e9740ee8277f5": { name: "Photography", img: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=150" },
+
+      // Map by lowercased servicesName strings
+      "catering": { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s" },
+      "decoration & lighting": { name: "Decoration & Lighting", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_1g&s" },
+      "furniture rental": { name: "Furniture Rental", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtg-K5_J_9L9Z11o1R19Tj8a_V19v1K0G_2g&s" },
+      "music & dj": { name: "Music & DJ", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_3g&s" },
+      "photography": { name: "Photography", img: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=150" },
     };
 
     if (rawServices.length === 0) {
       return [];
     }
 
-    return rawServices.map((srv, index) => {
-      const srvId = typeof srv === "string" ? srv : srv.serviceId;
-      const srvStatus = typeof srv === "object" ? srv.status : "pending";
-      const info = serviceMap[srvId] || { name: `Additional Service`, img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s" };
+    return rawServices.map((srv) => {
+      let name = "Additional Service";
+      let apiImage = null;
+
+      if (srv.serviceId && typeof srv.serviceId === "object") {
+        name = srv.serviceId.servicesName || srv.serviceId.serviceName || "Additional Service";
+        apiImage = srv.serviceId.image || srv.serviceId.servicesImage || srv.serviceId.bannerImage || srv.serviceId.thumbnail;
+      } else if (typeof srv.serviceId === "string") {
+        name = srv.serviceId;
+      }
+
+      const srvStatus = srv.status || "pending";
+      const key = name.toLowerCase();
+      
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(name);
+      const displayName = isObjectId ? "Additional Service" : name;
+
+      const defaultImg = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s";
+      const info = serviceMap[key] || { 
+        name: displayName, 
+        img: defaultImg
+      };
+
+      const finalImg = apiImage || info.img || defaultImg;
+
       return {
         ...info,
+        img: finalImg,
         status: srvStatus
       };
     });
@@ -343,6 +377,7 @@ export default function ReservationDetailsPage() {
                     border-radius: 30px;
                     width: fit-content;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                    cursor: pointer;
                   }
                   .web-avatar-stack {
                     display: flex;
@@ -527,43 +562,50 @@ export default function ReservationDetailsPage() {
                       <span>Tap to Upload Image</span>
                     </div>
 
-                    {/* Dynamic Participants stack */}
-                    {totalInvited > 0 && (
-                      <div className="web-participants-badge">
-                        <div className="web-avatar-stack">
-                          {displayGuests.map((g, idx) => {
-                            const name = g.fullName || g.name || "Guest";
-                            const initial = name.charAt(0).toUpperCase();
-                            return (
-                              <div 
-                                key={idx} 
-                                style={{ 
-                                  width: "32px", 
-                                  height: "32px", 
-                                  borderRadius: "50%", 
-                                  background: ["#3e56f0", "#22c55e", "#ff9f43", "#ef4444"][idx % 4], 
-                                  color: "#fff", 
-                                  display: "grid", 
-                                  placeItems: "center", 
-                                  fontSize: "12px", 
-                                  fontWeight: "700",
-                                  border: "2px solid #fff",
-                                  marginLeft: idx > 0 ? "-10px" : "0",
-                                  position: "relative",
-                                  zIndex: 4 - idx
-                                }}
-                              >
-                                {initial}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <span className="web-participants-text">
-                          {totalInvited > 3 ? `+${totalInvited - 3} invited` : `${totalInvited} invited`}
-                        </span>
-                      </div>
-                    )}
-                  </label>
+                     {/* Dynamic Participants stack */}
+                     {totalInvited > 0 && (
+                       <div 
+                         className="web-participants-badge"
+                         onClick={(e) => {
+                           e.preventDefault();
+                           e.stopPropagation();
+                           setShowGuestsModal(true);
+                         }}
+                       >
+                         <div className="web-avatar-stack">
+                           {displayGuests.map((g, idx) => {
+                             const name = g.fullName || g.name || "Guest";
+                             const initial = name.charAt(0).toUpperCase();
+                             return (
+                               <div 
+                                 key={idx} 
+                                 style={{ 
+                                   width: "32px", 
+                                   height: "32px", 
+                                   borderRadius: "50%", 
+                                   background: ["#3e56f0", "#22c55e", "#ff9f43", "#ef4444"][idx % 4], 
+                                   color: "#fff", 
+                                   display: "grid", 
+                                   placeItems: "center", 
+                                   fontSize: "12px", 
+                                   fontWeight: "700",
+                                   border: "2px solid #fff",
+                                   marginLeft: idx > 0 ? "-10px" : "0",
+                                   position: "relative",
+                                   zIndex: 4 - idx
+                                 }}
+                               >
+                                 {initial}
+                               </div>
+                             );
+                           })}
+                         </div>
+                         <span className="web-participants-text">
+                           {totalInvited > 3 ? `+${totalInvited - 3} invited` : `${totalInvited} invited`}
+                         </span>
+                       </div>
+                     )}
+                   </label>
 
                   <div className="web-content-grid">
                     <div className="row g-4">
@@ -735,6 +777,71 @@ export default function ReservationDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Invited Guests list Modal */}
+      {showGuestsModal && (
+        <div className="modal fade show d-block" tabIndex="-1" role="dialog" style={{ background: "rgba(12, 27, 51, 0.6)", backdropFilter: "blur(4px)", zIndex: 1050 }}>
+          <div className="modal-dialog modal-dialog-centered" role="document">
+            <div className="modal-content border-0 rounded-4 shadow-lg">
+              <div className="modal-header border-bottom-0 pb-0 pt-4 px-4 d-flex align-items-center justify-content-between">
+                <h5 className="modal-title fw-bold text-dark fs-4">Invited Guests</h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowGuestsModal(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div className="modal-body px-4 py-3" style={{ maxHeight: "400px", overflowY: "auto" }}>
+                <p className="text-muted small mb-4">A list of all users invited to this reservation request.</p>
+                <div className="d-flex flex-column gap-3">
+                  {guestsList.map((g, idx) => {
+                    const rawGuest = g;
+                    const name = rawGuest.fullName || rawGuest.name || rawGuest.email || (typeof rawGuest === "string" ? rawGuest : "Guest");
+                    const initial = typeof name === "string" ? name.charAt(0).toUpperCase() : "G";
+                    const subtitle = rawGuest.mobile || rawGuest.phone || rawGuest.email || "";
+                    const displaySub = subtitle !== name ? subtitle : "";
+                    
+                    return (
+                      <div key={idx} className="d-flex align-items-center gap-3 p-2 rounded-3 hover-bg-light border border-light">
+                        <div 
+                          style={{ 
+                            width: "42px", 
+                            height: "42px", 
+                            borderRadius: "50%", 
+                            background: ["#3e56f0", "#22c55e", "#ff9f43", "#ef4444"][idx % 4], 
+                            color: "#fff", 
+                            display: "grid", 
+                            placeItems: "center", 
+                            fontSize: "16px", 
+                            fontWeight: "700" 
+                          }}
+                        >
+                          {initial}
+                        </div>
+                        <div className="flex-grow-1 min-w-0">
+                          <h6 className="fw-bold mb-0 text-dark text-truncate">{name}</h6>
+                          {displaySub && <span className="text-muted small text-truncate d-block">{displaySub}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="modal-footer border-top-0 pt-0 pb-4 px-4">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary rounded-pill px-4 w-100 fw-bold py-2" 
+                  onClick={() => setShowGuestsModal(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );

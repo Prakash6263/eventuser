@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="h-100">
+    <html lang="en" className="h-100" suppressHydrationWarning>
       <head>
         <link rel="icon" type="image/png" href="/images/fav.png" />
         <link
@@ -30,12 +30,14 @@ export default function RootLayout({ children }) {
         <link href="/css/vertical-responsive-menu.min.css" rel="stylesheet" />
         <link href="/css/jquery-steps.css" rel="stylesheet" />
         <link href="/css/datepicker.min.css" rel="stylesheet" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       </head>
-      <body className="d-flex flex-column h-100">
+      <body className="d-flex flex-column h-100" suppressHydrationWarning>
         <Preloader />
         <AuthProvider>
           {children}
         </AuthProvider>
+        <Script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" strategy="beforeInteractive" />
         <Script src="/js/jquery.min.js" strategy="afterInteractive" />
         <Script src="/vendor/bootstrap/js/bootstrap.bundle.min.js" strategy="afterInteractive" />
         <Script src="/vendor/OwlCarousel/owl.carousel.js" strategy="afterInteractive" />

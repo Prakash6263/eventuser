@@ -67,6 +67,7 @@ export default function CreateEventPage() {
   const [place, setPlace] = useState("");
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState(null);
+  const [filterCoords, setFilterCoords] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [selectedGuests, setSelectedGuests] = useState([]);
   const [guestSearch, setGuestSearch] = useState("");
@@ -84,7 +85,7 @@ export default function CreateEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [subview, setSubview] = useState(null);
-  const [placeSearch, setPlaceSearch] = useState("ind");
+  const [placeSearch, setPlaceSearch] = useState("");
   const [dialog, setDialog] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [completionMode, setCompletionMode] = useState("sent");
@@ -239,22 +240,6 @@ export default function CreateEventPage() {
       }
     }
 
-    async function loadMerchants() {
-      setLoadingMerchants(true);
-      try {
-        const res = await getMerchantsByServiceApi("686fb6ced46e9740ee8277ec");
-        if (res && res.status && Array.isArray(res.data) && res.data.length > 0) {
-          setMerchantRestaurants(res.data);
-        } else {
-          console.error("Failed to load merchants: API error status.", res);
-        }
-      } catch (err) {
-        console.error("Failed to load merchants:", err.message || err);
-      } finally {
-        setLoadingMerchants(false);
-      }
-    }
-
     async function loadEventNotes() {
       setLoadingNotes(true);
       try {
@@ -271,10 +256,44 @@ export default function CreateEventPage() {
 
     loadEventTypes();
     loadPlacePreferences();
-    loadMerchants();
     loadEventNotes();
     fetchSavedAddresses();
   }, []);
+
+  const currentServiceId = useMemo(() => {
+    if (place === "Restaurant from list" || place === "restaurant" || place === "6877a86668d1e0b9fcdf5006") {
+      return "686fb6ced46e9740ee8277ec";
+    }
+    if (place === "Other participating facilities" || place === "facility" || place === "6877a87c68d1e0b9fcdf5010") {
+      return "686fb6dcd46e9740ee8277ee";
+    }
+    return null;
+  }, [place]);
+
+  useEffect(() => {
+    if (!currentServiceId) return;
+
+    async function fetchFilteredMerchants() {
+      setLoadingMerchants(true);
+      try {
+        const lat = filterCoords ? filterCoords.lat : null;
+        const lng = filterCoords ? filterCoords.lng : null;
+        const res = await getMerchantsByServiceApi(currentServiceId, lat, lng, 100);
+        if (res && res.status && Array.isArray(res.data)) {
+          setMerchantRestaurants(res.data);
+        } else {
+          setMerchantRestaurants([]);
+        }
+      } catch (err) {
+        console.error("Failed to load merchants:", err);
+        setMerchantRestaurants([]);
+      } finally {
+        setLoadingMerchants(false);
+      }
+    }
+
+    fetchFilteredMerchants();
+  }, [currentServiceId, filterCoords]);
 
   const handleEventTypeChange = async (typeId) => {
     setSelectedEventTypeId(typeId);
@@ -774,11 +793,18 @@ export default function CreateEventPage() {
     } else if (step === "category") {
       setStep("place");
     } else if (step === "place") {
-      const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006";
+      const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006" || place === "Other participating facilities" || place === "facility" || place === "6877a87c68d1e0b9fcdf5010";
       if (place === "Private location") {
         if (subview !== "private-address") {
           setSubview("private-address");
           fetchSavedAddresses();
+        } else if (selectedLocation) {
+          setStep("guests");
+          setSubview(null);
+        }
+      } else if (place === "Choose from map") {
+        if (subview !== "map-selector") {
+          setSubview("map-selector");
         } else if (selectedLocation) {
           setStep("guests");
           setSubview(null);
@@ -804,7 +830,7 @@ export default function CreateEventPage() {
       setSubview("private-address");
       return;
     }
-    if (subview === "private-address") {
+    if (subview === "private-address" || subview === "map-selector") {
       setSubview(null);
       return;
     }
@@ -812,7 +838,7 @@ export default function CreateEventPage() {
       setSubview(null);
       return;
     }
-    const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006";
+    const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006" || place === "Other participating facilities" || place === "facility" || place === "6877a87c68d1e0b9fcdf5010";
     if (step === "category") setStep("date");
     else if (step === "place") setStep("category");
     else if (step === "restaurants") setStep("place");
@@ -820,6 +846,9 @@ export default function CreateEventPage() {
       if (place === "Private location") {
         setStep("place");
         setSubview("private-address");
+      } else if (place === "Choose from map") {
+        setStep("place");
+        setSubview("map-selector");
       } else {
         setStep(isRestaurantOption ? "restaurants" : "place");
       }
@@ -1093,6 +1122,40 @@ export default function CreateEventPage() {
                       />
                     )}
 
+                    {step === "place" && subview === "map-selector" && (
+                      <MapSelectorView
+                        selectedLocation={selectedLocation}
+                        setSelectedLocation={setSelectedLocation}
+                        onSave={async (addressData) => {
+                          setIsAddingAddress(true);
+                          setAddAddressError("");
+                          try {
+                            const res = await addAddressApi(addressData);
+                            if (res && res.status) {
+                              const newAddr = res.address || res.data;
+                              await fetchSavedAddresses();
+                              if (newAddr && newAddr._id) {
+                                newAddr.address = `${newAddr.address1 || ""}, ${newAddr.address2 || ""}, ${newAddr.postcode || ""}`.replace(/^,\s*|,\s*$/g, '');
+                                setSelectedLocation(newAddr);
+                              }
+                              setStep("guests");
+                              setSubview(null);
+                            } else {
+                              throw new Error(res?.message || "Failed to save address.");
+                            }
+                          } catch (err) {
+                            setAddAddressError(err.message || "An error occurred while saving address.");
+                          } finally {
+                            setIsAddingAddress(false);
+                          }
+                        }}
+                        onCancel={() => setSubview(null)}
+                        error={addAddressError}
+                        setError={setAddAddressError}
+                        submitting={isAddingAddress}
+                      />
+                    )}
+
                     {step === "place" && subview === "add-private-address" && (
                       <AddPrivateAddressView
                         newPrivateAddress={newPrivateAddress}
@@ -1115,6 +1178,9 @@ export default function CreateEventPage() {
                         openDetail={(restaurant) => { setSelectedRestaurant(restaurant._id || restaurant.id); setSubview("detail"); }}
                         openLocations={(restaurant) => { setSelectedRestaurant(restaurant._id || restaurant.id); setSubview("locations"); }}
                         openSearch={() => setSubview("search")}
+                        filterCoords={filterCoords}
+                        setFilterCoords={setFilterCoords}
+                        setPlaceSearch={setPlaceSearch}
                       />
                     )}
                     {step === "restaurants" && subview === "detail" && (
@@ -1134,7 +1200,7 @@ export default function CreateEventPage() {
                         selectedLocation={selectedLocation}
                       />
                     )}
-                    {step === "restaurants" && subview === "search" && <PlaceSearch search={placeSearch} setSearch={setPlaceSearch} onSelect={() => setSubview(null)} />}
+                    {step === "restaurants" && subview === "search" && <PlaceSearch search={placeSearch} setSearch={setPlaceSearch} onSelect={(coords) => { setFilterCoords(coords); setSubview(null); }} />}
 
                     {step === "guests" && (
                       <GuestsStep
@@ -1497,6 +1563,7 @@ function getViewTitle(step, subview) {
   if (subview === "search") return "Search places";
   if (subview === "private-address") return "Event at private place";
   if (subview === "add-private-address") return "Add Address";
+  if (subview === "map-selector") return "Select on Map";
   return {
     date: "When is your event?",
     category: "What kind of event is it?",
@@ -1514,6 +1581,7 @@ function getViewTitle(step, subview) {
 function getViewDescription(step, subview) {
   if (subview === "private-address") return "Confirm the event is at your private location and select a saved address.";
   if (subview === "add-private-address") return "Enter the details to save a new private address.";
+  if (subview === "map-selector") return "Drag the map to place the pin exactly where your event will take place.";
   if (subview) return "Review the venue information before making your selection.";
   return {
     date: "Select the event date, start time, and end time.",
@@ -1556,7 +1624,20 @@ function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, calendar
   );
 }
 
-function RestaurantList({ restaurantsList, loading, selectedRestaurant, setSelectedRestaurant, selectedLocation, setSelectedLocation, openDetail, openLocations, openSearch }) {
+function RestaurantList({
+  restaurantsList,
+  loading,
+  selectedRestaurant,
+  setSelectedRestaurant,
+  selectedLocation,
+  setSelectedLocation,
+  openDetail,
+  openLocations,
+  openSearch,
+  filterCoords,
+  setFilterCoords,
+  setPlaceSearch
+}) {
   const items = restaurantsList || [];
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -1572,33 +1653,72 @@ function RestaurantList({ restaurantsList, loading, selectedRestaurant, setSelec
 
   return (
     <div>
-      <button className={styles.locationFilter} onClick={openSearch}>
-        <i className="fa-solid fa-location-crosshairs"></i>
-        <span>
-          <small>Showing venues near</small>
-          <strong>Indore, Madhya Pradesh</strong>
-        </span>
-        <i className="fa-solid fa-chevron-down"></i>
-      </button>
+      <div className="d-flex align-items-center gap-2 mb-4">
+        <button
+          className={styles.locationFilter}
+          style={{ flexGrow: 1 }}
+          onClick={openSearch}
+        >
+          <i className="fa-solid fa-location-crosshairs"></i>
+          <span>
+            <small>Showing venues near</small>
+            <strong>
+              {filterCoords
+                ? filterCoords.displayName.split(",").slice(0, 2).join(",")
+                : "All Locations"}
+            </strong>
+          </span>
+          <i className="fa-solid fa-chevron-down"></i>
+        </button>
+        {filterCoords && (
+          <button
+            type="button"
+            className="btn btn-outline-danger btn-sm rounded-pill px-3.5 d-flex align-items-center"
+            style={{
+              height: "48px",
+              fontSize: "13px",
+              fontWeight: "600",
+              borderColor: "#fee2e2",
+              background: "#fef2f2",
+              color: "#ef4444"
+            }}
+            onClick={() => {
+              setFilterCoords(null);
+              setPlaceSearch("");
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
 
       {loading ? (
         <div className="text-center py-5 text-muted">
           <i className="fa-solid fa-spinner fa-spin fa-2x mb-2"></i>
-          <div>Loading participating restaurants...</div>
+          <div>Loading participating venues...</div>
         </div>
-       ) : items.length > 0 ? (
+      ) : items.length > 0 ? (
         <>
           <div className={styles.restaurantList}>
             {currentItems.map((restaurant) => {
               const id = restaurant._id || restaurant.id;
-              const name = restaurant.serviceName || restaurant.fullName || restaurant.name || "Restaurant";
-              
+              const name = restaurant.serviceName || restaurant.fullName || restaurant.name || "Venue";
+
               const isChecked = selectedRestaurant === id;
               const currentSelectedLoc = isChecked ? selectedLocation : null;
+
+              const bestLoc = (restaurant.serviceLocationIds || []).find((loc) => {
+                return loc.lat && loc.long;
+              }) || (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]);
+
+              const distanceStr = bestLoc && bestLoc.distance !== undefined
+                ? `${bestLoc.distance.toFixed(1)} km away`
+                : "";
+
               const locationStr =
                 (currentSelectedLoc && (currentSelectedLoc.addressName || currentSelectedLoc.address)) ||
-                (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.addressName) ||
-                (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.address) ||
+                (bestLoc && bestLoc.addressName) ||
+                (bestLoc && bestLoc.address) ||
                 restaurant.location ||
                 "Location available";
 
@@ -1622,6 +1742,14 @@ function RestaurantList({ restaurantsList, loading, selectedRestaurant, setSelec
                     <span>
                       <i className="fa-solid fa-location-dot me-1"></i>
                       {locationStr}
+                      {distanceStr && (
+                        <span
+                          className="badge bg-light text-primary border border-primary-subtle ms-2 px-2 py-1"
+                          style={{ fontSize: "10.5px", fontWeight: "600", borderRadius: "6px" }}
+                        >
+                          {distanceStr}
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div className={styles.restaurantActions}>
@@ -1817,8 +1945,93 @@ function LocationsList({ restaurant, onSelect, selectedLocation }) {
 }
 
 function PlaceSearch({ search, setSearch, onSelect }) {
-  const results = ["India", "Indore", "Indonesia", "Indri", "Indora", "Indragarh", "Indergarh", "Indianapolis, IN"].filter((item) => item.toLowerCase().includes(search.toLowerCase()));
-  return <div><div className={styles.searchBox}><i className="fa-solid fa-magnifying-glass"></i><input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search a city or place" />{search && <button onClick={() => setSearch("")} aria-label="Clear search"><i className="fa-solid fa-xmark"></i></button>}</div><div className={styles.searchResults}>{results.map((item) => <button key={item} onClick={onSelect}><i className="fa-solid fa-location-dot"></i><span><strong>{item}</strong><small>{item === "Indianapolis, IN" ? "United States" : "Madhya Pradesh, India"}</small></span></button>)}</div></div>;
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (search.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    const delayDebounce = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(search)}&limit=5&addressdetails=1`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setSuggestions(data);
+        }
+      } catch (err) {
+        console.error("Nominatim search failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [search]);
+
+  return (
+    <div>
+      <div className={styles.searchBox}>
+        <i className="fa-solid fa-magnifying-glass"></i>
+        <input
+          autoFocus
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search a city, address, or landmark"
+        />
+        {loading && (
+          <span className="me-2">
+            <i className="fa-solid fa-spinner fa-spin text-muted"></i>
+          </span>
+        )}
+        {search && (
+          <button onClick={() => setSearch("")} aria-label="Clear search">
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        )}
+      </div>
+      <div className={styles.searchResults}>
+        {suggestions.length > 0 ? (
+          suggestions.map((item, idx) => {
+            const name = item.address?.neighbourhood || item.address?.suburb || item.address?.road || item.address?.city || item.address?.town || item.name || "Location";
+            const details = item.display_name;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => onSelect({
+                  lat: parseFloat(item.lat),
+                  lng: parseFloat(item.lon),
+                  displayName: item.display_name
+                })}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  textAlign: "left",
+                  border: "none",
+                  background: "none",
+                  borderBottom: "1px solid #f3f4f6",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px"
+                }}
+              >
+                <i className="fa-solid fa-location-dot text-muted"></i>
+                <span className="d-flex flex-column text-start">
+                  <strong style={{ fontSize: "14px", color: "#1f2937" }}>{name}</strong>
+                  <small style={{ fontSize: "12px", color: "#6b7280" }}>{details}</small>
+                </span>
+              </button>
+            );
+          })
+        ) : search.trim().length >= 3 && !loading ? (
+          <div className="text-center py-4 text-muted small">No places found matching search.</div>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function NotesStep({ notesList, loading, selectedNotes, setSelectedNotes, customNote, setCustomNote }) {
@@ -2392,6 +2605,286 @@ function AddPrivateAddressView({
             </>
           ) : (
             "ADD"
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MapSelectorView({
+  selectedLocation,
+  setSelectedLocation,
+  onSave,
+  onCancel,
+  error,
+  setError,
+  submitting
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [addressData, setAddressData] = useState({
+    addressName: "",
+    address1: "",
+    address2: "",
+    postcode: ""
+  });
+  const [mapInstance, setMapInstance] = useState(null);
+  const [markerInstance, setMarkerInstance] = useState(null);
+  const [isAddressSelectedCheckbox, setIsAddressSelectedCheckbox] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.L) return;
+    const L = window.L;
+
+    // Patna, Bihar coordinates as default
+    const initialLat = 25.5941;
+    const initialLng = 85.1376;
+
+    const map = L.map("map-view-selector", {
+      center: [initialLat, initialLng],
+      zoom: 14,
+      zoomControl: true
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const customIcon = L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41]
+    });
+
+    const marker = L.marker([initialLat, initialLng], {
+      draggable: true,
+      icon: customIcon
+    }).addTo(map);
+
+    setMapInstance(map);
+    setMarkerInstance(marker);
+
+    // Fetch initial details
+    updateAddressFromCoords(initialLat, initialLng, marker, L);
+
+    marker.on("dragend", () => {
+      const pos = marker.getLatLng();
+      updateAddressFromCoords(pos.lat, pos.lng, marker, L);
+    });
+
+    return () => {
+      map.remove();
+    };
+  }, []);
+
+  const updateAddressFromCoords = async (lat, lng, marker, L) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+      const data = await res.json();
+      if (data && data.address) {
+        const addr = data.address;
+        const addressName = addr.neighbourhood || addr.suburb || addr.road || addr.village || addr.industrial || addr.commercial || "Location Select";
+        const address1 = addr.city || addr.town || addr.county || addr.state_district || "";
+        const address2 = addr.state || addr.region || "";
+        const postcode = addr.postcode || "000000";
+
+        setAddressData({
+          addressName,
+          address1,
+          address2,
+          postcode
+        });
+
+        const fullStr = data.display_name || `${addressName}, ${address1}, ${address2}`;
+        setSearchQuery(fullStr);
+        if (marker && L) {
+          marker.bindPopup(`<b>${addressName}</b><br/>${address1}, ${address2}`).openPopup();
+        }
+      }
+    } catch (err) {
+      console.error("Reverse geocoding failed:", err);
+    }
+  };
+
+  const handleSearchChange = async (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    if (query.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+
+    setLoadingSuggestions(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setSuggestions(data);
+      }
+    } catch (err) {
+      console.error("Search failed:", err);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (item) => {
+    const lat = parseFloat(item.lat);
+    const lon = parseFloat(item.lon);
+    
+    if (mapInstance && markerInstance) {
+      mapInstance.setView([lat, lon], 15);
+      markerInstance.setLatLng([lat, lon]);
+      
+      const addr = item.address || {};
+      const addressName = addr.neighbourhood || addr.suburb || addr.road || addr.village || addr.industrial || addr.commercial || item.name || "Location Select";
+      const address1 = addr.city || addr.town || addr.county || addr.state_district || "";
+      const address2 = addr.state || addr.region || "";
+      const postcode = addr.postcode || "000000";
+
+      setAddressData({
+        addressName,
+        address1,
+        address2,
+        postcode
+      });
+
+      setSearchQuery(item.display_name);
+      setSuggestions([]);
+      
+      if (window.L) {
+        markerInstance.bindPopup(`<b>${addressName}</b><br/>${address1}, ${address2}`).openPopup();
+      }
+    }
+  };
+
+  const handleNext = () => {
+    if (!addressData.addressName || !addressData.address1 || !addressData.address2 || !addressData.postcode) {
+      setError("Please select a location with complete details.");
+      return;
+    }
+    onSave(addressData);
+  };
+
+  return (
+    <div className="mx-auto" style={{ maxWidth: "480px", padding: "10px" }}>
+      <div className="mb-3 position-relative">
+        <div className="form-check mb-3 bg-white p-3 rounded-3 shadow-sm border border-light-subtle d-flex align-items-center gap-2" style={{ borderColor: "#e5e7eb" }}>
+          <input
+            className="form-check-input ms-0 mt-0"
+            type="checkbox"
+            id="selectAddressCheckbox"
+            checked={isAddressSelectedCheckbox}
+            onChange={(e) => setIsAddressSelectedCheckbox(e.target.checked)}
+            style={{ width: "20px", height: "20px", cursor: "pointer" }}
+          />
+          <label className="form-check-label fw-semibold text-dark cursor-pointer ms-2" htmlFor="selectAddressCheckbox" style={{ fontSize: "14px" }}>
+            I will Select address
+          </label>
+        </div>
+
+        {isAddressSelectedCheckbox && (
+          <div className="position-relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Search address..."
+              className="form-control border-light-subtle shadow-sm px-3.5"
+              style={{
+                width: "100%",
+                height: "48px",
+                borderRadius: "10px",
+                fontSize: "14px",
+                borderColor: "#e5e7eb",
+                paddingRight: "40px"
+              }}
+            />
+            {loadingSuggestions && (
+              <span className="position-absolute end-0 top-50 translate-middle-y me-3">
+                <i className="fa-solid fa-spinner fa-spin text-muted"></i>
+              </span>
+            )}
+            
+            {suggestions.length > 0 && (
+              <ul className="dropdown-menu show position-absolute w-100 p-0 shadow-lg border border-light-subtle" style={{ maxHeight: "200px", overflowY: "auto", top: "100%", zIndex: 10000, display: "block" }}>
+                {suggestions.map((item, idx) => (
+                  <li key={idx}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectSuggestion(item)}
+                      className="dropdown-item py-2.5 px-3 d-flex align-items-center text-wrap text-start border-bottom border-light-subtle"
+                      style={{ fontSize: "13px", gap: "8px", borderBottom: "1px solid #f3f4f6" }}
+                    >
+                      <i className="fa-solid fa-location-dot text-muted"></i>
+                      <span>{item.display_name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-3">
+        <div
+          id="map-view-selector"
+          style={{
+            height: "350px",
+            width: "100%",
+            borderRadius: "12px",
+            border: "1px solid #e5e7eb",
+            position: "relative",
+            zIndex: 10
+          }}
+        ></div>
+        <p className="text-muted small mt-2 text-center">
+          <i className="fa-solid fa-circle-info me-1"></i> Drag the map marker to place the pin exactly where your event will take place.
+        </p>
+      </div>
+
+      {error && (
+        <div className="alert alert-danger py-2 px-3 small border-0 shadow-sm d-flex align-items-center gap-2 mb-4" style={{ borderRadius: "8px" }}>
+          <i className="fa-solid fa-circle-exclamation text-danger"></i>
+          <span className="fw-medium text-danger">{error}</span>
+        </div>
+      )}
+
+      <div className="d-flex gap-3 mt-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          className="btn btn-outline-secondary rounded-pill py-2.5 fw-bold flex-grow-1 border-light-subtle"
+          style={{ fontSize: "14px", background: "#f9fafb" }}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleNext}
+          disabled={submitting}
+          className="btn btn-primary rounded-pill py-2.5 fw-bold flex-grow-1 text-white"
+          style={{
+            background: "#5b5fc7",
+            border: "none",
+            fontSize: "14px",
+            boxShadow: "0 4px 12px rgba(91, 95, 199, 0.2)"
+          }}
+        >
+          {submitting ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-1.5" role="status" aria-hidden="true"></span>
+              Saving...
+            </>
+          ) : (
+            "NEXT"
           )}
         </button>
       </div>

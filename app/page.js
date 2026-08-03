@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -295,6 +295,46 @@ export default function Home() {
   const [eventsError, setEventsError] = useState(null);
   const [token, setToken] = useState(null);
 
+  // Auto-scroll refs
+  const servicesScrollRef = useRef(null);
+  const eventsScrollRef = useRef(null);
+
+  // Auto-scroll services slider (every 2 seconds)
+  useEffect(() => {
+    if (loadingServices || services.length === 0) return;
+    const interval = setInterval(() => {
+      const container = servicesScrollRef.current;
+      if (container) {
+        const maxScroll = container.scrollWidth - container.clientWidth;
+        if (container.scrollLeft >= maxScroll - 10) {
+          container.scrollTo({ left: 0, behavior: "smooth" });
+        } else {
+          // Cards are 220px wide + 24px gap = 244px
+          container.scrollBy({ left: 244, behavior: "smooth" });
+        }
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [services, loadingServices]);
+
+  // Auto-scroll upcoming events slider (every 2 seconds)
+  useEffect(() => {
+    if (loadingEvents || upcomingEvents.length === 0) return;
+    const interval = setInterval(() => {
+      const container = eventsScrollRef.current;
+      if (container) {
+        const maxScroll = container.scrollWidth - container.clientWidth;
+        if (container.scrollLeft >= maxScroll - 10) {
+          container.scrollTo({ left: 0, behavior: "smooth" });
+        } else {
+          // Cards are 280px wide + 24px gap = 304px
+          container.scrollBy({ left: 304, behavior: "smooth" });
+        }
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [upcomingEvents, loadingEvents]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setToken(localStorage.getItem("user_token"));
@@ -414,7 +454,11 @@ export default function Home() {
                 </div>
               </div>
               <div className="col-lg-12 mt-4">
-                <div className="d-flex flex-nowrap overflow-auto gap-4 pb-3 no-scrollbar" style={{ scrollSnapType: "x mandatory" }}>
+                <div 
+                  ref={servicesScrollRef}
+                  className="d-flex flex-nowrap overflow-auto gap-4 pb-3 no-scrollbar" 
+                  style={{ scrollSnapType: "x mandatory" }}
+                >
                   {loadingServices ? (
                     <div className="w-100 text-center py-5">
                       <div className="spinner-border text-primary" role="status">
@@ -430,32 +474,35 @@ export default function Home() {
                       </div>
                     </div>
                   ) : services.length > 0 ? (
-                    services.map((service) => (
-                      <div 
-                        key={service._id} 
-                        className="flex-shrink-0"
-                        onClick={() => handleServiceClick(service)}
-                        style={{ width: "220px", cursor: "pointer", scrollSnapAlign: "start" }}
-                      >
-                        <div className="main-card h-100">
-                          <div className="host-item text-center h-100 d-flex flex-column justify-content-center">
-                            <div className="host-img mb-3 d-flex align-items-center justify-content-center" style={{ height: "45px" }}>
-                              {getServiceIcon(service.servicesName) ? (
-                                <img src={getServiceIcon(service.servicesName)} alt={service.servicesName} className="mx-auto" />
-                              ) : (
-                                <div 
-                                  className={`d-flex align-items-center justify-content-center rounded-circle mx-auto fw-bold ${getServiceColorClass(service.servicesName)}`}
-                                  style={{ width: "45px", height: "45px", fontSize: "18px" }}
-                                >
-                                  {service.servicesName.charAt(0).toUpperCase()}
-                                </div>
-                              )}
+                    <>
+                      {services.map((service) => (
+                        <div 
+                          key={service._id} 
+                          className="flex-shrink-0"
+                          onClick={() => handleServiceClick(service)}
+                          style={{ width: "220px", cursor: "pointer", scrollSnapAlign: "start" }}
+                        >
+                          <div className="main-card h-100">
+                            <div className="host-item text-center h-100 d-flex flex-column justify-content-center">
+                              <div className="host-img mb-3 d-flex align-items-center justify-content-center" style={{ height: "45px" }}>
+                                {getServiceIcon(service.servicesName) ? (
+                                  <img src={getServiceIcon(service.servicesName)} alt={service.servicesName} className="mx-auto" />
+                                ) : (
+                                  <div 
+                                    className={`d-flex align-items-center justify-content-center rounded-circle mx-auto fw-bold ${getServiceColorClass(service.servicesName)}`}
+                                    style={{ width: "45px", height: "45px", fontSize: "18px" }}
+                                  >
+                                    {service.servicesName.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                              <h4 style={{ fontSize: "14px", fontWeight: "600", margin: 0 }}>{service.servicesName}</h4>
                             </div>
-                            <h4 style={{ fontSize: "14px", fontWeight: "600", margin: 0 }}>{service.servicesName}</h4>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                      <div className="flex-shrink-0" style={{ width: "20px" }}></div>
+                    </>
                   ) : (
                     <div className="w-100 text-center py-5">
                       <p className="text-muted small">No categories found.</p>
@@ -476,37 +523,45 @@ export default function Home() {
                   <h3>Upcoming Events</h3>
                 </div>
               </div>
-              <div className="col-xl-12 col-lg-12 col-md-12">
+              <div className="col-xl-12 col-lg-12 col-md-12 mt-4">
                 <div className="event-filter-items">
                   <div className="featured-controls">
-                    <div className="row">
-                      {loadingEvents ? (
-                        <div className="col-12 text-center py-5">
-                          <div className="spinner-border text-primary" role="status">
-                            <span className="visually-hidden">Loading...</span>
-                          </div>
-                          <p className="text-muted mt-2 small">Loading upcoming events...</p>
+                    {loadingEvents ? (
+                      <div className="text-center py-5">
+                        <div className="spinner-border text-primary" role="status">
+                          <span className="visually-hidden">Loading...</span>
                         </div>
-                      ) : !token ? (
-                        <div className="col-12 text-center py-5 bg-light rounded-4 border p-4 my-3">
-                          <i className="bi bi-calendar-event fs-1 text-muted d-block mb-2"></i>
-                          <h5 className="fw-bold text-dark mb-1">Your Upcoming Events</h5>
-                          <p className="text-muted small mb-3">Please sign in to see your personalized upcoming events list.</p>
-                          <Link href="/login" className="btn btn-primary rounded-pill px-4 fw-bold">
-                            Login Now
-                          </Link>
+                        <p className="text-muted mt-2 small">Loading upcoming events...</p>
+                      </div>
+                    ) : !token ? (
+                      <div className="text-center py-5 bg-light rounded-4 border p-4 my-3">
+                        <i className="bi bi-calendar-event fs-1 text-muted d-block mb-2"></i>
+                        <h5 className="fw-bold text-dark mb-1">Your Upcoming Events</h5>
+                        <p className="text-muted small mb-3">Please sign in to see your personalized upcoming events list.</p>
+                        <Link href="/login" className="btn btn-primary rounded-pill px-4 fw-bold">
+                          Login Now
+                        </Link>
+                      </div>
+                    ) : eventsError ? (
+                      <div>
+                        <div className="alert alert-danger border-0 rounded-3 p-3 text-center my-3" role="alert">
+                          <i className="bi bi-exclamation-triangle me-2"></i>
+                          {eventsError}
                         </div>
-                      ) : eventsError ? (
-                        <div className="col-12">
-                          <div className="alert alert-danger border-0 rounded-3 p-3 text-center my-3" role="alert">
-                            <i className="bi bi-exclamation-triangle me-2"></i>
-                            {eventsError}
-                          </div>
-                        </div>
-                      ) : upcomingEvents.length > 0 ? (
-                        upcomingEvents.map((evt) => (
-                          <div key={evt.id} className="col-xl-3 col-lg-4 col-md-6 col-sm-12">
-                            <div className="main-card mt-4" style={{ cursor: "pointer" }} onClick={() => handleViewEventDetails(evt)}>
+                      </div>
+                    ) : upcomingEvents.length > 0 ? (
+                      <div 
+                        ref={eventsScrollRef}
+                        className="d-flex flex-nowrap overflow-auto gap-4 pb-3 no-scrollbar" 
+                        style={{ scrollSnapType: "x mandatory" }}
+                      >
+                        {upcomingEvents.map((evt) => (
+                          <div 
+                            key={evt.id} 
+                            className="flex-shrink-0" 
+                            style={{ width: "280px", scrollSnapAlign: "start" }}
+                          >
+                            <div className="main-card mt-0 h-100" style={{ cursor: "pointer" }} onClick={() => handleViewEventDetails(evt)}>
                               <div className="event-thumbnail" style={{ height: "180px", overflow: "hidden", position: "relative" }}>
                                 <div className="thumbnail-img h-100 w-100">
                                   <SafeImage
@@ -570,13 +625,15 @@ export default function Home() {
                               </div>
                             </div>
                           </div>
-                        ))
-                      ) : (
-                        <div className="col-12 text-center py-5">
-                          <p className="text-muted small">No upcoming events found.</p>
-                        </div>
-                      )}
-                    </div>
+                        ))}
+                        {/* Trailing scroll margin spacer */}
+                        <div className="flex-shrink-0" style={{ width: "20px" }}></div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-5">
+                        <p className="text-muted small">No upcoming events found.</p>
+                      </div>
+                    )}
                     <div className="browse-btn text-center mt-5">
                       <Link href="/events" className="main-btn btn-hover">
                         Browse All
@@ -615,180 +672,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Nearby Services Lists */}
-        <div className="p-80">
-          <div className="container">
-            <div className="row g-4">
-              {/* Nearby Places */}
-              <div className="col-lg-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h4 className="fw-bold text-dark mb-0">Nearby Places</h4>
-                  <Link href="#" className="small text-decoration-none">
-                    See All
-                  </Link>
-                </div>
-                <div className="d-flex flex-column gap-3">
-                  <div className="list-item-card d-flex align-items-center p-3 rounded-3 bg-white shadow-sm border">
-                    <img
-                      src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=150"
-                      alt="venue"
-                      className="rounded-3 flex-shrink-0 object-fit-cover"
-                      width="70"
-                      height="70"
-                    />
-                    <div className="ms-3 flex-grow-1 min-w-0">
-                      <h6 className="fw-bold mb-1 text-truncate text-dark">Royal Wedding Palace</h6>
-                      <p className="text-muted small mb-1 text-truncate">
-                        <i className="fa-solid fa-location-dot me-1"></i>Radius Gallery - Santa Cruz
-                      </p>
-                      <span className="badge bg-success-subtle text-success border border-success-subtle px-2">Open</span>
-                    </div>
-                    <div className="d-flex flex-column align-items-end justify-content-between h-100 gap-3">
-                      <i className="fa-solid fa-bookmark text-danger cursor-pointer"></i>
-                      <Link href="#" className="detail-link font-weight-bold">
-                        DETAILS
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="list-item-card d-flex align-items-center p-3 rounded-3 bg-white shadow-sm border">
-                    <img
-                      src="https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=150"
-                      alt="venue"
-                      className="rounded-3 flex-shrink-0 object-fit-cover"
-                      width="70"
-                      height="70"
-                    />
-                    <div className="ms-3 flex-grow-1 min-w-0">
-                      <h6 className="fw-bold mb-1 text-truncate text-dark">Grand Ballroom Palace</h6>
-                      <p className="text-muted small mb-1 text-truncate">
-                        <i className="fa-solid fa-location-dot me-1"></i>Radius Gallery - Santa Cruz
-                      </p>
-                      <span className="badge bg-success-subtle text-success border border-success-subtle px-2">Open</span>
-                    </div>
-                    <div className="d-flex flex-column align-items-end justify-content-between h-100 gap-3">
-                      <i className="fa-regular fa-bookmark cursor-pointer text-muted"></i>
-                      <Link href="#" className="detail-link">
-                        DETAILS
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Nearby Bands */}
-              <div className="col-lg-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h4 className="fw-bold text-dark mb-0">Nearby Music Bands</h4>
-                  <Link href="#" className="small text-decoration-none">
-                    See All
-                  </Link>
-                </div>
-                <div className="d-flex flex-column gap-3">
-                  <div className="list-item-card d-flex align-items-center p-3 rounded-3 bg-white shadow-sm border">
-                    <img
-                      src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=150"
-                      alt="band"
-                      className="rounded-3 flex-shrink-0 object-fit-cover"
-                      width="70"
-                      height="70"
-                    />
-                    <div className="ms-3 flex-grow-1 min-w-0">
-                      <h6 className="fw-bold mb-1 text-truncate text-dark">The Symphony Band 1</h6>
-                      <p className="text-muted small mb-1 text-truncate">
-                        <i className="fa-solid fa-location-dot me-1"></i>Radius Gallery - Santa Cruz
-                      </p>
-                      <span className="badge bg-success-subtle text-success border border-success-subtle px-2">Open</span>
-                    </div>
-                    <div className="d-flex flex-column align-items-end justify-content-between h-100 gap-3">
-                      <i className="fa-solid fa-bookmark text-danger cursor-pointer"></i>
-                      <Link href="#" className="detail-link">
-                        DETAILS
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="list-item-card d-flex align-items-center p-3 rounded-3 bg-white shadow-sm border">
-                    <img
-                      src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=150"
-                      alt="band"
-                      className="rounded-3 flex-shrink-0 object-fit-cover"
-                      width="70"
-                      height="70"
-                    />
-                    <div className="ms-3 flex-grow-1 min-w-0">
-                      <h6 className="fw-bold mb-1 text-truncate text-dark">Rock Beats - Band 2</h6>
-                      <p className="text-muted small mb-1 text-truncate">
-                        <i className="fa-solid fa-location-dot me-1"></i>Radius Gallery - Santa Cruz
-                      </p>
-                      <span className="badge bg-success-subtle text-success border border-success-subtle px-2">Open</span>
-                    </div>
-                    <div className="d-flex flex-column align-items-end justify-content-between h-100 gap-3">
-                      <i className="fa-regular fa-bookmark cursor-pointer text-muted"></i>
-                      <Link href="#" className="detail-link">
-                        DETAILS
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nearby Photographers */}
-              <div className="col-lg-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h4 className="fw-bold text-dark mb-0">Nearby Photographers</h4>
-                  <Link href="#" className="small text-decoration-none">
-                    See All
-                  </Link>
-                </div>
-                <div className="d-flex flex-column gap-3">
-                  <div className="list-item-card d-flex align-items-center p-3 rounded-3 bg-white shadow-sm border">
-                    <img
-                      src="https://images.unsplash.com/photo-1554080353-a576cf803bda?w=150"
-                      alt="photography"
-                      className="rounded-3 flex-shrink-0 object-fit-cover"
-                      width="70"
-                      height="70"
-                    />
-                    <div className="ms-3 flex-grow-1 min-w-0">
-                      <h6 className="fw-bold mb-1 text-truncate text-dark">Jon Photography Studio</h6>
-                      <p className="text-muted small mb-1 text-truncate">
-                        <i className="fa-solid fa-location-dot me-1"></i>Radius Gallery - Santa Cruz
-                      </p>
-                      <span className="badge bg-success-subtle text-success border border-success-subtle px-2">Open</span>
-                    </div>
-                    <div className="d-flex flex-column align-items-end justify-content-between h-100 gap-3">
-                      <i className="fa-solid fa-bookmark text-danger cursor-pointer"></i>
-                      <Link href="#" className="detail-link">
-                        DETAILS
-                      </Link>
-                    </div>
-                  </div>
-                  <div className="list-item-card d-flex align-items-center p-3 rounded-3 bg-white shadow-sm border">
-                    <img
-                      src="https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=150"
-                      alt="photography"
-                      className="rounded-3 flex-shrink-0 object-fit-cover"
-                      width="70"
-                      height="70"
-                    />
-                    <div className="ms-3 flex-grow-1 min-w-0">
-                      <h6 className="fw-bold mb-1 text-truncate text-dark">The Frame Image Studio</h6>
-                      <p className="text-muted small mb-1 text-truncate">
-                        <i className="fa-solid fa-location-dot me-1"></i>Radius Gallery - Santa Cruz
-                      </p>
-                      <span className="badge bg-success-subtle text-success border border-success-subtle px-2">Open</span>
-                    </div>
-                    <div className="d-flex flex-column align-items-end justify-content-between h-100 gap-3">
-                      <i className="fa-regular fa-bookmark cursor-pointer text-muted"></i>
-                      <Link href="#" className="detail-link">
-                        DETAILS
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Testimonials Slider Area */}
         <div className="testimonial-block p-80 bg-dark-new">
