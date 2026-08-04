@@ -111,7 +111,7 @@ export default function Header() {
                       href="/events"
                       onClick={() => setOffcanvasOpen(false)}
                     >
-                      Events
+                      Upcoming
                     </Link>
                   </li>
 

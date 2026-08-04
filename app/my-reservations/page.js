@@ -8,6 +8,7 @@ import Footer from "../components/Footer";
 import SafeImage from "../components/SafeImage";
 import { authService } from "../services/authService";
 import { getReservationDetailsApi, cancelReservationApi, resendReservationApi, getCancelReasonsApi, makeReservationApi } from "../services/reservationApi";
+import Swal from "sweetalert2";
 
 export default function MyReservationsPage() {
   const router = useRouter();
@@ -224,11 +225,21 @@ export default function MyReservationsPage() {
         setSuccessMessage(`Reservation ID ${cancelModal.id} has been cancelled successfully!`);
         setTimeout(() => setSuccessMessage(""), 5000);
       } else {
-        alert(response?.message || "Failed to cancel reservation on server.");
+        Swal.fire({
+          title: "Error",
+          text: response?.message || "Failed to cancel reservation on server.",
+          icon: "error",
+          confirmButtonColor: "#3e56f0"
+        });
       }
     } catch (err) {
       console.error("Cancel API error:", err);
-      alert(err.message || "An error occurred while cancelling the reservation.");
+      Swal.fire({
+        title: "Error",
+        text: err.message || "An error occurred while cancelling the reservation.",
+        icon: "error",
+        confirmButtonColor: "#3e56f0"
+      });
     } finally {
       setCancelModal({ show: false, id: null, reservationId: null, comment: "", reason: "" });
     }
@@ -249,11 +260,21 @@ export default function MyReservationsPage() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setTimeout(() => setSuccessMessage(""), 5000);
       } else {
-        alert(response?.message || "Failed to resend reservation details.");
+        Swal.fire({
+          title: "Error",
+          text: response?.message || "Failed to resend reservation details.",
+          icon: "error",
+          confirmButtonColor: "#3e56f0"
+        });
       }
     } catch (err) {
       console.error("Resend API error:", err);
-      alert(err.message || "An error occurred while resending reservation.");
+      Swal.fire({
+        title: "Error",
+        text: err.message || "An error occurred while resending reservation.",
+        icon: "error",
+        confirmButtonColor: "#3e56f0"
+      });
     }
   };
 

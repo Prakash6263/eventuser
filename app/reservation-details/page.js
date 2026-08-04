@@ -6,6 +6,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { authService } from "../services/authService";
 import { getReservationDetailsByIdApi } from "../services/reservationApi";
+import Swal from "sweetalert2";
 
 export default function ReservationDetailsPage() {
   const [profile, setProfile] = useState(null);
@@ -631,7 +632,12 @@ export default function ReservationDetailsPage() {
                               {reservation.eventStartTime} - {reservation.eventEndTime}
                             </div>
                           </div>
-                          <button className="web-row-action-btn" onClick={() => alert("Navigate to event modifier")}>Update</button>
+                          <button className="web-row-action-btn" onClick={() => Swal.fire({
+                            title: "Update Event",
+                            text: "Navigate to event modifier",
+                            icon: "info",
+                            confirmButtonColor: "#3e56f0"
+                          })}>Update</button>
                         </div>
 
                         {/* Venue Row */}

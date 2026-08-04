@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { authService } from "../services/authService";
+import Swal from "sweetalert2";
 
 export default function UserProfilePage() {
   const router = useRouter();
@@ -154,7 +155,12 @@ export default function UserProfilePage() {
     try {
       const res = await authService.deleteUser();
       if (res && res.status) {
-        alert(res.message || "Account deleted (deactivated) successfully");
+        await Swal.fire({
+          title: "Account Deactivated",
+          text: res.message || "Account deleted (deactivated) successfully",
+          icon: "success",
+          confirmButtonColor: "#3e56f0"
+        });
         router.push("/login");
       } else {
         setActionMsg({ type: "danger", text: res?.message || "Failed to delete account. Please try again." });

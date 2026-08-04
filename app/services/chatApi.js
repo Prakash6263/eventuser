@@ -25,10 +25,31 @@ export const sendChatMessageApi = async (chatId, content) => {
   });
 };
 
+// 4. Fetch (or create) Merchant 1:1 Chat + messages
+export const getMerchantChatApi = async (eventId, merchantId) => {
+  return await apiRequest(
+    `/chat/merchant-chat?eventId=${eventId}&merchantId=${merchantId}`,
+    { method: "GET" }
+  );
+};
+
+// 5. Send Merchant Chat Message
+export const sendMerchantChatMessageApi = async (chatId, content) => {
+  return await apiRequest("/chat/merchant-chat/send", {
+    method: "POST",
+    body: JSON.stringify({
+      chatId,
+      content,
+    }),
+  });
+};
+
 export const chatApi = {
   getEventGroupChat: getEventGroupChatApi,
   getChatMessages: getChatMessagesApi,
   sendChatMessage: sendChatMessageApi,
+  getMerchantChat: getMerchantChatApi,
+  sendMerchantChatMessage: sendMerchantChatMessageApi,
 };
 
 export default chatApi;

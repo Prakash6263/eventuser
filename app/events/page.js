@@ -9,6 +9,7 @@ import SafeImage from "../components/SafeImage";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { getEventMediaApi } from "../services/eventApi";
 import { handleAuthFailure, isAuthFailureResponse } from "../services/apiClient";
+import EventMediaModal from "../components/EventMediaModal";
 
 export default function EventsPage() {
   const router = useRouter();
@@ -261,7 +262,7 @@ export default function EventsPage() {
   };
 
   // Gallery Integration
-  const handleOpenGallery = async (evt, e) => {
+  const handleOpenGallery = (evt, e) => {
     e.stopPropagation();
     const userStatus = evt.status?.toLowerCase();
     const isAccepted = ["accepted", "ongoing", "approved", "ongoingevent"].includes(userStatus);
@@ -272,32 +273,10 @@ export default function EventsPage() {
         photos: [],
         notAcceptedMessage: "You can only view event media files once your invitation has been accepted."
       });
-      setGalleryLoading(false);
       return;
     }
 
     setActiveGalleryEvent(evt);
-    setGalleryLoading(true);
-    try {
-      const res = await getEventMediaApi(evt.id);
-      if (res && res.status && res.data && Array.isArray(res.data.media)) {
-        const photos = res.data.media.map((m) => ({
-          id: m._id,
-          url: m.mediaUrl || m.thumbnailUrl || "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=600&q=80",
-          thumbnailUrl: m.thumbnailUrl || "",
-          description: m.caption || "Event venue view",
-          mediaType: m.mediaType || "image"
-        }));
-        setActiveGalleryEvent({ ...evt, photos });
-      } else {
-        setActiveGalleryEvent({ ...evt, photos: [] });
-      }
-    } catch (err) {
-      console.error("Failed to load event media from API:", err);
-      setActiveGalleryEvent({ ...evt, photos: [] });
-    } finally {
-      setGalleryLoading(false);
-    }
   };
 
   const getInitials = (name) => {
@@ -695,127 +674,10 @@ export default function EventsPage() {
 
       {/* Photo Gallery Modal */}
       {activeGalleryEvent && (
-        <div className="modal fade show d-block" style={{ background: "rgba(5, 2, 62, 0.7)", backdropFilter: "blur(4px)", zIndex: 1050 }}>
-          <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable px-3">
-            <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden" style={{ maxHeight: "85vh" }}>
-              
-              <div className="modal-header border-bottom py-3 px-4 d-flex justify-content-between align-items-center bg-dark text-white">
-                <div>
-                  <h5 className="modal-title fw-bold text-white m-0" style={{ fontSize: "18px" }}>
-                    {activeGalleryEvent.title} Media
-                  </h5>
-                  <p className="text-white opacity-75 small m-0 mt-0.5" style={{ fontSize: "11px" }}>Browse event venue photos and albums</p>
-                </div>
-                <button 
-                  type="button" 
-                  className="btn text-white border-0 p-0" 
-                  onClick={() => {
-                    setActiveGalleryEvent(null);
-                    setSelectedPhoto(null);
-                  }}
-                  style={{ background: "none", fontSize: "18px", color: "#fff", cursor: "pointer", opacity: 0.8 }}
-                >
-                  <i className="bi bi-x-lg"></i>
-                </button>
-              </div>
-
-              <div className="modal-body p-4 bg-light overflow-y-auto">
-                {activeGalleryEvent.notAcceptedMessage ? (
-                  <div className="text-center py-5 px-3">
-                    <i className="bi bi-lock-fill fs-1 text-warning mb-3 d-block"></i>
-                    <h5 className="fw-bold text-dark mb-2">Access Restricted</h5>
-                    <p className="text-muted small mb-0">{activeGalleryEvent.notAcceptedMessage}</p>
-                  </div>
-                ) : galleryLoading ? (
-                  <div className="text-center py-5">
-                    <div className="spinner-border text-primary" role="status">
-                      <span className="visually-hidden">Loading media...</span>
-                    </div>
-                    <p className="text-muted mt-2 small">Loading event gallery...</p>
-                  </div>
-                ) : selectedPhoto ? (
-                  /* Lightbox detail view */
-                  <div className="text-center">
-                    <button className="btn btn-sm btn-secondary mb-3 rounded-pill px-3" onClick={() => setSelectedPhoto(null)}>
-                      <i className="bi bi-arrow-left me-1"></i> Back to Gallery
-                    </button>
-                    <div className="bg-dark rounded-4 p-2 overflow-hidden shadow-inner d-flex align-items-center justify-content-center" style={{ minHeight: "300px", maxHeight: "450px" }}>
-                      {selectedPhoto.mediaType === "video" ? (
-                        <video 
-                          src={selectedPhoto.url} 
-                          controls 
-                          autoPlay 
-                          className="w-100 rounded-3" 
-                          style={{ objectFit: "contain", maxHeight: "430px" }}
-                        />
-                      ) : (
-                        <img 
-                          src={selectedPhoto.url} 
-                          alt="Selected Album" 
-                          className="w-100 rounded-3" 
-                          style={{ objectFit: "contain", maxHeight: "430px" }}
-                        />
-                      )}
-                    </div>
-                    {selectedPhoto.description && (
-                      <p className="text-dark fw-medium mt-3 m-0 small">{selectedPhoto.description}</p>
-                    )}
-                  </div>
-                ) : activeGalleryEvent.photos.length === 0 ? (
-                  <div className="text-center py-5">
-                    <i className="bi bi-images fs-2 text-muted mb-2 d-block"></i>
-                    <p className="text-muted mb-0 small">No media uploaded yet for this event.</p>
-                  </div>
-                ) : (
-                  /* Grid view */
-                  <div className="row g-3">
-                    {activeGalleryEvent.photos.map((photo, i) => (
-                      <div key={i} className="col-md-4 col-sm-6 col-12">
-                        <div 
-                          className="card border-0 shadow-sm rounded-3 overflow-hidden position-relative bg-white p-1.5 shadow-hover"
-                          style={{ cursor: "pointer" }}
-                          onClick={() => setSelectedPhoto(photo)}
-                        >
-                          <div className="position-relative w-100 rounded-2 overflow-hidden" style={{ height: "140px" }}>
-                            {photo.mediaType === "video" ? (
-                              <video 
-                                src={photo.url} 
-                                className="w-100 h-100" 
-                                style={{ objectFit: "cover" }} 
-                                preload="metadata" 
-                                muted 
-                                playsInline
-                              />
-                            ) : (
-                              <img 
-                                src={photo.url} 
-                                alt="Gallery Preview" 
-                                className="w-100 h-100"
-                                style={{ objectFit: "cover" }}
-                                onError={(e) => {
-                                  e.target.src = "https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=600&q=80";
-                                }}
-                              />
-                            )}
-                            {photo.mediaType === "video" && (
-                              <div className="position-absolute top-50 start-50 translate-middle text-white bg-dark bg-opacity-50 rounded-circle d-flex align-items-center justify-content-center" style={{ width: "40px", height: "40px" }}>
-                                <i className="bi bi-play-fill fs-4 text-white"></i>
-                              </div>
-                            )}
-                            <div className="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-50 p-2 text-white text-truncate small" style={{ fontSize: "11px" }}>
-                              {photo.description}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-            </div>
-          </div>
-        </div>
+        <EventMediaModal
+          activeGalleryEvent={activeGalleryEvent}
+          onClose={() => setActiveGalleryEvent(null)}
+        />
       )}
       <Footer />
     </>

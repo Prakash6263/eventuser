@@ -72,7 +72,7 @@ const mapEventData = (data, loggedInUser) => {
     rsvpBy: data.eventDate || "",
     selectedNotes: (data.noteId || []).map((n) => n.notes || n),
     registryUrl: typeof data.registryUrl === "object" && data.registryUrl !== null
-      ? (data.registryUrl.registryUrl || data.registryUrl.registryName || "")
+      ? (data.registryUrl.registryUrl || data.registryUrl.registryUrtl || data.registryUrl.registryName || "")
       : (data.registryUrl || ""),
     place: data.placeId?.preferences || "At a participating restaurant",
     selectedLocation: data.serviceLocationId
@@ -87,6 +87,9 @@ const mapEventData = (data, loggedInUser) => {
     eventAttendanceQr: data.eventAttendanceQr || data.attendanceQrToken || null,
     status: rawStatus,
     isMyEvent: !!isMyEvent,
+    additionalServices: data.additionalServices || [],
+    serviceLocationId: data.serviceLocationId || null,
+    registryUrlObject: data.registryUrl || null,
   };
 };
 
@@ -429,11 +432,15 @@ function EventDetailsContent() {
   const isRestaurantOption = event.place === "At a participating restaurant" ||
     event.place === "restaurant" ||
     event.place === "Restaurant from list" ||
-    event.place === "6877a86668d1e0b9fcdf5006";
+    event.place === "6877a86668d1e0b9fcdf5006" ||
+    !!event.serviceLocationId;
 
   // Dynamic Venue Display String
   let venueDisplay = "Location provided by organizer";
-  if (isRestaurantOption) {
+  if (event.serviceLocationId) {
+    const merchantName = event.serviceLocationId.merchantId?.serviceName || event.serviceLocationId.merchantId?.fullName || "Event Venue";
+    venueDisplay = `${merchantName} - ${event.serviceLocationId.addressName || event.serviceLocationId.address}`;
+  } else if (isRestaurantOption) {
     if (restaurant) {
       const restName = restaurant.serviceName || restaurant.fullName || restaurant.name || "Participating restaurant";
       if (event.selectedLocation) {
@@ -452,6 +459,13 @@ function EventDetailsContent() {
   }
 
   const monthName = new Date(2026, event.month || 6, 1).toLocaleString("en-US", { month: "long" });
+
+  const displayRestaurantName = event.serviceLocationId?.merchantId?.serviceName || event.serviceLocationId?.merchantId?.fullName || restaurant?.serviceName || restaurant?.fullName || restaurant?.name || "Event Venue";
+  const displayRestaurantImage = event.serviceLocationId?.merchantId?.profileImage || restaurant?.bannerImage || restaurant?.profileImage || "/images/banner.jpg";
+  const displayRestaurantDescription = event.serviceLocationId?.merchantId?.serviceDescription || restaurant?.serviceDescription || restaurant?.serviceSlogan || "Participating event venue.";
+  const displayAddress = event.serviceLocationId?.address || event.selectedLocation?.address || restaurant?.location || "Indore location";
+  const displayPhone = event.serviceLocationId?.locationPhone || restaurant?.phone || restaurant?.mobile || "";
+  const displayCapacity = event.serviceLocationId?.capacity || restaurant?.capacity || "";
 
   // Guest avatar initials helper
   const getInitials = (name) => {
@@ -601,7 +615,7 @@ function EventDetailsContent() {
 
               {/* Special Notes Card */}
               {event.selectedNotes && event.selectedNotes.length > 0 && (
-                <div className="card border-0 rounded-4 shadow-sm p-4 bg-white">
+                <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
                   <h5 className="fw-bold text-dark mb-3">
                     <i className="fa-solid fa-note-sticky text-warning me-2"></i>
                     Special Instructions / Notes
@@ -614,6 +628,135 @@ function EventDetailsContent() {
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {/* Additional Services Card */}
+              {event.additionalServices && event.additionalServices.length > 0 && (
+                <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                  <div className="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+                    <h5 className="fw-bold text-dark m-0 d-flex align-items-center gap-2">
+                      <i className="fa-solid fa-bell-concierge text-primary"></i>
+                      Additional Services Requested
+                    </h5>
+                    <span className="badge rounded-pill bg-light text-secondary px-2.5 py-1 small fw-semibold" style={{ fontSize: "11px" }}>
+                      {event.additionalServices.length} {event.additionalServices.length === 1 ? 'Service' : 'Services'}
+                    </span>
+                  </div>
+
+                  <div className="d-flex flex-column gap-3">
+                    {event.additionalServices.map((service, index) => {
+                      const serviceName = service.serviceId?.servicesName || "Extra Service";
+                      
+                      // Resolve thematic icons and soft colors for premium look
+                      const getServiceIconClass = (name) => {
+                        const norm = (name || "").toLowerCase();
+                        if (norm.includes("catering")) return { icon: "fa-utensils", bg: "#eff6ff", color: "#3b82f6" };
+                        if (norm.includes("decor")) return { icon: "fa-lightbulb", bg: "#fef3c7", color: "#d97706" };
+                        if (norm.includes("photo")) return { icon: "fa-camera", bg: "#ecfdf5", color: "#10b981" };
+                        if (norm.includes("music") || norm.includes("dj")) return { icon: "fa-music", bg: "#fdf2f8", color: "#db2777" };
+                        if (norm.includes("furniture") || norm.includes("rent")) return { icon: "fa-chair", bg: "#f5f3ff", color: "#8b5cf6" };
+                        if (norm.includes("servant") || norm.includes("clean")) return { icon: "fa-broom", bg: "#f1f5f9", color: "#64748b" };
+                        if (norm.includes("clown") || norm.includes("entertain")) return { icon: "fa-face-laugh-beam", bg: "#fff7ed", color: "#f97316" };
+                        return { icon: "fa-bell-concierge", bg: "#f0fdf4", color: "#15803d" };
+                      };
+                      
+                      const meta = getServiceIconClass(serviceName);
+                      const isClickable = !!service.serviceId?._id;
+
+                      const rowContent = (
+                        <div 
+                          className="d-flex align-items-center justify-content-between p-3 rounded-3 border border-light-subtle bg-white shadow-sm w-100 text-start" 
+                          style={{ 
+                            cursor: isClickable ? 'pointer' : 'default',
+                            transition: "transform 0.2s ease, box-shadow 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (isClickable) {
+                              e.currentTarget.style.transform = "translateY(-2px)";
+                              e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.06)";
+                              e.currentTarget.style.borderColor = "#4f46e5";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (isClickable) {
+                              e.currentTarget.style.transform = "translateY(0)";
+                              e.currentTarget.style.boxShadow = "none";
+                              e.currentTarget.style.borderColor = "var(--bs-border-color)";
+                            }
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-3 overflow-hidden">
+                            {/* Service Icon Box */}
+                            <div 
+                              className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                              style={{ width: "42px", height: "42px", backgroundColor: meta.bg, color: meta.color, fontSize: "16px" }}
+                            >
+                              <i className={`fa-solid ${meta.icon}`}></i>
+                            </div>
+
+                            {/* Service Text Details */}
+                            <div className="overflow-hidden">
+                              <h6 className="fw-bold text-dark m-0 d-flex align-items-center gap-2 small text-truncate">
+                                {serviceName}
+                                {isClickable && (
+                                  <i className="fa-solid fa-arrow-up-right-from-square text-primary" style={{ fontSize: "9px" }}></i>
+                                )}
+                              </h6>
+                              {isClickable ? (
+                                <span className="text-primary small d-block fw-semibold" style={{ fontSize: "11px" }}>
+                                  Browse Service Providers
+                                </span>
+                              ) : (
+                                <span className="text-muted small d-block" style={{ fontSize: "11px" }}>
+                                  Additional Event Requirement
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Status and Payment Badges */}
+                          <div className="d-flex align-items-center gap-2 flex-shrink-0">
+                            {/* Booking Status Badge */}
+                            <span className="badge rounded-pill px-2.5 py-1.5 fw-semibold text-capitalize shadow-sm" style={{
+                              fontSize: "10px",
+                              background: ["accepted", "approved"].includes(service.status?.toLowerCase()) ? "#d1fae5" : "#fee2e2",
+                              color: ["accepted", "approved"].includes(service.status?.toLowerCase()) ? "#065f46" : "#991b1b"
+                            }}>
+                              Status: {service.status || "Pending"}
+                            </span>
+
+                            {/* Payment Status Badge */}
+                            <span className="badge rounded-pill px-2.5 py-1.5 fw-semibold shadow-sm" style={{
+                              fontSize: "10px",
+                              background: ["yes", "paid", "success"].includes(service.paymentStatus?.toLowerCase()) ? "#e0f2fe" : "#fff1f2",
+                              color: ["yes", "paid", "success"].includes(service.paymentStatus?.toLowerCase()) ? "#0369a1" : "#be123c"
+                            }}>
+                              {["yes", "paid", "success"].includes(service.paymentStatus?.toLowerCase()) ? "Paid" : "Unpaid"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+
+                      if (isClickable) {
+                        return (
+                          <Link 
+                            key={service._id || index}
+                            href={`/merchants-by-service?serviceId=${service.serviceId._id}&serviceName=${encodeURIComponent(serviceName)}&eventId=${event.eventId}`}
+                            className="text-decoration-none d-block"
+                          >
+                            {rowContent}
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <div key={service._id || index} className="d-block">
+                          {rowContent}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -873,7 +1016,7 @@ function EventDetailsContent() {
       </div>
 
       {/* Venue Details Modal dialog */}
-      {showVenueModal && restaurant && (
+      {showVenueModal && (event.serviceLocationId || restaurant) && (
         <div
           className="modal fade show d-block"
           tabIndex="-1"
@@ -882,13 +1025,13 @@ function EventDetailsContent() {
         >
           <div
             className="modal-dialog modal-dialog-centered modal-dialog-scrollable px-3"
-            style={{ maxWidth: "520px" }}
+            style={{ maxWidth: "550px" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="modal-content border-0 rounded-4 overflow-hidden shadow-lg">
+            <div className="modal-content border-0 rounded-4 overflow-hidden shadow-lg bg-white">
 
               <div className="modal-header border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
-                <h5 className="modal-title fw-bold" style={{ fontSize: "18px" }}>Venue Information</h5>
+                <h5 className="modal-title fw-bold text-dark m-0" style={{ fontSize: "18px" }}>Venue Information</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -897,28 +1040,31 @@ function EventDetailsContent() {
                 ></button>
               </div>
 
-              <div className="modal-body p-4">
+              <div className="modal-body p-4 text-start">
                 {/* Banner / Profile Image */}
-                <div className="mb-4 rounded-3 overflow-hidden" style={{ height: "180px" }}>
+                <div className="mb-4 rounded-3 overflow-hidden" style={{ height: "200px" }}>
                   <img
-                    src={restaurant.bannerImage || restaurant.profileImage || "/images/banner.jpg"}
-                    alt={restaurant.serviceName || restaurant.name}
+                    src={displayRestaurantImage}
+                    alt={displayRestaurantName}
                     className="w-100 h-100 object-fit-cover"
+                    onError={(e) => {
+                      e.target.src = "/images/banner.jpg";
+                    }}
                   />
                 </div>
 
                 <h4 className="fw-bold mb-2 text-dark">
-                  {restaurant.serviceName || restaurant.fullName || restaurant.name}
+                  {displayRestaurantName}
                 </h4>
                 <p className="text-muted mb-4 small" style={{ lineHeight: "1.6" }}>
-                  {restaurant.serviceDescription || restaurant.serviceSlogan || "Participating event venue."}
+                  {displayRestaurantDescription}
                 </p>
 
                 {/* Details layout rows */}
                 <div className="d-flex flex-column gap-3">
 
-                  {/* Cuisine */}
-                  {restaurant.cuisineName && (
+                  {/* Cuisine (if available on merchant profile) */}
+                  {restaurant?.cuisineName && !event.serviceLocationId && (
                     <div className="d-flex align-items-center gap-3">
                       <div
                         className="rounded-3 d-flex align-items-center justify-content-center"
@@ -941,16 +1087,16 @@ function EventDetailsContent() {
                     >
                       <i className="fa-solid fa-location-dot"></i>
                     </div>
-                    <div>
-                      <span className="small text-muted d-block">Venue location</span>
-                      <strong className="text-dark small">
-                        {event.selectedLocation?.address || restaurant.location || "Indore location"}
+                    <div className="overflow-hidden">
+                      <span className="small text-muted d-block">Venue Location Address</span>
+                      <strong className="text-dark small text-break">
+                        {displayAddress}
                       </strong>
                     </div>
                   </div>
 
                   {/* Phone */}
-                  {(restaurant.phone || restaurant.mobile) && (
+                  {displayPhone && (
                     <div className="d-flex align-items-center gap-3">
                       <div
                         className="rounded-3 d-flex align-items-center justify-content-center"
@@ -960,13 +1106,29 @@ function EventDetailsContent() {
                       </div>
                       <div>
                         <span className="small text-muted d-block">Phone</span>
-                        <strong className="text-dark small">{restaurant.phone || restaurant.mobile}</strong>
+                        <strong className="text-dark small">{displayPhone}</strong>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Capacity */}
+                  {displayCapacity && (
+                    <div className="d-flex align-items-center gap-3">
+                      <div
+                        className="rounded-3 d-flex align-items-center justify-content-center"
+                        style={{ width: "38px", height: "38px", background: "#fef3c7", color: "#d97706" }}
+                      >
+                        <i className="fa-solid fa-users"></i>
+                      </div>
+                      <div>
+                        <span className="small text-muted d-block">Capacity</span>
+                        <strong className="text-dark small">{displayCapacity} Guests</strong>
                       </div>
                     </div>
                   )}
 
                   {/* Website link */}
-                  {restaurant.webUrl && (
+                  {restaurant?.webUrl && !event.serviceLocationId && (
                     <div className="d-flex align-items-center gap-3">
                       <div
                         className="rounded-3 d-flex align-items-center justify-content-center"
@@ -982,14 +1144,14 @@ function EventDetailsContent() {
                           rel="noreferrer"
                           className="text-primary text-decoration-none small fw-semibold"
                         >
-                          {restaurant.webUrl} <i className="fa-solid fa-arrow-up-right-from-square ms-1"></i>
+                          {restaurant.webUrl} <i className="fa-solid fa-arrow-up-right-from-square ms-1" style={{ fontSize: "10px" }}></i>
                         </a>
                       </div>
                     </div>
                   )}
 
                   {/* Menu link */}
-                  {restaurant.menuUrl && (
+                  {restaurant?.menuUrl && !event.serviceLocationId && (
                     <div className="d-flex align-items-center gap-3">
                       <div
                         className="rounded-3 d-flex align-items-center justify-content-center"
@@ -1005,8 +1167,61 @@ function EventDetailsContent() {
                           rel="noreferrer"
                           className="text-primary text-decoration-none small fw-semibold"
                         >
-                          View Menu <i className="fa-solid fa-arrow-up-right-from-square ms-1"></i>
+                          View Menu <i className="fa-solid fa-arrow-up-right-from-square ms-1" style={{ fontSize: "10px" }}></i>
                         </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Weekly Schedule & Shift hours */}
+                  {event.serviceLocationId?.weeklySchedule && event.serviceLocationId.weeklySchedule.length > 0 && (
+                    <div className="mt-4 pt-3 border-top">
+                      <h6 className="fw-bold text-dark mb-2 small">
+                        <i className="fa-regular fa-calendar-days text-primary me-1.5"></i>
+                        Weekly Schedule & Hours
+                      </h6>
+                      <div className="bg-light p-2.5 rounded-3 border">
+                        {event.serviceLocationId.weeklySchedule.map((sched, idx) => {
+                          const hasMorning = sched.morning && (sched.morning.from !== "00:00" || sched.morning.to !== "00:00");
+                          const hasEvening = sched.evening && (sched.evening.from !== "00:00" || sched.evening.to !== "00:00");
+                          return (
+                            <div key={sched._id || idx} className="d-flex justify-content-between text-muted small py-1.5 border-bottom border-light-subtle last-border-0" style={{ fontSize: "12px" }}>
+                              <span className="fw-semibold text-dark">{sched.day}</span>
+                              <span className="text-end">
+                                {!hasMorning && !hasEvening ? (
+                                  <span className="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">Closed</span>
+                                ) : (
+                                  <>
+                                    {hasMorning && `Morning: ${sched.morning.from} - ${sched.morning.to}`}
+                                    {hasMorning && hasEvening && <br />}
+                                    {hasEvening && `Evening: ${sched.evening.from} - ${sched.evening.to}`}
+                                  </>
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Photos / Gallery list */}
+                  {event.serviceLocationId?.locationPhotoVideoList && event.serviceLocationId.locationPhotoVideoList.length > 0 && (
+                    <div className="mt-4 pt-3 border-top">
+                      <h6 className="fw-bold text-dark mb-2 small">
+                        <i className="fa-regular fa-image text-primary me-1.5"></i>
+                        Venue Media Gallery
+                      </h6>
+                      <div className="d-flex gap-2 overflow-x-auto pb-2">
+                        {event.serviceLocationId.locationPhotoVideoList.map((media, idx) => {
+                          const imgKey = media.thumbnail || media.file;
+                          const imgUrl = imgKey.startsWith("http") ? imgKey : `https://event-una-image-bucket.s3.ap-south-1.amazonaws.com/merchant/locationPhotoVideo/${imgKey}`;
+                          return (
+                            <div key={media._id || idx} className="rounded-3 overflow-hidden border shadow-sm flex-shrink-0" style={{ width: "120px", height: "80px" }}>
+                              <img src={imgUrl} alt={media.description || "Venue photo"} className="w-100 h-100 object-fit-cover" />
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
