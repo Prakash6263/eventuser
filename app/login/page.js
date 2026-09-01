@@ -120,12 +120,9 @@ export default function LoginPage() {
   };
 
   return (
-    <>
+    <div className="d-flex flex-column min-vh-100 bg-light">
       <Header />
-      <div
-        className="form-wrapper bg-light py-5"
-        style={{ minHeight: "calc(100vh - 140px)", marginTop: "80px" }}
-      >
+      <main className="flex-grow-1 d-flex align-items-center justify-content-center py-4" style={{ marginTop: "80px", marginBottom: "30px" }}>
         <div className="container d-flex justify-content-center align-items-center px-3">
           <div
             className="registration border p-4 p-md-5 rounded-4 bg-white shadow-lg position-relative"
@@ -383,9 +380,9 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-      </div>
+      </main>
       <Footer />
-    </>
+    </div>
   );
 }
 
