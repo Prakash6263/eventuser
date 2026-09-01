@@ -105,6 +105,7 @@ export default function Header() {
                       About Us
                     </Link>
                   </li>
+                  {isLoggedIn && (
                   <li className="nav-item">
                     <Link
                       className={`nav-link ${isActive("/events") ? "active" : ""}`}
@@ -114,6 +115,7 @@ export default function Header() {
                       Upcoming
                     </Link>
                   </li>
+                  )}
 
                   <li className="nav-item">
                     <Link
@@ -170,12 +172,14 @@ export default function Header() {
 
             <div className="right-header order-2">
               <ul className="align-self-stretch d-flex align-items-center m-0">
+                {isLoggedIn && (
                 <li className="me-2">
-                  <a href="/create-event" className="create-btn btn-hover" onClick={handleCreateEventClick}>
+                  <Link href="/create-event" className="create-btn btn-hover">
                     <i className="fa-solid fa-calendar-days"></i>
                     <span>Create Event</span>
-                  </a>
+                  </Link>
                 </li>
+                )}
                 {isLoggedIn ? (
                   <li className="d-flex align-items-center gap-2">
                     <Link href="/user-profile" className="create-btn btn-hover">
