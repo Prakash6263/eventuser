@@ -87,14 +87,33 @@ function VerificationForm() {
     }
   };
 
-  const handleResendCode = () => {
-    setCountdown(20);
-    setOtp(["", "", "", ""]);
-    if (otpRefs[0].current) {
-      otpRefs[0].current.focus();
+  const handleResendCode = async () => {
+    setErrorMsg("");
+    setSuccessMsg("");
+    setLoading(true);
+    try {
+      const rawMobile = searchParams.get("mobile") || "";
+      const cleanMobile = rawMobile.replace(/[^0-9]/g, "") || rawMobile;
+      if (cleanMobile) {
+        const res = await authService.sendLoginOtp({ mobile: cleanMobile });
+        if (res && res.status) {
+          setSuccessMsg(res.message || "Verification OTP code has been resent!");
+        } else {
+          setErrorMsg(res?.message || "Failed to resend OTP.");
+        }
+      } else {
+        setSuccessMsg("Verification code has been re-sent!");
+      }
+      setCountdown(20);
+      setOtp(["", "", "", ""]);
+      if (otpRefs[0].current) {
+        otpRefs[0].current.focus();
+      }
+    } catch (err) {
+      setErrorMsg("Failed to resend OTP code. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setSuccessMsg("Verification code has been re-sent!");
-    setTimeout(() => setSuccessMsg(""), 3000);
   };
 
   return (
