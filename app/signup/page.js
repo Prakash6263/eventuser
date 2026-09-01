@@ -5,14 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import CountryCodePicker from "../components/CountryCodePicker";
 import { authService } from "../services/authService";
 
 export default function SignupPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [countryCode, setCountryCode] = useState("+91");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -65,10 +63,10 @@ export default function SignupPage() {
   return (
     <>
       <Header />
-      <div className="form-wrapper bg-light d-flex align-items-center justify-content-center" style={{ minHeight: "calc(100vh - 90px)", paddingTop: "100px", paddingBottom: "100px" }}>
-        <div className="container d-flex justify-content-center align-items-center">
+      <div className="form-wrapper bg-light d-flex align-items-center justify-content-center" style={{ minHeight: "calc(100vh - 90px)", paddingTop: "100px", paddingBottom: "40px" }}>
+        <div className="container d-flex justify-content-center align-items-center px-3">
           <div
-            className="registration border p-5 rounded-4 bg-white shadow-lg position-relative"
+            className="registration border p-4 p-md-5 rounded-4 bg-white shadow-lg position-relative"
             style={{ maxWidth: "480px", width: "100%" }}
           >
             {/* Back button */}
@@ -137,33 +135,23 @@ export default function SignupPage() {
                 />
               </div>
 
-              {/* Country Code & Mobile Number */}
-              <div className="row g-2 mb-3">
-                <div className="col-4">
-                  <CountryCodePicker
-                    value={countryCode}
-                    onChange={(code) => setCountryCode(code)}
-                  />
-                </div>
-                <div className="col-8">
-                  <div className="form-group position-relative">
-                    <span
-                      className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                      style={{ zIndex: 10 }}
-                    >
-                      <i className="fa-solid fa-phone"></i>
-                    </span>
-                    <input
-                      type="tel"
-                      className="form-control rounded-pill border-light-subtle h_50 ps-5"
-                      placeholder="Mobile number"
-                      value={mobile}
-                      onChange={(e) => setMobile(e.target.value)}
-                      style={{ background: "#f8f9fa", border: "1px solid #e9ecef" }}
-                      required
-                    />
-                  </div>
-                </div>
+              {/* Mobile Number */}
+              <div className="form-group mb-3 position-relative">
+                <span
+                  className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
+                  style={{ zIndex: 10 }}
+                >
+                  <i className="fa-solid fa-phone"></i>
+                </span>
+                <input
+                  type="tel"
+                  className="form-control rounded-pill border-light-subtle h_50 ps-5"
+                  placeholder="Mobile number"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  style={{ background: "#f8f9fa", border: "1px solid #e9ecef" }}
+                  required
+                />
               </div>
 
               {/* Password */}
