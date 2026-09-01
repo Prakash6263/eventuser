@@ -63,26 +63,36 @@ export default function SignupPage() {
   return (
     <div className="d-flex flex-column min-vh-100 bg-light">
       <Header />
-      <main className="flex-grow-1 d-flex align-items-center justify-content-center py-4" style={{ marginTop: "80px", marginBottom: "30px" }}>
+      <main className="flex-grow-1 d-flex align-items-center justify-content-center py-5" style={{ marginTop: "75px" }}>
         <div className="container px-3">
           <div className="row justify-content-center">
-            <div className="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
-              <div className="bg-white rounded-4 border shadow-sm p-4">
-                {/* Top header with Back arrow and Title */}
-                <div className="d-flex align-items-center mb-3">
-                  <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className="btn btn-light rounded-circle p-0 me-3 d-flex align-items-center justify-content-center"
-                    style={{ width: "36px", height: "36px" }}
-                    title="Back"
-                  >
-                    <i className="fa-solid fa-arrow-left text-dark"></i>
-                  </button>
-                  <h4 className="fw-bold mb-0" style={{ color: "#0c1b33" }}>
-                    Sign up
-                  </h4>
+            <div className="col-12 col-sm-10 col-md-8 col-lg-6 col-xl-5">
+              <div
+                className="registration border p-4 p-md-5 rounded-4 bg-white shadow-sm"
+                style={{ borderRadius: "16px" }}
+              >
+                {/* Brand Logo */}
+                <div className="text-center mb-3">
+                  <Link href="/">
+                    <img
+                      src="/images/logo.png"
+                      alt="EVENTUNA"
+                      style={{ maxHeight: "50px", width: "auto", objectFit: "contain" }}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = "none";
+                      }}
+                    />
+                  </Link>
                 </div>
+
+                {/* Heading */}
+                <h2 className="registration-title text-center mt-0 mb-1" style={{ fontSize: "24px", color: "#0c1b33" }}>
+                  Sign Up
+                </h2>
+                <p className="text-center text-muted mb-4" style={{ fontSize: "14px" }}>
+                  Create your Eventuna account
+                </p>
 
                 {/* Alerts */}
                 {errorMsg && (
@@ -101,152 +111,115 @@ export default function SignupPage() {
                 {/* Signup Form */}
                 <form onSubmit={handleSignup}>
                   {/* Full Name */}
-                  <div className="form-group mb-2.5 position-relative">
-                    <span
-                      className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                      style={{ zIndex: 10 }}
-                    >
-                      <i className="fa-regular fa-user"></i>
-                    </span>
+                  <div className="form-group mb-3">
+                    <label className="form-label text-secondary small fw-medium mb-1">Full Name*</label>
                     <input
                       type="text"
-                      className="form-control rounded-pill ps-5"
-                      placeholder="Full name"
+                      className="form-control rounded-3 h_50"
+                      placeholder="Enter your full name"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      style={{ background: "#f8f9fa", border: "1px solid #e9ecef", height: "46px" }}
                       required
                     />
                   </div>
 
                   {/* Email */}
-                  <div className="form-group mb-2.5 position-relative">
-                    <span
-                      className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                      style={{ zIndex: 10 }}
-                    >
-                      <i className="fa-regular fa-envelope"></i>
-                    </span>
+                  <div className="form-group mb-3">
+                    <label className="form-label text-secondary small fw-medium mb-1">Email Address*</label>
                     <input
                       type="email"
-                      className="form-control rounded-pill ps-5"
-                      placeholder="Email address"
+                      className="form-control rounded-3 h_50"
+                      placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      style={{ background: "#f8f9fa", border: "1px solid #e9ecef", height: "46px" }}
                       required
                     />
                   </div>
 
-                  {/* Mobile */}
-                  <div className="form-group mb-2.5 position-relative">
-                    <span
-                      className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                      style={{ zIndex: 10 }}
-                    >
-                      <i className="fa-solid fa-phone"></i>
-                    </span>
+                  {/* Mobile Number */}
+                  <div className="form-group mb-3">
+                    <label className="form-label text-secondary small fw-medium mb-1">Mobile Number*</label>
                     <input
                       type="tel"
-                      className="form-control rounded-pill ps-5"
-                      placeholder="Mobile number"
+                      className="form-control rounded-3 h_50"
+                      placeholder="Enter mobile number"
                       value={mobile}
                       onChange={(e) => setMobile(e.target.value)}
-                      style={{ background: "#f8f9fa", border: "1px solid #e9ecef", height: "46px" }}
                       required
                     />
                   </div>
 
                   {/* Password */}
-                  <div className="form-group mb-2.5 position-relative">
-                    <span
-                      className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                      style={{ zIndex: 10 }}
-                    >
-                      <i className="fa-solid fa-lock"></i>
-                    </span>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      className="form-control rounded-pill ps-5 pe-5"
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      style={{ background: "#f8f9fa", border: "1px solid #e9ecef", height: "46px" }}
-                      required
-                    />
-                    <span
-                      className="position-absolute top-50 end-0 translate-middle-y me-3 text-muted"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{ zIndex: 10, cursor: "pointer" }}
-                    >
-                      <i className={`fa-solid ${showPassword ? "fa-eye" : "fa-eye-slash"}`}></i>
-                    </span>
+                  <div className="form-group mb-3">
+                    <label className="form-label text-secondary small fw-medium mb-1">Password*</label>
+                    <div className="position-relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        className="form-control rounded-3 h_50 pe-5"
+                        placeholder="Enter password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <span
+                        className="position-absolute top-50 end-0 translate-middle-y me-3 text-muted"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{ cursor: "pointer", zIndex: 10 }}
+                      >
+                        <i className={`fa-solid ${showPassword ? "fa-eye" : "fa-eye-slash"}`}></i>
+                      </span>
+                    </div>
                   </div>
 
                   {/* Confirm Password */}
-                  <div className="form-group mb-3 position-relative">
-                    <span
-                      className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                      style={{ zIndex: 10 }}
-                    >
-                      <i className="fa-solid fa-lock"></i>
-                    </span>
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      className="form-control rounded-pill ps-5 pe-5"
-                      placeholder="Confirm password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      style={{ background: "#f8f9fa", border: "1px solid #e9ecef", height: "46px" }}
-                      required
-                    />
-                    <span
-                      className="position-absolute top-50 end-0 translate-middle-y me-3 text-muted"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      style={{ zIndex: 10, cursor: "pointer" }}
-                    >
-                      <i className={`fa-solid ${showConfirmPassword ? "fa-eye" : "fa-eye-slash"}`}></i>
-                    </span>
+                  <div className="form-group mb-4">
+                    <label className="form-label text-secondary small fw-medium mb-1">Confirm Password*</label>
+                    <div className="position-relative">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        className="form-control rounded-3 h_50 pe-5"
+                        placeholder="Re-enter password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                      />
+                      <span
+                        className="position-absolute top-50 end-0 translate-middle-y me-3 text-muted"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        style={{ cursor: "pointer", zIndex: 10 }}
+                      >
+                        <i className={`fa-solid ${showConfirmPassword ? "fa-eye" : "fa-eye-slash"}`}></i>
+                      </span>
+                    </div>
                   </div>
 
                   {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="btn w-100 rounded-pill d-flex align-items-center justify-content-between px-4 text-white border-0 shadow-sm"
+                    className="btn w-100 rounded-3 text-white fw-semibold border-0 transition-all py-2.5"
                     style={{
-                      background: "linear-gradient(135deg, #5b67f1, #3e52e9)",
+                      backgroundColor: "#3e56f0",
                       height: "48px",
-                      fontSize: "15px",
-                      fontWeight: "600",
+                      fontSize: "16px",
                       opacity: loading ? 0.75 : 1,
                     }}
                   >
-                    <span className="mx-auto">
-                      {loading ? "Creating account..." : "SIGN UP"}
-                    </span>
-                    <span
-                      className="bg-white rounded-circle d-flex align-items-center justify-content-center"
-                      style={{ width: "28px", height: "28px", color: "#5b67f1", flexShrink: 0 }}
-                    >
-                      {loading ? (
-                        <i className="fa-solid fa-spinner fa-spin" style={{ fontSize: "12px" }}></i>
-                      ) : (
-                        <i className="fa-solid fa-arrow-right" style={{ fontSize: "12px" }}></i>
-                      )}
-                    </span>
+                    {loading ? (
+                      <span>
+                        <i className="fa-solid fa-spinner fa-spin me-2"></i>Creating Account...
+                      </span>
+                    ) : (
+                      "Sign Up"
+                    )}
                   </button>
                 </form>
 
                 {/* Footer link */}
-                <div className="text-center mt-3 pt-1">
+                <div className="text-center mt-4 pt-2 border-top">
                   <span className="text-muted small">Already have an account? </span>
-                  <Link
-                    href="/login"
-                    className="fw-semibold text-decoration-none"
-                    style={{ color: "#5b67f1" }}
-                  >
-                    Login
+                  <Link href="/login" className="signup-link text-decoration-none fw-semibold">
+                    Sign In
                   </Link>
                 </div>
               </div>
