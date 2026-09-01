@@ -34,13 +34,14 @@ export const verifyOtpApi = async ({ userId, otp }) => {
 };
 
 // 3. Login API
-export const loginApi = async ({ email, password }) => {
+export const loginApi = async ({ email, mobile, countryCode, password }) => {
+  const payload = email
+    ? { email, password }
+    : { mobile, countryCode, password, email: mobile };
+
   const data = await apiRequest("/auth/login", {
     method: "POST",
-    body: JSON.stringify({
-      email,
-      password,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (data && data.status && data.token) {
@@ -49,7 +50,47 @@ export const loginApi = async ({ email, password }) => {
       userId: data.userId,
       role: data.role,
       register_id: data.register_id,
-      email,
+      email: email || `${countryCode || ""}${mobile}`,
+    });
+  }
+
+  return data;
+};
+
+// 3b. Send Login OTP API
+export const sendLoginOtpApi = async ({ mobile }) => {
+  return await apiRequest("/auth/send-login-otp", {
+    method: "POST",
+    body: JSON.stringify({
+      mobile,
+    }),
+  });
+};
+
+// 3c. Verify Login OTP API
+export const verifyLoginOtpApi = async ({
+  mobile,
+  otp,
+  register_id = "34444",
+  ios_register_id = "34444",
+}) => {
+  const data = await apiRequest("/auth/verify-login-otp", {
+    method: "POST",
+    body: JSON.stringify({
+      mobile,
+      otp,
+      register_id,
+      ios_register_id,
+    }),
+  });
+
+  if (data && data.status && data.token) {
+    saveAuthData({
+      token: data.token,
+      userId: data.userId || data.user?._id || data.id,
+      role: data.role || data.user?.role,
+      register_id: data.register_id || register_id,
+      email: data.user?.email || mobile,
     });
   }
 
@@ -189,6 +230,8 @@ export const authApi = {
   signup: signupApi,
   verifyOtp: verifyOtpApi,
   login: loginApi,
+  sendLoginOtp: sendLoginOtpApi,
+  verifyLoginOtp: verifyLoginOtpApi,
   logout: logoutApi,
   deleteUser: deleteUserApi,
   forgotPassword: forgotPasswordApi,
