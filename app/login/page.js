@@ -123,8 +123,8 @@ export default function LoginPage() {
     <>
       <Header />
       <div
-        className="form-wrapper bg-light d-flex align-items-center justify-content-center py-4 py-md-5"
-        style={{ minHeight: "calc(100vh - 90px)" }}
+        className="form-wrapper bg-light py-5"
+        style={{ minHeight: "calc(100vh - 140px)", marginTop: "80px" }}
       >
         <div className="container d-flex justify-content-center align-items-center px-3">
           <div
