@@ -145,16 +145,16 @@ function MerchantDetailsContent() {
     const match = (merchant?.couponIds || []).find(c => c.couponName.toLowerCase() === couponCode.trim().toLowerCase());
     if (match) {
       setAppliedCoupon(match);
-      Swal.fire({ icon: "success", title: "Coupon Applied!", text: `${match.discount}% discount applied.`, confirmButtonColor: "#4f46e5", timer: 2000, timerProgressBar: true });
+      Swal.fire({ icon: "success", title: "Coupon Applied!", text: `${match.discount}% discount applied.`, confirmButtonColor: "#3e56f0", timer: 2000, timerProgressBar: true });
     } else {
-      Swal.fire({ icon: "error", title: "Invalid Coupon", text: "This coupon code is not valid.", confirmButtonColor: "#4f46e5" });
+      Swal.fire({ icon: "error", title: "Invalid Coupon", text: "This coupon code is not valid.", confirmButtonColor: "#3e56f0" });
     }
   };
 
   // ── Step 1 → Step 2 ──
   const handleAddToOrder = () => {
     if (selectedProducts.length === 0) {
-      Swal.fire({ icon: "warning", title: "No Items Selected", text: "Please add at least one item to your order.", confirmButtonColor: "#4f46e5" });
+      Swal.fire({ icon: "warning", title: "No Items Selected", text: "Please add at least one item to your order.", confirmButtonColor: "#3e56f0" });
       return;
     }
     setBookingStep(2);
@@ -178,10 +178,10 @@ function MerchantDetailsContent() {
         setBookingResult(res.booking || null);
         setBookingStep(4);
       } else {
-        Swal.fire({ icon: "error", title: "Booking Failed", text: res?.message || "Could not create booking. Please try again.", confirmButtonColor: "#4f46e5" });
+        Swal.fire({ icon: "error", title: "Booking Failed", text: res?.message || "Could not create booking. Please try again.", confirmButtonColor: "#3e56f0" });
       }
     } catch (err) {
-      Swal.fire({ icon: "error", title: "Error", text: err.message || "Network error.", confirmButtonColor: "#4f46e5" });
+      Swal.fire({ icon: "error", title: "Error", text: err.message || "Network error.", confirmButtonColor: "#3e56f0" });
     } finally {
       setBookingLoading(false);
     }
@@ -224,23 +224,23 @@ function MerchantDetailsContent() {
             <div
               style={{
                 width: "42px", height: "42px", borderRadius: "50%",
-                background: bookingStep >= s ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "#f1f5f9",
-                border: bookingStep >= s ? "2.5px solid #4f46e5" : "2px solid #e2e8f0",
+                background: bookingStep >= s ? "linear-gradient(135deg,#3e56f0,#2563eb)" : "#f1f5f9",
+                border: bookingStep >= s ? "2.5px solid #3e56f0" : "2px solid #e2e8f0",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 color: bookingStep >= s ? "#fff" : "#94a3b8",
                 fontWeight: 700, fontSize: "15px",
-                boxShadow: bookingStep >= s ? "0 4px 14px rgba(79,70,229,0.35)" : "none",
+                boxShadow: bookingStep >= s ? "0 4px 14px rgba(62,86,240,0.35)" : "none",
                 transition: "all 0.3s ease",
               }}
             >
               {bookingStep > s ? <i className="fa-solid fa-check" style={{ fontSize: "13px" }}></i> : s}
             </div>
-            <span style={{ fontSize: "10px", fontWeight: 600, color: bookingStep >= s ? "#4f46e5" : "#94a3b8", marginTop: "5px", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: "10px", fontWeight: 600, color: bookingStep >= s ? "#3e56f0" : "#94a3b8", marginTop: "5px", whiteSpace: "nowrap" }}>
               {stepLabels[s - 1]}
             </span>
           </div>
           {s < 3 && (
-            <div style={{ width: "60px", height: "3px", margin: "0 4px", marginBottom: "16px", background: bookingStep > s ? "linear-gradient(90deg,#4f46e5,#7c3aed)" : "#e2e8f0", borderRadius: "2px", transition: "background 0.3s" }}></div>
+            <div style={{ width: "60px", height: "3px", margin: "0 4px", marginBottom: "16px", background: bookingStep > s ? "linear-gradient(90deg,#3e56f0,#2563eb)" : "#e2e8f0", borderRadius: "2px", transition: "background 0.3s" }}></div>
           )}
         </div>
       ))}
@@ -256,7 +256,7 @@ function MerchantDetailsContent() {
         <Header />
         <div style={{ background: "#f0f4ff", flexGrow: 1, paddingBottom: "60px" }}>
           {/* Gradient hero top */}
-          <div style={{ background: "linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
+          <div style={{ background: "linear-gradient(135deg,#3e56f0 0%,#2563eb 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
             <div className="container" style={{ maxWidth: "680px" }}>
               <div className="d-flex align-items-center gap-3 mb-2">
                 <button
@@ -275,18 +275,18 @@ function MerchantDetailsContent() {
 
           <div className="container" style={{ maxWidth: "680px" }}>
             {/* Step bar on white card */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(79,70,229,0.10)" }}>
+            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(62,86,240,0.10)" }}>
               <StepBar />
               {/* Merchant info strip */}
-              <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background: "#f8f7ff", border: "1.5px solid #ede9fe" }}>
-                <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "linear-gradient(135deg,#4f46e5,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background: "#eff6ff", border: "1.5px solid #dbeafe" }}>
+                <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "linear-gradient(135deg,#3e56f0,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <i className="fa-solid fa-store text-white" style={{ fontSize: "16px" }}></i>
                 </div>
                 <div>
                   <div className="fw-bold text-dark" style={{ fontSize: "14px" }}>{merchant.serviceName}</div>
                   <div className="text-muted" style={{ fontSize: "12px" }}>{merchant.cuisineName || "Service Provider"}</div>
                 </div>
-                <span className="ms-auto badge rounded-pill px-3 py-2" style={{ background: "#ede9fe", color: "#4f46e5", fontWeight: 700, fontSize: "11px" }}>
+                <span className="ms-auto badge rounded-pill px-3 py-2" style={{ background: "#e0e7ff", color: "#3e56f0", fontWeight: 700, fontSize: "11px" }}>
                   {(merchant.products || []).length} Products
                 </span>
               </div>
@@ -302,8 +302,8 @@ function MerchantDetailsContent() {
                     key={prod._id}
                     style={{
                       background: "#fff", borderRadius: "16px",
-                      border: isSelected ? "2px solid #4f46e5" : "1.5px solid #e8eaf0",
-                      boxShadow: isSelected ? "0 4px 20px rgba(79,70,229,0.15)" : "0 2px 8px rgba(0,0,0,0.05)",
+                      border: isSelected ? "2px solid #3e56f0" : "1.5px solid #e8eaf0",
+                      boxShadow: isSelected ? "0 4px 20px rgba(62,86,240,0.15)" : "0 2px 8px rgba(0,0,0,0.05)",
                       overflow: "hidden", transition: "all 0.2s ease",
                     }}
                   >
@@ -317,7 +317,7 @@ function MerchantDetailsContent() {
                           onError={e => { e.target.onerror = null; e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=300&q=80"; }}
                         />
                         {isSelected && (
-                          <div style={{ position: "absolute", top: "6px", left: "6px", width: "22px", height: "22px", borderRadius: "50%", background: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <div style={{ position: "absolute", top: "6px", left: "6px", width: "22px", height: "22px", borderRadius: "50%", background: "#3e56f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
                             <i className="fa-solid fa-check text-white" style={{ fontSize: "10px" }}></i>
                           </div>
                         )}
@@ -328,18 +328,18 @@ function MerchantDetailsContent() {
                         <p className="text-muted mb-2" style={{ fontSize: "12px", lineHeight: "1.4", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                           {prod.description || "Premium quality product."}
                         </p>
-                        <span className="fw-bold" style={{ color: "#4f46e5", fontSize: "16px" }}>${prod.price}</span>
+                        <span className="fw-bold" style={{ color: "#3e56f0", fontSize: "16px" }}>${prod.price}</span>
                       </div>
                       {/* Stepper */}
                       <div className="d-flex flex-column align-items-center justify-content-center gap-2 pe-3" style={{ flexShrink: 0 }}>
                         <button
                           type="button"
                           onClick={() => handleIncrease(prod._id)}
-                          style={{ width: "34px", height: "34px", borderRadius: "50%", border: "none", background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(79,70,229,0.35)", transition: "transform 0.1s" }}
+                          style={{ width: "34px", height: "34px", borderRadius: "50%", border: "none", background: "linear-gradient(135deg,#3e56f0,#2563eb)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 3px 10px rgba(62,86,240,0.35)", transition: "transform 0.1s" }}
                         >
                           <i className="fa-solid fa-plus" style={{ fontSize: "12px" }}></i>
                         </button>
-                        <span style={{ fontWeight: 800, fontSize: "18px", color: isSelected ? "#4f46e5" : "#334155", minWidth: "24px", textAlign: "center" }}>{qty}</span>
+                        <span style={{ fontWeight: 800, fontSize: "18px", color: isSelected ? "#3e56f0" : "#334155", minWidth: "24px", textAlign: "center" }}>{qty}</span>
                         <button
                           type="button"
                           onClick={() => handleDecrease(prod._id)}
@@ -350,7 +350,7 @@ function MerchantDetailsContent() {
                       </div>
                     </div>
                     {isSelected && (
-                      <div style={{ background: "linear-gradient(90deg,#4f46e5,#7c3aed)", height: "3px" }}></div>
+                      <div style={{ background: "linear-gradient(90deg,#3e56f0,#2563eb)", height: "3px" }}></div>
                     )}
                   </div>
                 );
@@ -358,10 +358,10 @@ function MerchantDetailsContent() {
             </div>
 
             {/* Sticky footer */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "18px 24px", boxShadow: "0 -4px 30px rgba(79,70,229,0.12)", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1.5px solid #ede9fe" }}>
+            <div style={{ background: "#fff", borderRadius: "20px", padding: "18px 24px", boxShadow: "0 -4px 30px rgba(62,86,240,0.12)", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1.5px solid #dbeafe" }}>
               <div>
                 <div className="text-muted" style={{ fontSize: "12px", fontWeight: 600 }}>ORDER TOTAL</div>
-                <div style={{ fontWeight: 800, fontSize: "22px", color: selectedProducts.length > 0 ? "#4f46e5" : "#94a3b8" }}>
+                <div style={{ fontWeight: 800, fontSize: "22px", color: selectedProducts.length > 0 ? "#3e56f0" : "#94a3b8" }}>
                   {selectedProducts.length > 0 ? `$${subtotal.toFixed(2)}` : "$0.00"}
                 </div>
                 <div className="text-muted" style={{ fontSize: "11px" }}>{selectedProducts.length} item{selectedProducts.length !== 1 ? "s" : ""} selected</div>
@@ -369,7 +369,7 @@ function MerchantDetailsContent() {
               <button
                 type="button"
                 onClick={handleAddToOrder}
-                style={{ background: selectedProducts.length > 0 ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "#e2e8f0", color: selectedProducts.length > 0 ? "#fff" : "#94a3b8", border: "none", borderRadius: "50px", padding: "14px 28px", fontWeight: 700, fontSize: "14px", cursor: selectedProducts.length > 0 ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: "8px", boxShadow: selectedProducts.length > 0 ? "0 6px 20px rgba(79,70,229,0.40)" : "none", transition: "all 0.2s" }}
+                style={{ background: selectedProducts.length > 0 ? "linear-gradient(135deg,#3e56f0,#2563eb)" : "#e2e8f0", color: selectedProducts.length > 0 ? "#fff" : "#94a3b8", border: "none", borderRadius: "50px", padding: "14px 28px", fontWeight: 700, fontSize: "14px", cursor: selectedProducts.length > 0 ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: "8px", boxShadow: selectedProducts.length > 0 ? "0 6px 20px rgba(62,86,240,0.35)" : "none", transition: "all 0.2s" }}
               >
                 ADD TO ORDER <i className="fa-solid fa-arrow-right"></i>
               </button>
@@ -390,7 +390,7 @@ function MerchantDetailsContent() {
         <Header />
         <div style={{ background: "#f0f4ff", flexGrow: 1, paddingBottom: "60px" }}>
           {/* Gradient hero top */}
-          <div style={{ background: "linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
+          <div style={{ background: "linear-gradient(135deg,#3e56f0 0%,#2563eb 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
             <div className="container" style={{ maxWidth: "680px" }}>
               <div className="d-flex align-items-center gap-3">
                 <button
@@ -409,7 +409,7 @@ function MerchantDetailsContent() {
 
           <div className="container" style={{ maxWidth: "680px" }}>
             {/* Step bar */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(79,70,229,0.10)" }}>
+            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(62,86,240,0.10)" }}>
               <StepBar />
             </div>
 
@@ -417,7 +417,7 @@ function MerchantDetailsContent() {
             <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "16px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
               <div className="d-flex align-items-center justify-content-between mb-4">
                 <h5 className="fw-bold text-dark m-0">Your Cart</h5>
-                <span className="badge rounded-pill px-3 py-2" style={{ background: "#ede9fe", color: "#4f46e5", fontWeight: 700 }}>{selectedProducts.length} item{selectedProducts.length !== 1 ? "s" : ""}</span>
+                <span className="badge rounded-pill px-3 py-2" style={{ background: "#e0e7ff", color: "#3e56f0", fontWeight: 700 }}>{selectedProducts.length} item{selectedProducts.length !== 1 ? "s" : ""}</span>
               </div>
               <div className="d-flex flex-column gap-3">
                 {selectedProducts.map((prod, idx) => (
@@ -431,12 +431,12 @@ function MerchantDetailsContent() {
                       <div className="flex-grow-1" style={{ overflow: "hidden" }}>
                         <h6 className="fw-bold text-dark mb-1 text-truncate" style={{ fontSize: "15px" }}>{prod.name}</h6>
                         <div className="d-flex align-items-center gap-2">
-                          <span style={{ background: "#ede9fe", color: "#4f46e5", borderRadius: "20px", padding: "2px 10px", fontSize: "12px", fontWeight: 700 }}>x{quantities[prod._id]}</span>
+                          <span style={{ background: "#e0e7ff", color: "#3e56f0", borderRadius: "20px", padding: "2px 10px", fontSize: "12px", fontWeight: 700 }}>x{quantities[prod._id]}</span>
                           <span className="text-muted" style={{ fontSize: "12px" }}>${prod.price} each</span>
                         </div>
                       </div>
                       <div className="text-end" style={{ flexShrink: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: "17px", color: "#4f46e5" }}>${(prod.price * quantities[prod._id]).toFixed(2)}</div>
+                        <div style={{ fontWeight: 800, fontSize: "17px", color: "#3e56f0" }}>${(prod.price * quantities[prod._id]).toFixed(2)}</div>
                         <button
                           type="button"
                           onClick={() => handleRemove(prod._id)}
@@ -467,7 +467,7 @@ function MerchantDetailsContent() {
             <button
               type="button"
               onClick={() => setBookingStep(3)}
-              style={{ width: "100%", background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", border: "none", borderRadius: "50px", padding: "16px", fontWeight: 700, fontSize: "16px", cursor: "pointer", boxShadow: "0 8px 24px rgba(79,70,229,0.40)", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", letterSpacing: "0.3px" }}
+              style={{ width: "100%", background: "linear-gradient(135deg,#3e56f0,#2563eb)", color: "#fff", border: "none", borderRadius: "50px", padding: "16px", fontWeight: 700, fontSize: "16px", cursor: "pointer", boxShadow: "0 8px 24px rgba(62,86,240,0.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", letterSpacing: "0.3px" }}
             >
               PROCEED TO PAYMENT <i className="fa-solid fa-arrow-right"></i>
             </button>
@@ -487,7 +487,7 @@ function MerchantDetailsContent() {
         <Header />
         <div style={{ background: "#f0f4ff", flexGrow: 1, paddingBottom: "60px" }}>
           {/* Gradient hero top */}
-          <div style={{ background: "linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
+          <div style={{ background: "linear-gradient(135deg,#3e56f0 0%,#2563eb 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
             <div className="container" style={{ maxWidth: "680px" }}>
               <div className="d-flex align-items-center gap-3">
                 <button
@@ -506,12 +506,12 @@ function MerchantDetailsContent() {
 
           <div className="container" style={{ maxWidth: "680px" }}>
             {/* Step bar */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(79,70,229,0.10)" }}>
+            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(62,86,240,0.10)" }}>
               <StepBar />
               {/* Booking info strip */}
-              <div className="d-flex align-items-center justify-content-between p-3 rounded-3" style={{ background: "#f8f7ff", border: "1.5px solid #ede9fe" }}>
+              <div className="d-flex align-items-center justify-content-between p-3 rounded-3" style={{ background: "#eff6ff", border: "1.5px solid #dbeafe" }}>
                 <div className="d-flex align-items-center gap-3">
-                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "linear-gradient(135deg,#4f46e5,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "linear-gradient(135deg,#3e56f0,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <i className="fa-solid fa-store text-white" style={{ fontSize: "14px" }}></i>
                   </div>
                   <div>
@@ -555,7 +555,7 @@ function MerchantDetailsContent() {
                   <button
                     type="button"
                     onClick={handleApplyCoupon}
-                    style={{ background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", border: "none", borderRadius: "50px", padding: "10px 22px", fontWeight: 700, fontSize: "14px", cursor: "pointer", flexShrink: 0, boxShadow: "0 4px 12px rgba(79,70,229,0.3)" }}
+                    style={{ background: "linear-gradient(135deg,#3e56f0,#2563eb)", color: "#fff", border: "none", borderRadius: "50px", padding: "10px 22px", fontWeight: 700, fontSize: "14px", cursor: "pointer", flexShrink: 0, boxShadow: "0 4px 12px rgba(62,86,240,0.3)" }}
                   >
                     Apply
                   </button>
@@ -570,7 +570,7 @@ function MerchantDetailsContent() {
                 <div key={p._id}>
                   <div className="d-flex justify-content-between align-items-center">
                     <div className="d-flex align-items-center gap-2">
-                      <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#4f46e5", flexShrink: 0 }}></div>
+                      <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3e56f0", flexShrink: 0 }}></div>
                       <span style={{ fontSize: "14px", color: "#475569" }}>{p.name}</span>
                       <span style={{ background: "#f1f5f9", color: "#64748b", borderRadius: "20px", padding: "1px 8px", fontSize: "11px", fontWeight: 700 }}>×{quantities[p._id]}</span>
                     </div>
@@ -594,10 +594,10 @@ function MerchantDetailsContent() {
                   <span style={{ fontWeight: 700, color: "#16a34a", fontSize: "14px" }}>-${discountAmount.toFixed(2)}</span>
                 </div>
               )}
-              <div style={{ height: "2px", background: "linear-gradient(90deg,#4f46e5,#7c3aed)", margin: "16px 0", borderRadius: "2px" }}></div>
+              <div style={{ height: "2px", background: "linear-gradient(90deg,#3e56f0,#2563eb)", margin: "16px 0", borderRadius: "2px" }}></div>
               <div className="d-flex justify-content-between align-items-center">
                 <span style={{ fontWeight: 700, color: "#0f172a", fontSize: "16px" }}>Total Payable</span>
-                <span style={{ fontWeight: 800, color: "#4f46e5", fontSize: "24px" }}>${finalAmount.toFixed(2)}</span>
+                <span style={{ fontWeight: 800, color: "#3e56f0", fontSize: "24px" }}>${finalAmount.toFixed(2)}</span>
               </div>
             </div>
 
@@ -606,7 +606,7 @@ function MerchantDetailsContent() {
               type="button"
               onClick={handleSubmitBooking}
               disabled={bookingLoading}
-              style={{ width: "100%", background: bookingLoading ? "#e2e8f0" : "linear-gradient(135deg,#4f46e5,#7c3aed)", color: bookingLoading ? "#94a3b8" : "#fff", border: "none", borderRadius: "50px", padding: "18px", fontWeight: 700, fontSize: "16px", cursor: bookingLoading ? "not-allowed" : "pointer", boxShadow: bookingLoading ? "none" : "0 8px 24px rgba(79,70,229,0.40)", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", letterSpacing: "0.5px", transition: "all 0.2s" }}
+              style={{ width: "100%", background: bookingLoading ? "#e2e8f0" : "linear-gradient(135deg,#3e56f0,#2563eb)", color: bookingLoading ? "#94a3b8" : "#fff", border: "none", borderRadius: "50px", padding: "18px", fontWeight: 700, fontSize: "16px", cursor: bookingLoading ? "not-allowed" : "pointer", boxShadow: bookingLoading ? "none" : "0 8px 24px rgba(62,86,240,0.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", letterSpacing: "0.5px", transition: "all 0.2s" }}
             >
               {bookingLoading ? (
                 <><span className="spinner-border spinner-border-sm" role="status"></span> Processing Booking...</>
@@ -632,7 +632,7 @@ function MerchantDetailsContent() {
         <Header />
         <div style={{ background: "#f0f4ff", flexGrow: 1, paddingBottom: "60px" }}>
           {/* Gradient hero top */}
-          <div style={{ background: "linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
+          <div style={{ background: "linear-gradient(135deg,#3e56f0 0%,#2563eb 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
             <div className="container" style={{ maxWidth: "680px" }}>
               <div className="d-flex align-items-center gap-3">
                 <button
@@ -651,7 +651,7 @@ function MerchantDetailsContent() {
 
           <div className="container" style={{ maxWidth: "680px" }}>
             {/* Success banner */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "28px 24px", marginBottom: "16px", boxShadow: "0 8px 32px rgba(79,70,229,0.10)", textAlign: "center" }}>
+            <div style={{ background: "#fff", borderRadius: "20px", padding: "28px 24px", marginBottom: "16px", boxShadow: "0 8px 32px rgba(62,86,240,0.10)", textAlign: "center" }}>
               <div style={{ width: "72px", height: "72px", borderRadius: "50%", background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                 <i className="fa-solid fa-circle-check" style={{ color: "#22c55e", fontSize: "36px" }}></i>
               </div>
@@ -663,7 +663,7 @@ function MerchantDetailsContent() {
             <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "16px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
               <div className="d-flex align-items-center justify-content-between mb-3">
                 <div className="d-flex align-items-center gap-2">
-                  <div style={{ width: "4px", height: "22px", borderRadius: "4px", background: "linear-gradient(180deg,#4f46e5,#7c3aed)" }}></div>
+                  <div style={{ width: "4px", height: "22px", borderRadius: "4px", background: "linear-gradient(180deg,#3e56f0,#2563eb)" }}></div>
                   <span className="fw-bold text-dark" style={{ fontSize: "15px" }}>Order No : {orderNo}</span>
                 </div>
                 <span style={{ background: "#fee2e2", color: "#dc2626", borderRadius: "8px", padding: "5px 14px", fontSize: "12px", fontWeight: 700, textTransform: "capitalize" }}>
@@ -671,7 +671,7 @@ function MerchantDetailsContent() {
                 </span>
               </div>
               <div className="d-flex align-items-center gap-2">
-                <div style={{ width: "4px", height: "22px", borderRadius: "4px", background: "linear-gradient(180deg,#4f46e5,#7c3aed)" }}></div>
+                <div style={{ width: "4px", height: "22px", borderRadius: "4px", background: "linear-gradient(180deg,#3e56f0,#2563eb)" }}></div>
                 <span className="fw-bold text-dark" style={{ fontSize: "15px" }}>Order For : {serviceLabel}</span>
               </div>
             </div>
@@ -679,7 +679,7 @@ function MerchantDetailsContent() {
             {/* Order summary table */}
             <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
               <div className="d-flex align-items-center gap-2 mb-3">
-                <div style={{ width: "4px", height: "22px", borderRadius: "4px", background: "linear-gradient(180deg,#4f46e5,#7c3aed)" }}></div>
+                <div style={{ width: "4px", height: "22px", borderRadius: "4px", background: "linear-gradient(180deg,#3e56f0,#2563eb)" }}></div>
                 <h6 className="fw-bold text-dark m-0">Order Summary</h6>
               </div>
               <div className="border rounded-3 overflow-hidden">
@@ -695,9 +695,9 @@ function MerchantDetailsContent() {
                   <span className="text-muted">Coupon discount</span>
                   <span className="fw-semibold text-dark">${discountAmount.toFixed(2)}</span>
                 </div>
-                <div className="d-flex justify-content-between align-items-center px-3 py-2" style={{ fontSize: "14px", background: "#f8f7ff" }}>
+                <div className="d-flex justify-content-between align-items-center px-3 py-2" style={{ fontSize: "14px", background: "#eff6ff" }}>
                   <span className="fw-bold text-dark">Paid Amount</span>
-                  <span className="fw-bold" style={{ color: "#4f46e5" }}>${Number(bookingResult?.finalAmount ?? finalAmount).toFixed(2)}</span>
+                  <span className="fw-bold" style={{ color: "#3e56f0" }}>${Number(bookingResult && bookingResult.finalAmount !== undefined ? bookingResult.finalAmount : finalAmount).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -706,7 +706,7 @@ function MerchantDetailsContent() {
             <button
               type="button"
               onClick={handleFinishBooking}
-              style={{ width: "100%", background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", border: "none", borderRadius: "50px", padding: "16px", fontWeight: 700, fontSize: "16px", cursor: "pointer", boxShadow: "0 8px 24px rgba(79,70,229,0.40)", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", letterSpacing: "0.3px" }}
+              style={{ width: "100%", background: "linear-gradient(135deg,#3e56f0,#2563eb)", color: "#fff", border: "none", borderRadius: "50px", padding: "16px", fontWeight: 700, fontSize: "16px", cursor: "pointer", boxShadow: "0 8px 24px rgba(62,86,240,0.35)", display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", letterSpacing: "0.3px" }}
             >
               <i className="fa-solid fa-check"></i> DONE
             </button>
@@ -889,7 +889,7 @@ function MerchantDetailsContent() {
                         type="button"
                         onClick={() => { setQuantities({}); setBookingStep(1); }}
                         className="btn w-100 rounded-pill py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                        style={{ background: "linear-gradient(135deg,#4f46e5,#6366f1)", border: "none", color: "#fff", fontSize: "15px" }}
+                        style={{ background: "linear-gradient(135deg,#3e56f0,#2563eb)", border: "none", color: "#fff", fontSize: "15px" }}
                       >
                         <i className="fa-regular fa-calendar-check"></i> BOOK SERVICE
                       </button>
