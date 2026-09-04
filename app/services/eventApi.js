@@ -80,6 +80,15 @@ export const rateEventApi = async (payload) => {
   });
 };
 
+// 10. Update Event API
+export const updateEventApi = async (payload) => {
+  return await apiRequest("/event/update-event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+};
+
 export const eventApi = {
   getEventTypes: getEventTypesApi,
   getEventCategoriesByTypeId: getEventCategoriesByTypeIdApi,
@@ -87,6 +96,7 @@ export const eventApi = {
   getMerchantsByService: getMerchantsByServiceApi,
   getEventNotes: getEventNotesApi,
   createEvent: createEventApi,
+  updateEvent: updateEventApi,
   getMyEvents: getMyEventsApi,
   getMyCreatedEvents: getMyCreatedEventsApi,
   getEventMedia: getEventMediaApi,

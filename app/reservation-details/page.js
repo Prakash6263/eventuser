@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { authService } from "../services/authService";
 import { getReservationDetailsByIdApi } from "../services/reservationApi";
+import { updateEventApi } from "../services/eventApi";
 
 export default function ReservationDetailsPage() {
   const router = useRouter();
@@ -14,6 +15,77 @@ export default function ReservationDetailsPage() {
   const [reservation, setReservation] = useState(null);
   const [detailsLoaded, setDetailsLoaded] = useState(false);
   const [showGuestsModal, setShowGuestsModal] = useState(false);
+
+  // Timing Modal State
+  const [showTimingModal, setShowTimingModal] = useState(false);
+  const [timingDate, setTimingDate] = useState("");
+  const [timingStartTime, setTimingStartTime] = useState("");
+  const [timingEndTime, setTimingEndTime] = useState("");
+  const [isUpdatingTiming, setIsUpdatingTiming] = useState(false);
+  const [timingError, setTimingError] = useState("");
+  const [timingSuccessMsg, setTimingSuccessMsg] = useState("");
+
+  const handleUpdateTiming = async (e) => {
+    e.preventDefault();
+    if (!timingDate || !timingStartTime || !timingEndTime) {
+      setTimingError("Please select date, start time, and end time.");
+      return;
+    }
+    setTimingError("");
+    setIsUpdatingTiming(true);
+
+    // Format eventDate as DD-MM-YYYY for backend API requirement
+    let formattedEventDate = timingDate;
+    if (timingDate.includes('-')) {
+      const parts = timingDate.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        // YYYY-MM-DD -> DD-MM-YYYY
+        formattedEventDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+
+    try {
+      const eventId = reservation.eventId || reservation.id || reservation.rawItem?._id;
+      const payload = {
+        eventId: eventId,
+        eventDate: formattedEventDate,
+        eventStartTime: timingStartTime,
+        eventEndTime: timingEndTime,
+        eventEndDate: ""
+      };
+
+      const res = await updateEventApi(payload);
+      if (res && res.status) {
+        let displayDate = formattedEventDate;
+        const dParts = formattedEventDate.split('-');
+        if (dParts.length === 3) {
+          const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const monthStr = monthNames[parseInt(dParts[1]) - 1] || dParts[1];
+          displayDate = `${dParts[0]} ${monthStr} ${dParts[2]}`;
+        }
+
+        setReservation(prev => ({
+          ...prev,
+          eventDate: displayDate,
+          eventStartTime: timingStartTime,
+          eventEndTime: timingEndTime
+        }));
+
+        setTimingSuccessMsg(res.message || "Event updated successfully.");
+        setTimeout(() => {
+          setShowTimingModal(false);
+          setTimingSuccessMsg("");
+        }, 1200);
+      } else {
+        setTimingError(res?.message || "Failed to update event timing.");
+      }
+    } catch (err) {
+      console.error("Error updating event timing:", err);
+      setTimingError("An error occurred while updating timing. Please try again.");
+    } finally {
+      setIsUpdatingTiming(false);
+    }
+  };
 
   const mapReservationItem = (item) => {
     let formattedDate = item.eventDate || "Date TBD";
@@ -641,7 +713,32 @@ export default function ReservationDetailsPage() {
                               {reservation.eventStartTime} - {reservation.eventEndTime}
                             </div>
                           </div>
-                          <button className="web-row-action-btn" onClick={() => alert("Navigate to event modifier")}>Update</button>
+                          <button
+                            className="web-row-action-btn"
+                            style={{ background: "#3e56f0", padding: "8px 22px" }}
+                            onClick={() => {
+                              const rawDate = reservation.rawItem?.eventDate || reservation.eventDate || "";
+                              let isoDate = "";
+                              if (rawDate.includes('-')) {
+                                const parts = rawDate.split('-');
+                                if (parts.length === 3) {
+                                  if (parts[2].length === 4) {
+                                    isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                                  } else if (parts[0].length === 4) {
+                                    isoDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                                  }
+                                }
+                              }
+                              setTimingDate(isoDate || new Date().toISOString().split('T')[0]);
+                              setTimingStartTime(reservation.eventStartTime || "06:14 PM");
+                              setTimingEndTime(reservation.eventEndTime || "08:14 PM");
+                              setTimingError("");
+                              setTimingSuccessMsg("");
+                              setShowTimingModal(true);
+                            }}
+                          >
+                            Update
+                          </button>
                         </div>
 
                         {/* Venue Row */}
@@ -655,6 +752,19 @@ export default function ReservationDetailsPage() {
                               {reservation.venue?.split(" - ")?.[1] || reservation.venue || "TBD"}
                             </div>
                           </div>
+                          <button
+                            className="web-row-action-btn"
+                            style={{ background: "#3e56f0", padding: "8px 22px" }}
+                            onClick={() => {
+                              const eventId = reservation.id || reservation.eventId || "";
+                              const rawRes = reservation.rawItem || {};
+                              const merchantId = typeof rawRes.merchantId === "object" ? rawRes.merchantId?._id : (rawRes.merchantId || reservation.merchantId || "");
+                              const serviceId = typeof rawRes.serviceLocationId === "object" ? rawRes.serviceLocationId?._id : (rawRes.serviceLocationId || reservation.serviceLocationId || "686fb6edd46e9740ee8277f0");
+                              router.push(`/merchant-details?eventId=${eventId}${merchantId ? `&merchantId=${merchantId}` : ""}${serviceId ? `&additionalServiceId=${serviceId}` : ""}`);
+                            }}
+                          >
+                            Venue
+                          </button>
                         </div>
 
                         {/* Organizer Row with Dynamic Avatar */}
@@ -870,6 +980,140 @@ export default function ReservationDetailsPage() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update Event Timing Modal */}
+      {showTimingModal && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1060, backdropFilter: "blur(4px)" }}
+        >
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "480px" }}>
+            <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+              <div className="modal-header border-bottom-0 pb-0 pt-4 px-4 align-items-center">
+                <div className="d-flex align-items-center gap-2">
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "12px",
+                      background: "#eef0ff",
+                      color: "#3e56f0",
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: "18px"
+                    }}
+                  >
+                    <i className="fa-regular fa-calendar-days"></i>
+                  </div>
+                  <h5 className="modal-title fw-bold text-dark fs-4 mb-0">Update Event Timing</h5>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowTimingModal(false)}
+                  aria-label="Close"
+                ></button>
+              </div>
+
+              <form onSubmit={handleUpdateTiming}>
+                <div className="modal-body px-4 py-4">
+                  {timingError && (
+                    <div className="alert alert-danger py-2 px-3 mb-3 rounded-3 small">
+                      <i className="fa-solid fa-triangle-exclamation me-2"></i>
+                      {timingError}
+                    </div>
+                  )}
+                  {timingSuccessMsg && (
+                    <div className="alert alert-success py-2 px-3 mb-3 rounded-3 small">
+                      <i className="fa-solid fa-circle-check me-2"></i>
+                      {timingSuccessMsg}
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <label className="form-label fw-bold text-dark mb-2">Event Date</label>
+                    <div className="input-group">
+                      <span className="input-group-text bg-light border-end-0 text-muted">
+                        <i className="fa-regular fa-calendar"></i>
+                      </span>
+                      <input
+                        type="date"
+                        className="form-control border-start-0 ps-0 bg-light"
+                        value={timingDate}
+                        onChange={(e) => setTimingDate(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <h6 className="fw-bold text-dark mb-3">Time Duration</h6>
+                  <div className="row g-3 mb-2">
+                    <div className="col-6">
+                      <label className="form-label text-muted small fw-semibold">Start Time</label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0 text-muted">
+                          <i className="fa-regular fa-clock"></i>
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control border-start-0 ps-0 bg-light"
+                          placeholder="06:14 PM"
+                          value={timingStartTime}
+                          onChange={(e) => setTimingStartTime(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label text-muted small fw-semibold">End Time</label>
+                      <div className="input-group">
+                        <span className="input-group-text bg-light border-end-0 text-muted">
+                          <i className="fa-regular fa-clock"></i>
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control border-start-0 ps-0 bg-light"
+                          placeholder="08:14 PM"
+                          value={timingEndTime}
+                          onChange={(e) => setTimingEndTime(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-footer border-top-0 pt-0 pb-4 px-4">
+                  <button
+                    type="button"
+                    className="btn btn-light rounded-pill px-4 fw-bold py-2 border"
+                    onClick={() => setShowTimingModal(false)}
+                    disabled={isUpdatingTiming}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn text-white rounded-pill px-4 fw-bold py-2 flex-grow-1"
+                    style={{ background: "#3e56f0", border: "none" }}
+                    disabled={isUpdatingTiming}
+                  >
+                    {isUpdatingTiming ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Updating...
+                      </>
+                    ) : (
+                      "Update"
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
