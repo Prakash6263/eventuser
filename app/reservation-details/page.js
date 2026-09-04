@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { authService } from "../services/authService";
 import { getReservationDetailsByIdApi } from "../services/reservationApi";
-import Swal from "sweetalert2";
 
 export default function ReservationDetailsPage() {
+  const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [reservation, setReservation] = useState(null);
   const [detailsLoaded, setDetailsLoaded] = useState(false);
@@ -136,29 +137,40 @@ export default function ReservationDetailsPage() {
 
   const getMappedServices = () => {
     const rawServices = reservation.rawItem?.additionalServices || reservation.rawItem?.makeReservation?.additionalServices || reservation.rawItem?.additionalService || [];
-    
+
     const serviceMap = {
-      // Map by database Object IDs
-      "686fb723d46e9740ee8277f4": { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s" },
-      "686fb6edd46e9740ee8277f0": { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s" },
-      "686fb7bad46e9740ee8277f8": { name: "Decoration & Lighting", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_1g&s" },
-      "686fb714d46e9740ee8277f2": { name: "Furniture Rental", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtg-K5_J_9L9Z11o1R19Tj8a_V19v1K0G_2g&s" },
-      "686fb788d46e9740ee8277f6": { name: "Music & DJ", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_3g&s" },
-      "686fb777d46e9740ee8277f5": { name: "Photography", img: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=150" },
+      // Map by exact database Object IDs
+      "686fb6ced46e9740ee8277ec": { name: "Restaurants", img: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300" },
+      "686fb6dcd46e9740ee8277ee": { name: "Facility", img: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300" },
+      "686fb6edd46e9740ee8277f0": { name: "Catering", img: "https://images.unsplash.com/photo-1555244162-803834f70033?w=300" },
+      "686fb714d46e9740ee8277f2": { name: "Decoration & Lighting", img: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=300" },
+      "686fb723d46e9740ee8277f4": { name: "Photography", img: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300" },
+      "686fb788d46e9740ee8277f6": { name: "Music Band and DJ", img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300" },
+      "686fb7bad46e9740ee8277f8": { name: "Furniture Rentals", img: "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=300" },
+      "686fb7e8d46e9740ee8277fa": { name: "Servants and Cleaning", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=300" },
+      "686fb80bd46e9740ee8277fc": { name: "Entertainment & clown", img: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300" },
 
       // Map by lowercased servicesName strings
-      "catering": { name: "Catering", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH7m3B140fW-LwR39L85aYkS9m5W28G6Fp5g&s" },
-      "decoration & lighting": { name: "Decoration & Lighting", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_1g&s" },
-      "furniture rental": { name: "Furniture Rental", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtg-K5_J_9L9Z11o1R19Tj8a_V19v1K0G_2g&s" },
-      "music & dj": { name: "Music & DJ", img: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTz-8Z4-sH0w9T11n1U29Fj8a_U19v1K0G_3g&s" },
-      "photography": { name: "Photography", img: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=150" },
+      "catering": { name: "Catering", img: "https://images.unsplash.com/photo-1555244162-803834f70033?w=300" },
+      "decoration & lighting": { name: "Decoration & Lighting", img: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=300" },
+      "furniture rentals": { name: "Furniture Rentals", img: "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=300" },
+      "furniture rental": { name: "Furniture Rentals", img: "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=300" },
+      "music band and dj": { name: "Music Band and DJ", img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300" },
+      "music & dj": { name: "Music Band and DJ", img: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300" },
+      "photography": { name: "Photography", img: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300" },
+      "servants and cleaning": { name: "Servants and Cleaning", img: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=300" },
+      "entertainment & clown": { name: "Entertainment & clown", img: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300" },
     };
 
     if (rawServices.length === 0) {
       return [];
     }
 
+    const darkFallbackSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111827'/></svg>";
+
     return rawServices.map((srv) => {
+      let rawId = srv.serviceId?._id || srv.serviceId || srv._id;
+      let targetId = typeof rawId === "string" ? rawId : (rawId?._id || "");
       let name = "Additional Service";
       let apiImage = null;
 
@@ -166,25 +178,22 @@ export default function ReservationDetailsPage() {
         name = srv.serviceId.servicesName || srv.serviceId.serviceName || "Additional Service";
         apiImage = srv.serviceId.image || srv.serviceId.servicesImage || srv.serviceId.bannerImage || srv.serviceId.thumbnail;
       } else if (typeof srv.serviceId === "string") {
-        name = srv.serviceId;
+        name = serviceMap[srv.serviceId]?.name || srv.serviceId;
       }
 
       const srvStatus = srv.status || "pending";
-      const key = name.toLowerCase();
-      
-      const isObjectId = /^[0-9a-fA-F]{24}$/.test(name);
-      const displayName = isObjectId ? "Additional Service" : name;
+      const key = (targetId || name).toLowerCase();
 
-      const defaultImg = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s";
-      const info = serviceMap[key] || { 
-        name: displayName, 
-        img: defaultImg
+      const info = serviceMap[targetId] || serviceMap[key] || serviceMap[name.toLowerCase()] || {
+        name: /^[0-9a-fA-F]{24}$/.test(name) ? "Additional Service" : name,
+        img: darkFallbackSvg
       };
 
-      const finalImg = apiImage || info.img || defaultImg;
+      const finalImg = apiImage || info.img || darkFallbackSvg;
 
       return {
         ...info,
+        serviceId: targetId,
         img: finalImg,
         status: srvStatus
       };
@@ -237,8 +246,8 @@ export default function ReservationDetailsPage() {
     );
   }
 
-  const guestsList = reservation.contactList?.length > 0 
-    ? reservation.contactList 
+  const guestsList = reservation.contactList?.length > 0
+    ? reservation.contactList
     : (reservation.invitedUsers || []).map(u => u.userId).filter(Boolean);
   const totalInvited = guestsList.length;
   const displayGuests = guestsList.slice(0, 3);
@@ -547,9 +556,9 @@ export default function ReservationDetailsPage() {
 
                 <div className="web-res-card">
                   {/* Banner Image with Upload Feature */}
-                  <label 
-                    className="web-banner" 
-                    style={{ 
+                  <label
+                    className="web-banner"
+                    style={{
                       backgroundImage: `url('${reservation.img || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQtTe-vPL0Z7hlwWUG6Tast9H5f8JhqpFVlXHYs8Zm4IBP0jjyklaI9nM_I&s=10"}')`,
                       backgroundSize: "cover",
                       backgroundPosition: "center"
@@ -557,63 +566,63 @@ export default function ReservationDetailsPage() {
                   >
                     <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
                     <div className="web-banner-overlay"></div>
-                    
+
                     <div className="web-upload-prompt">
                       <i className="fa-solid fa-cloud-arrow-up"></i>
                       <span>Tap to Upload Image</span>
                     </div>
 
-                     {/* Dynamic Participants stack */}
-                     {totalInvited > 0 && (
-                       <div 
-                         className="web-participants-badge"
-                         onClick={(e) => {
-                           e.preventDefault();
-                           e.stopPropagation();
-                           setShowGuestsModal(true);
-                         }}
-                       >
-                         <div className="web-avatar-stack">
-                           {displayGuests.map((g, idx) => {
-                             const name = g.fullName || g.name || "Guest";
-                             const initial = name.charAt(0).toUpperCase();
-                             return (
-                               <div 
-                                 key={idx} 
-                                 style={{ 
-                                   width: "32px", 
-                                   height: "32px", 
-                                   borderRadius: "50%", 
-                                   background: ["#3e56f0", "#22c55e", "#ff9f43", "#ef4444"][idx % 4], 
-                                   color: "#fff", 
-                                   display: "grid", 
-                                   placeItems: "center", 
-                                   fontSize: "12px", 
-                                   fontWeight: "700",
-                                   border: "2px solid #fff",
-                                   marginLeft: idx > 0 ? "-10px" : "0",
-                                   position: "relative",
-                                   zIndex: 4 - idx
-                                 }}
-                               >
-                                 {initial}
-                               </div>
-                             );
-                           })}
-                         </div>
-                         <span className="web-participants-text">
-                           {totalInvited > 3 ? `+${totalInvited - 3} invited` : `${totalInvited} invited`}
-                         </span>
-                       </div>
-                     )}
-                   </label>
+                    {/* Dynamic Participants stack */}
+                    {totalInvited > 0 && (
+                      <div
+                        className="web-participants-badge"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowGuestsModal(true);
+                        }}
+                      >
+                        <div className="web-avatar-stack">
+                          {displayGuests.map((g, idx) => {
+                            const name = g.fullName || g.name || "Guest";
+                            const initial = name.charAt(0).toUpperCase();
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  borderRadius: "50%",
+                                  background: ["#3e56f0", "#22c55e", "#ff9f43", "#ef4444"][idx % 4],
+                                  color: "#fff",
+                                  display: "grid",
+                                  placeItems: "center",
+                                  fontSize: "12px",
+                                  fontWeight: "700",
+                                  border: "2px solid #fff",
+                                  marginLeft: idx > 0 ? "-10px" : "0",
+                                  position: "relative",
+                                  zIndex: 4 - idx
+                                }}
+                              >
+                                {initial}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <span className="web-participants-text">
+                          {totalInvited > 3 ? `+${totalInvited - 3} invited` : `${totalInvited} invited`}
+                        </span>
+                      </div>
+                    )}
+                  </label>
 
                   <div className="web-content-grid">
                     <div className="row g-4">
                       {/* Left Main details column (col-lg-7) */}
                       <div className="col-lg-7">
                         <h2 className="web-event-title">{reservation.eventTitle}</h2>
-                        
+
                         <h3 className="web-details-label" style={{ marginTop: "16px" }}>Event Details</h3>
                         <p className="web-description">
                           {reservation.rawItem?.description || "No description provided."}
@@ -632,12 +641,7 @@ export default function ReservationDetailsPage() {
                               {reservation.eventStartTime} - {reservation.eventEndTime}
                             </div>
                           </div>
-                          <button className="web-row-action-btn" onClick={() => Swal.fire({
-                            title: "Update Event",
-                            text: "Navigate to event modifier",
-                            icon: "info",
-                            confirmButtonColor: "#3e56f0"
-                          })}>Update</button>
+                          <button className="web-row-action-btn" onClick={() => alert("Navigate to event modifier")}>Update</button>
                         </div>
 
                         {/* Venue Row */}
@@ -657,17 +661,17 @@ export default function ReservationDetailsPage() {
                         <div className="web-info-row">
                           <div className="web-icon-wrapper" style={{ background: "transparent" }}>
                             {reservation.organizerName ? (
-                              <div 
-                                style={{ 
-                                  width: "44px", 
-                                  height: "44px", 
-                                  borderRadius: "50%", 
-                                  background: "#3e56f0", 
-                                  color: "#fff", 
-                                  display: "grid", 
-                                  placeItems: "center", 
-                                  fontSize: "16px", 
-                                  fontWeight: "700" 
+                              <div
+                                style={{
+                                  width: "44px",
+                                  height: "44px",
+                                  borderRadius: "50%",
+                                  background: "#3e56f0",
+                                  color: "#fff",
+                                  display: "grid",
+                                  placeItems: "center",
+                                  fontSize: "16px",
+                                  fontWeight: "700"
                                 }}
                               >
                                 {reservation.organizerName.charAt(0).toUpperCase()}
@@ -716,7 +720,7 @@ export default function ReservationDetailsPage() {
                         {/* Selected Summary Section */}
                         <div className="web-sidebar-box">
                           <h4 className="web-sidebar-heading">Selected Summary</h4>
-                          
+
                           <div className="web-summary-item">
                             <div className="web-summary-label">Invites</div>
                             <div className="web-summary-value">
@@ -760,11 +764,34 @@ export default function ReservationDetailsPage() {
                             <h4 className="web-services-heading">Additional Services</h4>
                             {getMappedServices().map((srv, index) => {
                               const statusInfo = getServiceStatusDisplay(srv.status);
+                              const targetServiceId = srv.serviceId;
                               return (
-                                <div className="web-service-card" key={index}>
-                                  <img src={srv.img} alt={srv.name} className="web-service-img" />
-                                  <div className="service-details">
-                                    <div className="web-service-name">{srv.name}</div>
+                                <div 
+                                  className="web-service-card hover-shadow transition" 
+                                  key={index}
+                                  style={{ cursor: targetServiceId ? "pointer" : "default" }}
+                                  onClick={() => {
+                                    if (targetServiceId) {
+                                      const eventId = reservation.id || reservation.rawItem?._id || "";
+                                      router.push(`/merchants-by-service?serviceId=${targetServiceId}&serviceName=${encodeURIComponent(srv.name)}${eventId ? `&eventId=${eventId}` : ""}`);
+                                    }
+                                  }}
+                                >
+                                  <img 
+                                    src={srv.img} 
+                                    alt={srv.name} 
+                                    className="web-service-img" 
+                                    onError={(e) => {
+                                      e.target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111827'/></svg>";
+                                    }}
+                                  />
+                                  <div className="service-details flex-grow-1">
+                                    <div className="web-service-name d-flex align-items-center justify-content-between">
+                                      <span>{srv.name}</span>
+                                      {targetServiceId && (
+                                        <i className="fa-solid fa-chevron-right text-muted small ms-2" style={{ fontSize: "11px" }}></i>
+                                      )}
+                                    </div>
                                     <div className="web-service-status" style={{ color: statusInfo.color }}>
                                       {statusInfo.text}
                                     </div>
@@ -791,9 +818,9 @@ export default function ReservationDetailsPage() {
             <div className="modal-content border-0 rounded-4 shadow-lg">
               <div className="modal-header border-bottom-0 pb-0 pt-4 px-4 d-flex align-items-center justify-content-between">
                 <h5 className="modal-title fw-bold text-dark fs-4">Invited Guests</h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
+                <button
+                  type="button"
+                  className="btn-close"
                   onClick={() => setShowGuestsModal(false)}
                   aria-label="Close"
                 ></button>
@@ -807,20 +834,20 @@ export default function ReservationDetailsPage() {
                     const initial = typeof name === "string" ? name.charAt(0).toUpperCase() : "G";
                     const subtitle = rawGuest.mobile || rawGuest.phone || rawGuest.email || "";
                     const displaySub = subtitle !== name ? subtitle : "";
-                    
+
                     return (
                       <div key={idx} className="d-flex align-items-center gap-3 p-2 rounded-3 hover-bg-light border border-light">
-                        <div 
-                          style={{ 
-                            width: "42px", 
-                            height: "42px", 
-                            borderRadius: "50%", 
-                            background: ["#3e56f0", "#22c55e", "#ff9f43", "#ef4444"][idx % 4], 
-                            color: "#fff", 
-                            display: "grid", 
-                            placeItems: "center", 
-                            fontSize: "16px", 
-                            fontWeight: "700" 
+                        <div
+                          style={{
+                            width: "42px",
+                            height: "42px",
+                            borderRadius: "50%",
+                            background: ["#3e56f0", "#22c55e", "#ff9f43", "#ef4444"][idx % 4],
+                            color: "#fff",
+                            display: "grid",
+                            placeItems: "center",
+                            fontSize: "16px",
+                            fontWeight: "700"
                           }}
                         >
                           {initial}
@@ -835,9 +862,9 @@ export default function ReservationDetailsPage() {
                 </div>
               </div>
               <div className="modal-footer border-top-0 pt-0 pb-4 px-4">
-                <button 
-                  type="button" 
-                  className="btn btn-secondary rounded-pill px-4 w-100 fw-bold py-2" 
+                <button
+                  type="button"
+                  className="btn btn-secondary rounded-pill px-4 w-100 fw-bold py-2"
                   onClick={() => setShowGuestsModal(false)}
                 >
                   Close

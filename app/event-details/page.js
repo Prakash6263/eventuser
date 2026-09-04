@@ -646,7 +646,20 @@ function EventDetailsContent() {
 
                   <div className="d-flex flex-column gap-3">
                     {event.additionalServices.map((service, index) => {
-                      const serviceName = service.serviceId?.servicesName || "Extra Service";
+                      const knownServiceNames = {
+                        "686fb6ced46e9740ee8277ec": "Restaurants",
+                        "686fb6dcd46e9740ee8277ee": "Facility",
+                        "686fb6edd46e9740ee8277f0": "Catering",
+                        "686fb714d46e9740ee8277f2": "Decoration & Lighting",
+                        "686fb723d46e9740ee8277f4": "Photography",
+                        "686fb788d46e9740ee8277f6": "Music Band and DJ",
+                        "686fb7bad46e9740ee8277f8": "Furniture Rentals",
+                        "686fb7e8d46e9740ee8277fa": "Servants and Cleaning",
+                        "686fb80bd46e9740ee8277fc": "Entertainment & clown"
+                      };
+
+                      const resolvedServiceId = service.serviceId?._id || (typeof service.serviceId === 'string' ? service.serviceId : '');
+                      const serviceName = service.serviceId?.servicesName || service.serviceId?.serviceName || knownServiceNames[resolvedServiceId] || "Extra Service";
                       
                       // Resolve thematic icons and soft colors for premium look
                       const getServiceIconClass = (name) => {
@@ -662,7 +675,7 @@ function EventDetailsContent() {
                       };
                       
                       const meta = getServiceIconClass(serviceName);
-                      const isClickable = !!service.serviceId?._id;
+                      const isClickable = !!resolvedServiceId;
 
                       const rowContent = (
                         <div 
@@ -742,7 +755,7 @@ function EventDetailsContent() {
                         return (
                           <Link 
                             key={service._id || index}
-                            href={`/merchants-by-service?serviceId=${service.serviceId._id}&serviceName=${encodeURIComponent(serviceName)}&eventId=${event.eventId}`}
+                            href={`/merchants-by-service?serviceId=${resolvedServiceId}&serviceName=${encodeURIComponent(serviceName)}&eventId=${event.eventId}`}
                             className="text-decoration-none d-block"
                           >
                             {rowContent}

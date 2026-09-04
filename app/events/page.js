@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
@@ -37,9 +37,168 @@ export default function EventsPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [galleryLoading, setGalleryLoading] = useState(false);
 
+  const [eventDates, setEventDates] = useState([]);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState("");
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
+  const formatLocalDateKey = (date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseEventDateKey = (value) => {
+    if (!value || typeof value !== "string") return null;
+    const match = value.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (!match) return null;
+    const [, day, month, year] = match;
+    const date = new Date(Number(year), Number(month) - 1, Number(day));
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const normalizeDateForApi = (value) => {
+    if (!value || typeof value !== "string") return "";
+    const isoMatch = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return `${day}-${month}-${year}`;
+    }
+
+    const shortMatch = value.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (shortMatch) {
+      return value.trim();
+    }
+
+    return "";
+  };
+
+  const getDateQueryVariants = (value) => {
+    const variants = new Set();
+    if (!value || typeof value !== "string") return [];
+
+    const trimmed = value.trim();
+    if (trimmed) variants.add(trimmed);
+
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      variants.add(`${day}-${month}-${year}`);
+    }
+
+    const shortMatch = trimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (shortMatch) {
+      const [, day, month, year] = shortMatch;
+      variants.add(`${year}-${month}-${day}`);
+    }
+
+    return [...variants];
+  };
+
+  const matchSelectedDate = (evt, selectedDate) => {
+    if (!selectedDate) return true;
+
+    const targetDates = new Set(getDateQueryVariants(selectedDate));
+    const rawEventDate = evt.rawEvent?.eventDate || "";
+    const rawDateString = evt.filterDateStr || "";
+    const candidates = [rawEventDate, rawDateString];
+
+    if (rawEventDate && rawEventDate.includes('-')) {
+      const parts = rawEventDate.split('-');
+      if (parts.length === 3) {
+        const [first, second, third] = parts;
+        const maybeDay = Number(first);
+        const maybeMonth = Number(second);
+        const maybeYear = Number(third);
+        if (!Number.isNaN(maybeDay) && !Number.isNaN(maybeMonth) && !Number.isNaN(maybeYear)) {
+          candidates.push(`${third}-${String(second).padStart(2, '0')}-${String(first).padStart(2, '0')}`);
+          candidates.push(`${String(first).padStart(2, '0')}-${String(second).padStart(2, '0')}-${third}`);
+        }
+      }
+    }
+
+    return candidates.some((candidate) => targetDates.has(candidate));
+  };
+
+  const eventDateSet = useMemo(() => new Set(eventDates), [eventDates]);
+
+  const getCalendarDaysForMonth = useCallback((monthDate) => {
+    const firstDayOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const startDay = new Date(firstDayOfMonth);
+    startDay.setDate(startDay.getDate() - firstDayOfMonth.getDay());
+
+    const days = [];
+    for (let i = 0; i < 42; i += 1) {
+      const d = new Date(startDay);
+      d.setDate(startDay.getDate() + i);
+      days.push({
+        date: d,
+        key: formatLocalDateKey(d),
+        isCurrentMonth: d.getMonth() === monthDate.getMonth(),
+      });
+    }
+    return days;
+  }, []);
+
+  const calendarDays = useMemo(() => getCalendarDaysForMonth(calendarMonth), [calendarMonth, getCalendarDaysForMonth]);
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setToken(localStorage.getItem("user_token"));
+    }
+  }, []);
+
+  const fetchMyEventDates = useCallback(async (activeToken) => {
+    if (!activeToken) {
+      setEventDates([]);
+      setCalendarSelectedDate("");
+      return;
+    }
+
+    try {
+      setCalendarLoading(true);
+      const response = await fetch("https://eventuna.com/api/event/my-event-dates", {
+        headers: {
+          Authorization: `Bearer ${activeToken}`,
+        },
+      });
+      const json = await response.json();
+
+      if (!response.ok || !json?.status || !Array.isArray(json.data)) {
+        setEventDates([]);
+        setCalendarSelectedDate("");
+        return;
+      }
+
+      const validDates = json.data
+        .map(parseEventDateKey)
+        .filter((date) => date instanceof Date && !Number.isNaN(date.getTime()))
+        .sort((a, b) => a - b)
+        .map((date) => formatLocalDateKey(date));
+
+      const uniqueDates = [...new Set(validDates.filter(Boolean))];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const nextDate = uniqueDates.find((dateKey) => {
+        const date = new Date(`${dateKey}T00:00:00`);
+        return date >= today;
+      }) || uniqueDates[0] || "";
+
+      setEventDates(uniqueDates);
+      if (nextDate) {
+        setCalendarSelectedDate(nextDate);
+        setCalendarMonth(new Date(`${nextDate}T00:00:00`));
+      } else {
+        setCalendarSelectedDate("");
+      }
+    } catch (error) {
+      console.error("Failed to fetch future event dates:", error);
+      setEventDates([]);
+      setCalendarSelectedDate("");
+    } finally {
+      setCalendarLoading(false);
     }
   }, []);
 
@@ -53,15 +212,8 @@ export default function EventsPage() {
       setLoading(true);
       setError(null);
 
-      // Build query parameters for Events API
       const queryParams = new URLSearchParams();
-      
-      // Always append myevent - default to false if empty or not selected, or match selection
       queryParams.append("myevent", selectedMyEvent || "false");
-      
-      if (selectedDate) {
-        queryParams.append("date", selectedDate); // YYYY-MM-DD
-      }
 
       const res = await fetch(`https://eventuna.com/api/event/events?${queryParams.toString()}`, {
         headers: {
@@ -69,77 +221,83 @@ export default function EventsPage() {
         }
       });
       const json = await res.json();
+
       if (isAuthFailureResponse(res, json)) {
         handleAuthFailure();
         return;
       }
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      if (json.status && Array.isArray(json.data)) {
-        let mapped = json.data.map((evt) => {
-          let formattedMonthDay = "";
-          let rawDateString = evt.eventDate || "";
-          try {
-            if (evt.eventDate) {
-              const parts = evt.eventDate.split('-');
-              if (parts.length === 3) {
-                const day = parts[0];
-                const monthIndex = parseInt(parts[1]) - 1;
-                const year = parts[2];
-                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const monthStr = monthNames[monthIndex] || parts[1];
-                formattedMonthDay = `${day} ${monthStr}`;
-                rawDateString = `${year}-${parts[1].padStart(2, '0')}-${day.padStart(2, '0')}`;
+      if (!json?.status || !Array.isArray(json.data)) {
+        setError(json?.message || "Failed to load events");
+        return;
+      }
+
+      let mapped = json.data.map((evt) => {
+        let formattedMonthDay = "";
+        let rawDateString = evt.eventDate || "";
+        try {
+          if (evt.eventDate) {
+            const parts = evt.eventDate.split('-');
+            if (parts.length === 3) {
+              const day = parts[0];
+              const monthIndex = parseInt(parts[1]) - 1;
+              const year = parts[2];
+              const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+              const monthStr = monthNames[monthIndex] || parts[1];
+              formattedMonthDay = `${day} ${monthStr}`;
+              rawDateString = `${year}-${parts[1].padStart(2, '0')}-${day.padStart(2, '0')}`;
+            } else {
+              const d = new Date(evt.eventDate);
+              if (!isNaN(d.getTime())) {
+                formattedMonthDay = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                rawDateString = d.toISOString().split('T')[0];
               } else {
-                const d = new Date(evt.eventDate);
-                if (!isNaN(d.getTime())) {
-                  formattedMonthDay = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                  rawDateString = d.toISOString().split('T')[0];
-                } else {
-                  formattedMonthDay = evt.eventDate;
-                }
+                formattedMonthDay = evt.eventDate;
               }
             }
-          } catch (e) {
-            formattedMonthDay = evt.eventDate || "";
           }
-
-          let locationStr = "Location TBD";
-          if (evt.serviceLocationId) {
-            const addrName = evt.serviceLocationId.addressName || "";
-            const addr = evt.serviceLocationId.address || "";
-            locationStr = addrName && addr ? `${addrName} - ${addr}` : (addr || addrName || "At a participating restaurant");
-          } else if (evt.placeId?.preferences) {
-            locationStr = evt.placeId.preferences;
-          }
-
-          let rawStatus = evt.myInvitationStatus || evt.status || evt.eventCurrentStatus || "pending";
-          const statusLower = rawStatus.toLowerCase();
-          if (statusLower === "ongoingevent" || statusLower === "ongoing") {
-            rawStatus = "Upcoming";
-          }
-
-          return {
-            id: evt._id,
-            title: evt.eventTitle || "Untitled Event",
-            category: evt.eventType?.eventType || evt.eventCategory?.category || "Celebration",
-            location: locationStr,
-            img: evt.image || "",
-            date: formattedMonthDay,
-            filterDateStr: rawDateString,
-            time: evt.eventStartTime || "",
-            status: rawStatus,
-            rawEvent: evt
-          };
-        });
-
-        if (selectedStatus) {
-          mapped = mapped.filter((evt) => evt.status.toLowerCase() === selectedStatus.toLowerCase());
+        } catch (e) {
+          formattedMonthDay = evt.eventDate || "";
         }
 
-        setEvents(mapped);
-      } else {
-        setError(json.message || "Failed to load events");
+        let locationStr = "Location TBD";
+        if (evt.serviceLocationId) {
+          const addrName = evt.serviceLocationId.addressName || "";
+          const addr = evt.serviceLocationId.address || "";
+          locationStr = addrName && addr ? `${addrName} - ${addr}` : (addr || addrName || "At a participating restaurant");
+        } else if (evt.placeId?.preferences) {
+          locationStr = evt.placeId.preferences;
+        }
+
+        let rawStatus = evt.myInvitationStatus || evt.status || evt.eventCurrentStatus || "pending";
+        const statusLower = rawStatus.toLowerCase();
+        if (statusLower === "ongoingevent" || statusLower === "ongoing") {
+          rawStatus = "Upcoming";
+        }
+
+        return {
+          id: evt._id,
+          title: evt.eventTitle || "Untitled Event",
+          category: evt.eventType?.eventType || evt.eventCategory?.category || "Celebration",
+          location: locationStr,
+          img: evt.image || "",
+          date: formattedMonthDay,
+          filterDateStr: rawDateString,
+          time: evt.eventStartTime || "",
+          status: rawStatus,
+          rawEvent: evt
+        };
+      });
+
+      if (selectedDate) {
+        mapped = mapped.filter((evt) => matchSelectedDate(evt, selectedDate));
       }
+
+      if (selectedStatus) {
+        mapped = mapped.filter((evt) => evt.status.toLowerCase() === selectedStatus.toLowerCase());
+      }
+
+      setEvents(mapped);
     } catch (err) {
       setError(err.message || "Network error loading events");
     } finally {
@@ -148,11 +306,26 @@ export default function EventsPage() {
   };
 
   useEffect(() => {
+    if (!token) {
+      setEventDates([]);
+      setCalendarSelectedDate("");
+      setCalendarMonth(new Date());
+      return;
+    }
+
     fetchFilteredEvents("false", "", "");
-  }, [token]);
+    fetchMyEventDates(token);
+  }, [token, fetchMyEventDates]);
 
   const handleApplyFilters = () => {
     fetchFilteredEvents(filterMyEvent, filterDate, filterStatus);
+  };
+
+  const handleCalendarDateClick = (dayKey) => {
+    const chosenDate = dayKey || "";
+    setCalendarSelectedDate(chosenDate);
+    setFilterDate(chosenDate);
+    fetchFilteredEvents(filterMyEvent, chosenDate, filterStatus);
   };
 
   const handleResetFilters = () => {
@@ -392,6 +565,77 @@ export default function EventsPage() {
 
                 {/* Events Grid - Right Column */}
                 <div className="col-lg-9 col-md-8">
+                  <div className="bg-white border rounded-3 shadow-sm p-3 mb-4 mx-auto" style={{ width: "100%", maxWidth: "860px" }}>
+                    <div className="d-flex justify-content-between align-items-center mb-2 px-1">
+                      <h6 className="fw-bold text-dark m-0">Upcoming Dates</h6>
+                      {calendarLoading && <span className="small text-muted">Loading...</span>}
+                    </div>
+
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <button
+                        type="button"
+                        className="btn btn-link text-dark p-0 border-0"
+                        onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
+                        aria-label="Previous month"
+                      >
+                        <i className="fa-solid fa-chevron-left"></i>
+                      </button>
+                      <strong className="text-dark" style={{ fontSize: "0.95rem" }}>
+                        {calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                      </strong>
+                      <button
+                        type="button"
+                        className="btn btn-link text-dark p-0 border-0"
+                        onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
+                        aria-label="Next month"
+                      >
+                        <i className="fa-solid fa-chevron-right"></i>
+                      </button>
+                    </div>
+
+                    <div className="row g-1 text-center small text-muted fw-semibold mb-2 px-1">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                        <div key={day} className="col-12" style={{ width: "14.28%" }}>
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="row g-1 text-center px-1">
+                      {calendarDays.map((day) => {
+                        const isSelected = calendarSelectedDate === day.key;
+                        const hasEvent = eventDateSet.has(day.key);
+
+                        return (
+                          <div key={day.key} className="col-12" style={{ width: "14.28%" }}>
+                            <button
+                              type="button"
+                              onClick={() => day.isCurrentMonth && handleCalendarDateClick(day.key)}
+                              disabled={!day.isCurrentMonth}
+                              className="btn btn-sm mx-auto d-flex align-items-center justify-content-center"
+                              style={{
+                                height: "36px",
+                                width: isSelected ? "52px" : "36px",
+                                padding: 0,
+                                background: isSelected ? "#e8f0ff" : hasEvent ? "#f3f7ff" : "transparent",
+                                color: isSelected ? "#1e3a8a" : day.isCurrentMonth ? "#1f2937" : "#9ca3af",
+                                border: isSelected ? "1px solid #dfe8ff" : hasEvent ? "1px solid #dfe8ff" : "1px solid transparent",
+                                borderRadius: isSelected ? "18px" : "50%",
+                                fontWeight: isSelected ? 700 : 500,
+                                opacity: 1,
+                                boxShadow: isSelected ? "0 2px 8px rgba(59, 130, 246, 0.10)" : "none",
+                                transition: "all 0.2s ease",
+                              }}
+                              title={hasEvent ? "Event date" : "No event"}
+                            >
+                              {day.date.getDate()}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {loading ? (
                     <div className="text-center py-5">
                       <div className="spinner-border text-primary" role="status">
@@ -411,9 +655,9 @@ export default function EventsPage() {
                       <p className="text-muted small">No events match your criteria.</p>
                     </div>
                   ) : (
-                    <div className="row">
+                    <div className="row g-4 justify-content-start">
                       {events.map((evt) => (
-                        <div key={evt.id} className="col-lg-4 col-md-6 mb-4">
+                        <div key={evt.id} className="col-xl-4 col-lg-4 col-md-6 mb-4">
                           <div className="main-card h-100 d-flex flex-column justify-content-between overflow-hidden shadow-sm" style={{ cursor: "pointer" }} onClick={() => handleViewEventDetails(evt)}>
                             
                             {/* Card Media Header */}

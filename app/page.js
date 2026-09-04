@@ -75,26 +75,14 @@ export default function Home() {
     fetchServices();
   }, []);
 
-  const handleServiceClick = async (service) => {
-    setSelectedService(service);
-    try {
-      setLoadingMerchants(true);
-      setMerchantsError(null);
-      setMerchants([]);
-      const res = await fetch(`https://eventuna.com/api/merchant/merchants-by-service?serviceId=${service._id}`);
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const json = await res.json();
-      if (json.status) {
-        setMerchants(json.data || []);
-      } else {
-        setMerchantsError(json.message || "Failed to fetch merchants");
-      }
-    } catch (err) {
-      setMerchantsError(err.message || "Network error fetching merchants");
-    } finally {
-      setLoadingMerchants(false);
-    }
+  const handleServiceClick = (service) => {
+    const params = new URLSearchParams({
+      serviceId: service._id || service.id,
+      serviceName: service.servicesName || service.name || "Service Providers",
+    });
+    router.push(`/merchants-by-service?${params.toString()}`);
   };
+
 
   const handleViewMerchantDetails = (merchant) => {
     localStorage.setItem("eventuna-latest-merchant", JSON.stringify(merchant));

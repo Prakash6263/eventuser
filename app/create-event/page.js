@@ -60,6 +60,7 @@ export default function CreateEventPage() {
   const [isEditingFromReview, setIsEditingFromReview] = useState(false);
   const [month, setMonth] = useState(6);
   const [selectedDate, setSelectedDate] = useState(14);
+  const [eventEndDate, setEventEndDate] = useState(14);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [category, setCategory] = useState("Birthday");
@@ -535,6 +536,30 @@ export default function CreateEventPage() {
     }
   };
 
+  const handleDateClick = (dayNumber) => {
+    const currentStart = Math.min(selectedDate, eventEndDate ?? selectedDate);
+    const currentEnd = Math.max(selectedDate, eventEndDate ?? selectedDate);
+
+    if (dayNumber <= currentStart) {
+      setSelectedDate(dayNumber);
+      setEventEndDate(currentEnd);
+      return;
+    }
+
+    if (dayNumber >= currentEnd) {
+      setSelectedDate(currentStart);
+      setEventEndDate(dayNumber);
+      return;
+    }
+
+    setSelectedDate(dayNumber);
+    setEventEndDate(currentEnd);
+  };
+
+  const resetDateRange = () => {
+    setEventEndDate(selectedDate);
+  };
+
   const submitEvent = async ({ saveDraft }) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
@@ -547,9 +572,13 @@ export default function CreateEventPage() {
       formData.append("eventDescription", invitationMessage);
       formData.append("eventTypeId", selectedEventTypeId);
       formData.append("eventCategoryId", selectedCategoryId);
-      
-      const formattedDate = `2026-${(month + 1).toString().padStart(2, "0")}-${selectedDate.toString().padStart(2, "0")}`;
+
+      const startDay = Number(selectedDate);
+      const endDay = Number(eventEndDate ?? selectedDate);
+      const formattedDate = `2026-${(month + 1).toString().padStart(2, "0")}-${startDay.toString().padStart(2, "0")}`;
+      const formattedEndDate = `2026-${(month + 1).toString().padStart(2, "0")}-${endDay.toString().padStart(2, "0")}`;
       formData.append("eventDate", formattedDate);
+      formData.append("eventEndDate", formattedEndDate);
       formData.append("eventStartTime", startTime);
       formData.append("eventEndTime", endTime);
       formData.append("bringalongGuest", bringGuests);
@@ -1006,6 +1035,10 @@ export default function CreateEventPage() {
                         setMonth={setMonth}
                         selectedDate={selectedDate}
                         setSelectedDate={setSelectedDate}
+                        eventEndDate={eventEndDate}
+                        setEventEndDate={setEventEndDate}
+                        onDateClick={handleDateClick}
+                        resetDateRange={resetDateRange}
                         calendarDays={calendarDays}
                         startTime={startTime}
                         setStartTime={setStartTime}
@@ -1263,6 +1296,7 @@ export default function CreateEventPage() {
                         setEventImage={setEventImage}
                         setEventImageFile={setEventImageFile}
                         selectedDate={selectedDate}
+                        eventEndDate={eventEndDate}
                         startTime={startTime}
                         endTime={endTime}
                         selectedRestaurant={selectedRestaurant}
@@ -1601,8 +1635,11 @@ function Field({ label, hint, children }) {
   return <label className={styles.field}><span>{label}</span>{children}<small>{hint}</small></label>;
 }
 
-function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, calendarDays, startTime, setStartTime, endTime, setEndTime }) {
+function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, eventEndDate, setEventEndDate, onDateClick, resetDateRange, calendarDays, startTime, setStartTime, endTime, setEndTime }) {
   const monthName = new Date(2026, month, 1).toLocaleString("en-US", { month: "long" });
+  const rangeStart = Math.min(selectedDate, eventEndDate ?? selectedDate);
+  const rangeEnd = Math.max(selectedDate, eventEndDate ?? selectedDate);
+
   return (
     <div className={styles.dateLayout}>
       <div className={styles.calendarPanel}>
@@ -1612,13 +1649,47 @@ function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, calendar
           <button onClick={() => setMonth((month + 1) % 12)} aria-label="Next month"><i className="fa-solid fa-chevron-right"></i></button>
         </div>
         <div className={styles.weekdays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <span key={day}>{day}</span>)}</div>
-        <div className={styles.calendarGrid}>{calendarDays.map((day, index) => <button key={`${day.number}-${index}`} className={`${day.outside ? styles.outsideDay : ""} ${!day.outside && day.number === selectedDate ? styles.selectedDay : ""}`} disabled={day.outside} onClick={() => setSelectedDate(day.number)}>{day.number}</button>)}</div>
+        <div className={styles.calendarGrid}>{calendarDays.map((day, index) => {
+          if (day.outside) {
+            return <button key={`${day.number}-${index}`} className={styles.outsideDay} disabled>{day.number}</button>;
+          }
+
+          const isInRange = day.number >= rangeStart && day.number <= rangeEnd;
+          const isSelectedStart = day.number === selectedDate;
+          const isSelectedEnd = day.number === (eventEndDate ?? selectedDate);
+          const isRangeStart = isInRange && day.number === rangeStart;
+          const isRangeEnd = isInRange && day.number === rangeEnd;
+
+          return (
+            <button
+              key={`${day.number}-${index}`}
+              className={[
+                isInRange ? styles.dateRangeSelected : "",
+                isRangeStart ? styles.dateRangeStart : "",
+                isRangeEnd ? styles.dateRangeEnd : "",
+                isSelectedStart || isSelectedEnd ? styles.selectedDay : "",
+              ].filter(Boolean).join(" ")}
+              onClick={() => onDateClick(day.number)}
+            >
+              {day.number}
+            </button>
+          );
+        })}</div>
       </div>
       <div className={styles.timePanel}>
         <div className={styles.timeHeading}><span><i className="fa-regular fa-clock"></i></span><div><strong>Time duration</strong><small>Choose an end time later than the start time.</small></div></div>
         <Field label="Start time" hint="When guests should arrive."><input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></Field>
         <Field label="End time" hint="When the event is expected to finish."><input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} /></Field>
-        <div className={styles.dateSummary}><i className="fa-regular fa-calendar"></i><span><small>Selected date</small><strong>{monthName} {selectedDate}, 2026</strong></span></div>
+        <div className={styles.dateSummary}>
+          <i className="fa-regular fa-calendar"></i>
+          <span>
+            <small>Selected date</small>
+            <strong>{monthName} {selectedDate}{eventEndDate && eventEndDate !== selectedDate ? ` - ${eventEndDate}` : ""}, 2026</strong>
+          </span>
+        </div>
+        <button type="button" className={styles.resetRangeButton} onClick={resetDateRange}>
+          <i className="fa-solid fa-rotate-left"></i> Reset date range
+        </button>
       </div>
     </div>
   );
@@ -2077,7 +2148,7 @@ function NotesStep({ notesList, loading, selectedNotes, setSelectedNotes, custom
   );
 }
 
-function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, setEventImageFile, selectedDate, startTime, endTime, selectedRestaurant, selectedGuests, contacts, bringGuests, maxGuests, rsvp, rsvpBy, selectedNotes, customNote, registryUrl, restaurants, month, place, selectedLocation, category, eventType, onViewDetail, onEditStep }) {
+function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, setEventImageFile, selectedDate, eventEndDate, startTime, endTime, selectedRestaurant, selectedGuests, contacts, bringGuests, maxGuests, rsvp, rsvpBy, selectedNotes, customNote, registryUrl, restaurants, month, place, selectedLocation, category, eventType, onViewDetail, onEditStep }) {
   const restaurant = Array.isArray(restaurants) ? restaurants.find((item) => (item._id || item.id) === selectedRestaurant) : null;
   const invitedGuests = contacts.filter((guest) => selectedGuests.includes(guest.id));
   const allNotes = [...selectedNotes, ...(customNote.trim() ? [customNote.trim()] : [])];
@@ -2159,7 +2230,7 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
             <i className="fa-regular fa-calendar"></i>
             <span>
               <small>Date and time</small>
-              <strong>{monthName} {selectedDate}, 2026 | {startTime || "--:--"} - {endTime || "--:--"}</strong>
+              <strong>{monthName} {selectedDate}{eventEndDate && eventEndDate !== selectedDate ? ` - ${eventEndDate}` : ""}, 2026 | {startTime || "--:--"} - {endTime || "--:--"}</strong>
             </span>
             <button 
               type="button" 
@@ -2634,6 +2705,35 @@ function MapSelectorView({
   const [markerInstance, setMarkerInstance] = useState(null);
   const [isAddressSelectedCheckbox, setIsAddressSelectedCheckbox] = useState(true);
 
+  const updateAddressFromCoords = async (lat, lng, marker, L) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+      const data = await res.json();
+      if (data && data.address) {
+        const addr = data.address;
+        const addressName = addr.neighbourhood || addr.suburb || addr.road || addr.village || addr.industrial || addr.commercial || "Location Select";
+        const address1 = addr.city || addr.town || addr.county || addr.state_district || "";
+        const address2 = addr.state || addr.region || "";
+        const postcode = addr.postcode || "000000";
+
+        setAddressData({
+          addressName,
+          address1,
+          address2,
+          postcode
+        });
+
+        const fullStr = data.display_name || `${addressName}, ${address1}, ${address2}`;
+        setSearchQuery(fullStr);
+        if (marker && L) {
+          marker.bindPopup(`<b>${addressName}</b><br/>${address1}, ${address2}`).openPopup();
+        }
+      }
+    } catch (err) {
+      console.error("Reverse geocoding failed:", err);
+    }
+  };
+
   useEffect(() => {
     if (typeof window === "undefined" || !window.L) return;
     const L = window.L;
@@ -2681,35 +2781,6 @@ function MapSelectorView({
       map.remove();
     };
   }, []);
-
-  const updateAddressFromCoords = async (lat, lng, marker, L) => {
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
-      const data = await res.json();
-      if (data && data.address) {
-        const addr = data.address;
-        const addressName = addr.neighbourhood || addr.suburb || addr.road || addr.village || addr.industrial || addr.commercial || "Location Select";
-        const address1 = addr.city || addr.town || addr.county || addr.state_district || "";
-        const address2 = addr.state || addr.region || "";
-        const postcode = addr.postcode || "000000";
-
-        setAddressData({
-          addressName,
-          address1,
-          address2,
-          postcode
-        });
-
-        const fullStr = data.display_name || `${addressName}, ${address1}, ${address2}`;
-        setSearchQuery(fullStr);
-        if (marker && L) {
-          marker.bindPopup(`<b>${addressName}</b><br/>${address1}, ${address2}`).openPopup();
-        }
-      }
-    } catch (err) {
-      console.error("Reverse geocoding failed:", err);
-    }
-  };
 
   const handleSearchChange = async (e) => {
     const query = e.target.value;

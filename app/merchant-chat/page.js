@@ -29,13 +29,14 @@ function MerchantChatContent() {
 
   // ── Fetch (or create) the merchant chat + messages ──
   const fetchChat = async () => {
-    if (!eventId || !merchantId) {
-      setError("Missing event or merchant reference.");
+    if (!merchantId) {
+      setError("Missing merchant reference.");
       setLoading(false);
       return;
     }
     try {
-      const res = await getMerchantChatApi(eventId, merchantId);
+      const activeEventId = eventId || "general";
+      const res = await getMerchantChatApi(activeEventId, merchantId);
       if (res && res.status && res.data) {
         const data = res.data;
         const id = data.chat?._id || null;

@@ -7,11 +7,14 @@ import Footer from "../components/Footer";
 import { apiRequest } from "../services/apiClient";
 import Swal from "sweetalert2";
 
+import { getMerchantsByServiceApi } from "../services/eventApi";
+
 function MerchantDetailsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId") || "";
   const additionalServiceId = searchParams.get("additionalServiceId") || "";
+  const merchantId = searchParams.get("id") || searchParams.get("merchantId") || "";
 
   const [merchant, setMerchant] = useState(null);
   const [copiedCoupon, setCopiedCoupon] = useState(null);
@@ -34,51 +37,80 @@ function MerchantDetailsContent() {
   };
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("eventuna-latest-merchant");
-      if (stored) {
-        setMerchant(JSON.parse(stored));
-      } else {
-        setMerchant({
-          _id: "68c259b5a6251e9e18484fdd",
-          serviceName: "MyMarkwt",
-          serviceSlogan: "Its@aazaing",
-          serviceDescription: "Serving premium experiences and catering setup for all high-end corporate events, weddings, and parties.",
-          email: "myrestaurent@gmail.com",
-          phone: "4884949493",
-          mobile: "810300651",
-          isVerified: true,
-          countryCode: "+966",
-          onlineReservation: true,
-          cuisineName: "Chinese, Italian",
-          bannerImage: "https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=600",
-          serviceLocationIds: [{
-            _id: "loc1",
-            addressName: "HomeTown",
-            address: "Ghatiya, Ujjain, Madhya Pradesh, India",
-            capacity: 300,
-            weeklySchedule: [
-              { day: "Sunday", morning: { from: "10:57", to: "20:00" }, evening: { from: "20:00", to: "23:30" } },
-              { day: "Monday", morning: { from: "09:00", to: "17:00" }, evening: { from: "00:00", to: "00:00" } },
-            ]
-          }],
-          couponIds: [{
-            _id: "c1", couponName: "50%OFF", discount: "50",
-            validFrom: "11-09-2025", validTo: "11-09-2026",
-            description: "Applicable on all catering orders above $500."
-          }],
-          products: [{
-            _id: "p1", name: "Gourmet Banquet",
-            description: "Complete buffet setup with starters, mains, and desserts.",
-            price: 450,
-            photo: [{ fileName: "https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=600&q=80" }]
-          }]
-        });
+    const fetchMerchantData = async () => {
+      try {
+        let foundMerchant = null;
+
+        // 1. Try reading from localStorage first
+        const stored = localStorage.getItem("eventuna-latest-merchant");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (!merchantId || parsed._id === merchantId || parsed.id === merchantId) {
+            foundMerchant = parsed;
+          }
+        }
+
+        // 2. If not found in localStorage or if URL parameters exist, fetch real data from API
+        if (!foundMerchant && (additionalServiceId || merchantId)) {
+          const serviceIdToFetch = additionalServiceId || "686fb6edd46e9740ee8277f0";
+          const res = await getMerchantsByServiceApi(serviceIdToFetch);
+          if (res && res.status && Array.isArray(res.data)) {
+            if (merchantId) {
+              foundMerchant = res.data.find(m => m._id === merchantId || m.id === merchantId);
+            }
+            if (!foundMerchant) {
+              foundMerchant = res.data.find(m => !m.isDeleted) || res.data[0];
+            }
+          }
+        }
+
+        if (foundMerchant) {
+          setMerchant(foundMerchant);
+        } else {
+          // Fallback mock merchant if offline or empty
+          setMerchant({
+            _id: "68c259b5a6251e9e18484fdd",
+            serviceName: "MyMarkwt",
+            serviceSlogan: "Its@aazaing",
+            serviceDescription: "Serving premium experiences and catering setup for all high-end corporate events, weddings, and parties.",
+            email: "myrestaurent@gmail.com",
+            phone: "4884949493",
+            mobile: "810300651",
+            isVerified: true,
+            countryCode: "+966",
+            onlineReservation: true,
+            cuisineName: "Chinese, Italian",
+            bannerImage: "https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=600",
+            serviceLocationIds: [{
+              _id: "loc1",
+              addressName: "HomeTown",
+              address: "Ghatiya, Ujjain, Madhya Pradesh, India",
+              capacity: 300,
+              weeklySchedule: [
+                { day: "Sunday", morning: { from: "10:57", to: "20:00" }, evening: { from: "20:00", to: "23:30" } },
+                { day: "Monday", morning: { from: "09:00", to: "17:00" }, evening: { from: "00:00", to: "00:00" } },
+              ]
+            }],
+            couponIds: [{
+              _id: "c1", couponName: "50%OFF", discount: "50",
+              validFrom: "11-09-2025", validTo: "11-09-2026",
+              description: "Applicable on all catering orders above $500."
+            }],
+            products: [{
+              _id: "p1", name: "Gourmet Banquet",
+              description: "Complete buffet setup with starters, mains, and desserts.",
+              price: 450,
+              photo: [{ fileName: "https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=600&q=80" }]
+            }]
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse merchant details:", e);
       }
-    } catch (e) {
-      console.error("Failed to parse merchant details:", e);
-    }
-  }, []);
+    };
+
+    fetchMerchantData();
+  }, [merchantId, additionalServiceId]);
 
   // ── Helpers ──
   const handleCopyCoupon = (code) => {
@@ -864,22 +896,21 @@ function MerchantDetailsContent() {
                     </div>
                   )}
 
-                  {/* Chat with Restaurant */}
-                  {eventId && (
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/merchant-chat?eventId=${eventId}&merchantId=${merchant._id || merchant.id}&merchantName=${encodeURIComponent(merchant.serviceName || "Restaurant")}`)}
-                        className="btn w-100 rounded-pill py-2 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                        style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", border: "none", color: "#fff" }}
-                      >
-                        <i className="fa-regular fa-comment-dots"></i> Chat with Restaurant
-                      </button>
-                    </div>
-                  )}
-
+                  {/* Contact Merchant Button (Matching screenshot design) */}
                   <div className="mt-3">
-                    <a href={`mailto:${merchant.email}`} className="btn btn-outline-secondary w-100 rounded-pill py-2 fw-semibold">Contact Merchant</a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const mId = merchant._id || merchant.id || "";
+                        const mName = encodeURIComponent(merchant.serviceName || merchant.fullName || "Merchant");
+                        const targetUrl = `/merchant-chat?${eventId ? `eventId=${eventId}&` : ""}merchantId=${mId}&merchantName=${mName}`;
+                        router.push(targetUrl);
+                      }}
+                      className="btn w-100 rounded-pill py-2.5 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                      style={{ border: "1.5px solid #475569", color: "#334155", background: "#ffffff", fontSize: "15px" }}
+                    >
+                      <i className="fa-regular fa-comment-dots text-primary"></i> Contact Merchant
+                    </button>
                   </div>
                 </div>
 
