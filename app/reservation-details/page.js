@@ -16,11 +16,43 @@ export default function ReservationDetailsPage() {
   const [detailsLoaded, setDetailsLoaded] = useState(false);
   const [showGuestsModal, setShowGuestsModal] = useState(false);
 
+  // Helpers for 12-hr / 24-hr time conversion
+  const time12To24 = (timeStr) => {
+    if (!timeStr) return "07:00";
+    const str = String(timeStr).trim();
+    const isPM = /pm/i.test(str);
+    const isAM = /am/i.test(str);
+    const clean = str.replace(/(am|pm)/i, "").trim();
+    const parts = clean.split(":");
+    if (parts.length < 2) return "07:00";
+    let hours = parseInt(parts[0], 10);
+    let minutes = parseInt(parts[1], 10);
+    if (isNaN(hours)) hours = 7;
+    if (isNaN(minutes)) minutes = 0;
+    if (isPM && hours < 12) hours += 12;
+    if (isAM && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  };
+
+  const time24To12 = (time24) => {
+    if (!time24) return "07:00 AM";
+    const parts = String(time24).split(":");
+    if (parts.length < 2) return time24;
+    let hours = parseInt(parts[0], 10);
+    let minutes = parseInt(parts[1], 10);
+    if (isNaN(hours)) hours = 7;
+    if (isNaN(minutes)) minutes = 0;
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${ampm}`;
+  };
+
   // Timing Modal State
   const [showTimingModal, setShowTimingModal] = useState(false);
   const [timingDate, setTimingDate] = useState("");
-  const [timingStartTime, setTimingStartTime] = useState("");
-  const [timingEndTime, setTimingEndTime] = useState("");
+  const [timingStartTime, setTimingStartTime] = useState("07:00");
+  const [timingEndTime, setTimingEndTime] = useState("19:00");
   const [isUpdatingTiming, setIsUpdatingTiming] = useState(false);
   const [timingError, setTimingError] = useState("");
   const [timingSuccessMsg, setTimingSuccessMsg] = useState("");
@@ -33,6 +65,10 @@ export default function ReservationDetailsPage() {
     }
     setTimingError("");
     setIsUpdatingTiming(true);
+
+    // Convert 24-hr time input values to 12-hr format with AM/PM for backend API
+    const formattedStartTime = time24To12(timingStartTime);
+    const formattedEndTime = time24To12(timingEndTime);
 
     // Format eventDate as DD-MM-YYYY for backend API requirement
     let formattedEventDate = timingDate;
@@ -49,8 +85,8 @@ export default function ReservationDetailsPage() {
       const payload = {
         eventId: eventId,
         eventDate: formattedEventDate,
-        eventStartTime: timingStartTime,
-        eventEndTime: timingEndTime,
+        eventStartTime: formattedStartTime,
+        eventEndTime: formattedEndTime,
         eventEndDate: ""
       };
 
@@ -67,8 +103,8 @@ export default function ReservationDetailsPage() {
         setReservation(prev => ({
           ...prev,
           eventDate: displayDate,
-          eventStartTime: timingStartTime,
-          eventEndTime: timingEndTime
+          eventStartTime: formattedStartTime,
+          eventEndTime: formattedEndTime
         }));
 
         setTimingSuccessMsg(res.message || "Event updated successfully.");
@@ -730,8 +766,8 @@ export default function ReservationDetailsPage() {
                                 }
                               }
                               setTimingDate(isoDate || new Date().toISOString().split('T')[0]);
-                              setTimingStartTime(reservation.eventStartTime || "06:14 PM");
-                              setTimingEndTime(reservation.eventEndTime || "08:14 PM");
+                              setTimingStartTime(time12To24(reservation.eventStartTime || "07:04 AM"));
+                              setTimingEndTime(time12To24(reservation.eventEndTime || "07:04 PM"));
                               setTimingError("");
                               setTimingSuccessMsg("");
                               setShowTimingModal(true);
@@ -1060,14 +1096,16 @@ export default function ReservationDetailsPage() {
                           <i className="fa-regular fa-clock"></i>
                         </span>
                         <input
-                          type="text"
+                          type="time"
                           className="form-control border-start-0 ps-0 bg-light"
-                          placeholder="06:14 PM"
                           value={timingStartTime}
                           onChange={(e) => setTimingStartTime(e.target.value)}
                           required
                         />
                       </div>
+                      <span className="text-muted mt-1 d-block" style={{ fontSize: "11.5px" }}>
+                        Selected: <strong>{time24To12(timingStartTime)}</strong>
+                      </span>
                     </div>
                     <div className="col-6">
                       <label className="form-label text-muted small fw-semibold">End Time</label>
@@ -1076,14 +1114,16 @@ export default function ReservationDetailsPage() {
                           <i className="fa-regular fa-clock"></i>
                         </span>
                         <input
-                          type="text"
+                          type="time"
                           className="form-control border-start-0 ps-0 bg-light"
-                          placeholder="08:14 PM"
                           value={timingEndTime}
                           onChange={(e) => setTimingEndTime(e.target.value)}
                           required
                         />
                       </div>
+                      <span className="text-muted mt-1 d-block" style={{ fontSize: "11.5px" }}>
+                        Selected: <strong>{time24To12(timingEndTime)}</strong>
+                      </span>
                     </div>
                   </div>
                 </div>
