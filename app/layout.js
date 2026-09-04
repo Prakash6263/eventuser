@@ -39,7 +39,7 @@ export default function RootLayout({ children }) {
         </AuthProvider>
         <Script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" strategy="beforeInteractive" />
         <Script src="/js/jquery.min.js" strategy="beforeInteractive" />
-        <Script src="/vendor/bootstrap/js/bootstrap.bundle.min.js" strategy="afterInteractive" />
+        <Script src="/vendor/bootstrap/js/bootstrap.bundle.min.js" strategy="beforeInteractive" />
         <Script src="/vendor/OwlCarousel/owl.carousel.js" strategy="afterInteractive" />
         <Script src="/vendor/bootstrap-select/dist/js/bootstrap-select.min.js" strategy="afterInteractive" />
         <Script src="/vendor/mixitup/dist/mixitup.min.js" strategy="afterInteractive" />
