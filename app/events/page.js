@@ -269,10 +269,27 @@ export default function EventsPage() {
           locationStr = evt.placeId.preferences;
         }
 
-        let rawStatus = evt.myInvitationStatus || evt.status || evt.eventCurrentStatus || "pending";
-        const statusLower = rawStatus.toLowerCase();
-        if (statusLower === "ongoingevent" || statusLower === "ongoing") {
-          rawStatus = "Upcoming";
+        let uiStatus = "Upcoming";
+        const rawStatus = (evt.status || "").toLowerCase();
+        const currentStatus = (evt.eventCurrentStatus || "").toLowerCase();
+        const invStatus = (evt.myInvitationStatus || "").toLowerCase();
+
+        if (rawStatus === "draft") {
+          uiStatus = "Draft";
+        } else if (rawStatus === "cancelled" || rawStatus === "canceled") {
+          uiStatus = "Canceled";
+        } else if (rawStatus === "rejected" || invStatus === "rejected") {
+          uiStatus = "Rejected";
+        } else if (rawStatus === "expired" || currentStatus === "expired") {
+          uiStatus = "Expired";
+        } else if (rawStatus === "completed" || currentStatus === "completed") {
+          uiStatus = "Completed";
+        } else if (rawStatus === "pending" || invStatus === "pending") {
+          uiStatus = "Pending";
+        } else if (rawStatus === "accepted" || invStatus === "accepted") {
+          uiStatus = "Accepted";
+        } else if (rawStatus === "ongoingevent" || rawStatus === "ongoing" || rawStatus === "upcoming" || currentStatus === "upcoming") {
+          uiStatus = "Upcoming";
         }
 
         return {
@@ -284,7 +301,7 @@ export default function EventsPage() {
           date: formattedMonthDay,
           filterDateStr: rawDateString,
           time: evt.eventStartTime || "",
-          status: rawStatus,
+          status: uiStatus,
           rawEvent: evt
         };
       });
@@ -551,9 +568,14 @@ export default function EventsPage() {
                         onChange={(e) => setFilterStatus(e.target.value)}
                       >
                         <option value="">All</option>
-                        <option value="accepted">Accepted</option>
                         <option value="pending">Pending</option>
-                        <option value="not_invited">Not Invited</option>
+                        <option value="accepted">Accepted</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="draft">Draft</option>
+                        <option value="upcoming">Upcoming</option>
+                        <option value="completed">Completed</option>
+                        <option value="expired">Expired</option>
+                        <option value="canceled">Canceled</option>
                       </select>
                     </div>
 
