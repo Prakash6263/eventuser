@@ -209,7 +209,7 @@ export default function MyReservationsPage() {
       adultCount: resObj.adultCount || "",
       childCount: resObj.childCount || "",
       instruction: resObj.instruction || "",
-      couponId: resObj.couponId?._id || resObj.couponId || "",
+      couponId: "",
       guestType: resObj.guestType || "All",
     });
   };
