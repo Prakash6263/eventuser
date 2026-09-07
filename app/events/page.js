@@ -339,7 +339,7 @@ export default function EventsPage() {
   };
 
   const handleCalendarDateClick = (dayKey) => {
-    const chosenDate = dayKey || "";
+    const chosenDate = calendarSelectedDate === dayKey ? "" : (dayKey || "");
     setCalendarSelectedDate(chosenDate);
     setFilterDate(chosenDate);
     fetchFilteredEvents(filterMyEvent, chosenDate, filterStatus);
@@ -551,12 +551,32 @@ export default function EventsPage() {
                     </div>
 
                     <div className="mb-3">
-                      <label className="filter-label mb-2 fw-semibold text-dark small">Date</label>
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <label className="filter-label fw-semibold text-dark small m-0">Date <span className="text-muted fw-normal">(Optional)</span></label>
+                        {filterDate && (
+                          <button
+                            type="button"
+                            className="btn btn-link text-danger p-0 border-0 text-decoration-none small"
+                            style={{ fontSize: "12px" }}
+                            onClick={() => {
+                              setFilterDate("");
+                              setCalendarSelectedDate("");
+                              fetchFilteredEvents(filterMyEvent, "", filterStatus);
+                            }}
+                          >
+                            Clear Date
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="date"
                         className="form-control"
                         value={filterDate}
-                        onChange={(e) => setFilterDate(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFilterDate(val);
+                          setCalendarSelectedDate(val);
+                        }}
                       />
                     </div>
 
