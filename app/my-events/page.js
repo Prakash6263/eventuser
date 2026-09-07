@@ -77,21 +77,35 @@ export default function MyEventsPage() {
               locationStr = evt.placeId.preferences;
             }
 
-            // Status mapping to "Accepted" | "Waiting for Action" | "Completed" | "Upcoming" | "Ongoing"
-            let uiStatus = "Ongoing";
-            let badgeClass = "bg-primary";
-            const rawStatus = (evt.status || evt.eventCurrentStatus || "").toLowerCase();
+            // Status mapping to "Pending" | "Accepted" | "Rejected" | "Draft" | "Upcoming" | "Completed" | "Expired" | "Canceled"
+            let uiStatus = "Upcoming";
+            let badgeClass = "bg-info text-dark";
+            const rawStatus = (evt.status || "").toLowerCase();
+            const currentStatus = (evt.eventCurrentStatus || "").toLowerCase();
+            const invStatus = (evt.myInvitationStatus || "").toLowerCase();
 
-            if (rawStatus === "expired" || rawStatus === "completed") {
+            if (rawStatus === "draft") {
+              uiStatus = "Draft";
+              badgeClass = "bg-secondary";
+            } else if (rawStatus === "cancelled" || rawStatus === "canceled") {
+              uiStatus = "Canceled";
+              badgeClass = "bg-danger";
+            } else if (rawStatus === "rejected" || invStatus === "rejected") {
+              uiStatus = "Rejected";
+              badgeClass = "bg-danger";
+            } else if (rawStatus === "expired" || currentStatus === "expired") {
+              uiStatus = "Expired";
+              badgeClass = "bg-dark";
+            } else if (rawStatus === "completed" || currentStatus === "completed") {
               uiStatus = "Completed";
               badgeClass = "bg-secondary";
-            } else if (rawStatus === "pending") {
-              uiStatus = "Waiting for Action";
+            } else if (rawStatus === "pending" || invStatus === "pending") {
+              uiStatus = "Pending";
               badgeClass = "bg-warning text-dark";
-            } else if (rawStatus === "accepted") {
+            } else if (rawStatus === "accepted" || invStatus === "accepted") {
               uiStatus = "Accepted";
               badgeClass = "bg-success";
-            } else if (rawStatus === "ongoingevent" || rawStatus === "ongoing") {
+            } else if (rawStatus === "ongoingevent" || rawStatus === "ongoing" || rawStatus === "upcoming" || currentStatus === "upcoming") {
               uiStatus = "Upcoming";
               badgeClass = "bg-info text-dark";
             }
@@ -209,8 +223,8 @@ export default function MyEventsPage() {
                   <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                     <h4 className="user-profile-card-title fw-bold m-0">My Events</h4>
                     {/* Status Tabs Filter */}
-                    <div className="btn-group btn-group-sm" role="group">
-                      {["All", "Accepted", "Completed", "Upcoming", "Ongoing"].map((tab) => (
+                    <div className="btn-group btn-group-sm flex-wrap" role="group">
+                      {["All", "Pending", "Accepted", "Rejected", "Draft", "Upcoming", "Completed", "Expired", "Canceled"].map((tab) => (
                         <button
                           key={tab}
                           type="button"
