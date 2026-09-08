@@ -219,10 +219,11 @@ export const getAddressesApi = async () => {
 };
 
 // 14. Add Address API
-export const addAddressApi = async ({ addressName, address1, address2, postcode }) => {
+export const addAddressApi = async (addressData) => {
+  const payload = typeof addressData === "object" && addressData !== null ? addressData : {};
   return await apiRequest("/auth/add-address", {
     method: "POST",
-    body: JSON.stringify({ addressName, address1, address2, postcode }),
+    body: JSON.stringify(payload),
   });
 };
 
