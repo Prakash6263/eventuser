@@ -62,11 +62,11 @@ export const isLoggedIn = () => {
 export const isAuthFailureResponse = (response, data) => {
   const message = String(data?.message || data?.error || "").toLowerCase();
   return response?.status === 401 ||
-    response?.status === 403 ||
     message.includes("invalid token") ||
     message.includes("token expired") ||
     message.includes("jwt expired") ||
-    message.includes("unauthorized");
+    message.includes("jwt malformed") ||
+    (response?.status === 401 && message.includes("unauthorized"));
 };
 
 export const handleAuthFailure = () => {
@@ -111,7 +111,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     const response = await fetch(`${BASE_URL}${endpoint}`, config);
     const data = await response.json();
 
-    if (isAuthFailureResponse(response, data)) {
+    if (!options.skipAuthRedirect && isAuthFailureResponse(response, data)) {
       handleAuthFailure();
       return {
         status: false,

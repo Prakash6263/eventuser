@@ -68,6 +68,7 @@ export const getMyCreatedEventsApi = async () => {
 export const getEventMediaApi = async (eventId) => {
   return await apiRequest(`/event-media/media?eventId=${eventId}`, {
     method: "GET",
+    skipAuthRedirect: true,
   });
 };
 

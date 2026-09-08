@@ -4,6 +4,7 @@ import { apiRequest } from "./apiClient";
 export const getEventMediaApi = async (eventId) => {
   return await apiRequest(`/event-media/media?eventId=${eventId}`, {
     method: "GET",
+    skipAuthRedirect: true,
   });
 };
 
@@ -12,6 +13,7 @@ export const likeMediaApi = async (mediaId) => {
   return await apiRequest("/event-media/media/like", {
     method: "POST",
     body: JSON.stringify({ mediaId }),
+    skipAuthRedirect: true,
   });
 };
 
@@ -20,6 +22,7 @@ export const commentMediaApi = async ({ mediaId, comment }) => {
   return await apiRequest("/event-media/media/comment", {
     method: "POST",
     body: JSON.stringify({ mediaId, comment }),
+    skipAuthRedirect: true,
   });
 };
 
@@ -28,6 +31,7 @@ export const deleteMediaApi = async (mediaId) => {
   return await apiRequest("/event-media/media", {
     method: "DELETE",
     body: JSON.stringify({ mediaId }),
+    skipAuthRedirect: true,
   });
 };
 
@@ -36,6 +40,7 @@ export const deleteCommentApi = async (commentId) => {
   return await apiRequest("/event-media/media/comment", {
     method: "DELETE",
     body: JSON.stringify({ commentId }),
+    skipAuthRedirect: true,
   });
 };
 
@@ -44,6 +49,7 @@ export const likeCommentApi = async (commentId) => {
   return await apiRequest("/event-media/media/comment/like", {
     method: "POST",
     body: JSON.stringify({ commentId }),
+    skipAuthRedirect: true,
   });
 };
 
@@ -51,6 +57,7 @@ export const likeCommentApi = async (commentId) => {
 export const getMediaCommentsApi = async ({ mediaId, page = 1, limit = 20 }) => {
   return await apiRequest(`/event-media/media/comments?mediaId=${mediaId}&page=${page}&limit=${limit}`, {
     method: "GET",
+    skipAuthRedirect: true,
   });
 };
 
@@ -64,6 +71,7 @@ export const uploadMediaApi = async ({ eventId, caption, mediaFile }) => {
   return await apiRequest("/event-media/upload", {
     method: "POST",
     body: formData,
+    skipAuthRedirect: true,
   });
 };
 

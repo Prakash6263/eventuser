@@ -588,14 +588,8 @@ export default function EventsPage() {
                         onChange={(e) => setFilterStatus(e.target.value)}
                       >
                         <option value="">All</option>
-                        <option value="pending">Pending</option>
                         <option value="accepted">Accepted</option>
-                        <option value="rejected">Rejected</option>
-                        <option value="draft">Draft</option>
                         <option value="upcoming">Upcoming</option>
-                        <option value="completed">Completed</option>
-                        <option value="expired">Expired</option>
-                        <option value="canceled">Canceled</option>
                       </select>
                     </div>
 

@@ -30,7 +30,7 @@ export default function Header() {
 
   const handleCreateEventClick = (e) => {
     e.preventDefault();
-    if (isLoggedIn) {
+    if (authService.isLoggedIn()) {
       router.push("/create-event");
     } else {
       router.push("/login");
@@ -174,25 +174,22 @@ export default function Header() {
               <ul className="align-self-stretch d-flex align-items-center m-0">
                 {isLoggedIn && (
                 <li className="me-2">
-                  <Link href="/create-event" className="create-btn btn-hover">
-                    <i className="fa-solid fa-calendar-days"></i>
+                  <a href="/create-event" className="create-btn btn-hover" onClick={handleCreateEventClick}>
+                    <i className="fa-solid fa-calendar-days me-1"></i>
                     <span>Create Event</span>
-                  </Link>
+                  </a>
                 </li>
                 )}
                 {isLoggedIn ? (
                   <li className="d-flex align-items-center gap-2">
-                    <Link href="/user-profile" className="create-btn btn-hover">
-                      <i className="fa-solid fa-user me-1"></i>
-                      <span>Profile</span>
-                    </Link>
                     <button
                       onClick={handleLogout}
                       className="btn btn-outline-danger btn-sm rounded-pill px-3 py-2 fw-semibold"
                       style={{ height: "40px" }}
                       title="Logout"
                     >
-                      <i className="fa-solid fa-right-from-bracket"></i>
+                      <i className="fa-solid fa-right-from-bracket me-1"></i>
+                      <span>Logout</span>
                     </button>
                   </li>
                 ) : (
