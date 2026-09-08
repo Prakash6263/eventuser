@@ -860,8 +860,11 @@ export default function CreateEventPage() {
     } else if (step === "category") {
       setStep("place");
     } else if (step === "place") {
-      const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006" || place === "Other participating facilities" || place === "facility" || place === "6877a87c68d1e0b9fcdf5010";
-      if (place === "Private location") {
+      const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "Restaurant" || place === "6877a86668d1e0b9fcdf5006" || place === "Other participating facilities" || place === "Other facilities" || place === "facility" || place === "6877a87c68d1e0b9fcdf5010";
+      const isMapOption = place === "Mark on Map" || place === "Choose from map" || place === "6877a85c68d1e0b9fcdf5004";
+      const isPrivateOption = place === "Private location" || place === "I will give the address" || place === "6874d0ea3dcb3579cb37d425";
+
+      if (isPrivateOption) {
         if (subview !== "private-address") {
           setSubview("private-address");
           fetchSavedAddresses();
@@ -869,7 +872,7 @@ export default function CreateEventPage() {
           setStep("guests");
           setSubview(null);
         }
-      } else if (place === "Choose from map") {
+      } else if (isMapOption) {
         if (subview !== "map-selector") {
           setSubview("map-selector");
         } else if (selectedLocation) {
@@ -905,15 +908,18 @@ export default function CreateEventPage() {
       setSubview(null);
       return;
     }
-    const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "6877a86668d1e0b9fcdf5006" || place === "Other participating facilities" || place === "facility" || place === "6877a87c68d1e0b9fcdf5010";
+    const isRestaurantOption = place === "restaurant" || place === "Restaurant from list" || place === "Restaurant" || place === "6877a86668d1e0b9fcdf5006" || place === "Other participating facilities" || place === "Other facilities" || place === "facility" || place === "6877a87c68d1e0b9fcdf5010";
+    const isMapOption = place === "Mark on Map" || place === "Choose from map" || place === "6877a85c68d1e0b9fcdf5004";
+    const isPrivateOption = place === "Private location" || place === "I will give the address" || place === "6874d0ea3dcb3579cb37d425";
+
     if (step === "category") setStep("date");
     else if (step === "place") setStep("category");
     else if (step === "restaurants") setStep("place");
     else if (step === "guests") {
-      if (place === "Private location") {
+      if (isPrivateOption) {
         setStep("place");
         setSubview("private-address");
-      } else if (place === "Choose from map") {
+      } else if (isMapOption) {
         setStep("place");
         setSubview("map-selector");
       } else {
