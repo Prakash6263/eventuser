@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import SiteHeader from "../components/Header";
 import Footer from "../components/Footer";
 import styles from "./create-event.module.css";
-import { getEventTypesApi, getEventCategoriesByTypeIdApi, getPlacePreferencesApi, getMerchantsByServiceApi, getEventNotesApi, createEventApi, getMyCreatedEventsApi } from "../services/eventApi";
+import { getEventTypesApi, getEventCategoriesByTypeIdApi, getPlacePreferencesApi, getMerchantsByServiceApi, getEventNotesApi, createEventApi, getMyCreatedEventsApi, markEventAsDraftApi } from "../services/eventApi";
 import { syncContactsApi, getAllUsersApi, getAddressesApi, addAddressApi } from "../services/authApi";
 import { makeReservationApi } from "../services/reservationApi";
 import CountryCodePicker from "../components/CountryCodePicker";
@@ -90,6 +90,8 @@ export default function CreateEventPage() {
   const [dialog, setDialog] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [completionMode, setCompletionMode] = useState("sent");
+  const [isRecalling, setIsRecalling] = useState(false);
+  const [recallMessage, setRecallMessage] = useState(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [newContact, setNewContact] = useState({ name: "", phone: "", email: "", countryCode: "+91" });
   const [contactError, setContactError] = useState("");
@@ -718,15 +720,6 @@ export default function CreateEventPage() {
 
       setCompletionMode(saveDraft ? "draft" : "sent");
       setCompleted(true);
-
-      // Automatically open the reservation modal if invitations were sent
-      if (!saveDraft) {
-        setResSuccess(false);
-        setResError("");
-        setResAdultCount("");
-        setResInstruction("");
-        setReservationModal(true);
-      }
     } catch (err) {
       setDialog({
         title: "Submission failed",
@@ -736,6 +729,51 @@ export default function CreateEventPage() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRecallEvent = async () => {
+    let eventIdVal = createdEventId || (typeof window !== "undefined" ? window.localStorage.getItem("eventuna-latest-event-id") : "") || "";
+    if (!eventIdVal) {
+      try {
+        const eventsRes = await getMyCreatedEventsApi();
+        if (eventsRes && eventsRes.status === true && Array.isArray(eventsRes.data) && eventsRes.data.length > 0) {
+          const matched = eventsRes.data.find((e) => e.eventTitle === eventTitle) || eventsRes.data[0];
+          if (matched && matched._id) {
+            eventIdVal = matched._id;
+            setCreatedEventId(matched._id);
+          }
+        }
+      } catch (fetchErr) {
+        console.error("Failed to fetch fallback created event ID:", fetchErr);
+      }
+    }
+
+    if (!eventIdVal) {
+      setRecallMessage({ type: "error", text: "Event ID not found. Unable to recall event." });
+      return;
+    }
+
+    setIsRecalling(true);
+    setRecallMessage(null);
+    try {
+      const res = await markEventAsDraftApi(eventIdVal);
+      if (res && (res.status === true || res.data)) {
+        setCompletionMode("draft");
+        setRecallMessage({
+          type: "success",
+          text: res.message || "Event marked as draft successfully",
+        });
+      } else {
+        throw new Error(res?.message || "Failed to mark event as draft.");
+      }
+    } catch (err) {
+      setRecallMessage({
+        type: "error",
+        text: err.message || "An error occurred while recalling event.",
+      });
+    } finally {
+      setIsRecalling(false);
     }
   };
 
@@ -943,43 +981,143 @@ export default function CreateEventPage() {
         <main className={styles.mainSection}>
           <div className="container">
             {completed ? (
-              <section className={styles.successPanel}>
-                <div className={styles.successIcon}><i className="fa-solid fa-check"></i></div>
-                <span>{completionMode === "draft" ? "Draft saved" : "Invitations sent"}</span>
-                <h2>{completionMode === "draft" ? "Your event draft is saved" : "Your event is ready"}</h2>
-                <p style={{ color: "#5b5fc7", fontWeight: 500 }}>
-                  {completionMode === "draft"
-                    ? "You can continue editing this event from My Events."
-                    : `Your event invitation has been sent${createdMerchantName ? ` selected Restaurant or Facility : ${createdMerchantName}` : ""}`}
-                </p>
-                <div className={styles.successActions}>
-                  <a href="/event-details" className={styles.primaryButton}>View event details</a>
-                  <a href="/my-events" className={styles.secondaryButton}>View my events</a>
+              <section className={styles.successPanel} style={{ maxWidth: "680px", margin: "0 auto", padding: "36px 24px" }}>
+                <div 
+                  style={{ 
+                    width: "68px", 
+                    height: "68px", 
+                    borderRadius: "50%", 
+                    background: completionMode === "draft" ? "linear-gradient(135deg, #f59e0b, #d97706)" : "linear-gradient(135deg, #10b981, #059669)", 
+                    color: "#fff", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
+                    fontSize: "30px", 
+                    margin: "0 auto 16px",
+                    boxShadow: completionMode === "draft" ? "0 8px 20px rgba(245, 158, 11, 0.3)" : "0 8px 20px rgba(16, 185, 129, 0.3)"
+                  }}
+                >
+                  <i className={`fa-solid ${completionMode === "draft" ? "fa-file-lines" : "fa-circle-check"}`}></i>
                 </div>
-                {completionMode !== "draft" && (
+                
+                <span className="badge rounded-pill px-3 py-2 mb-2" style={{ background: completionMode === "draft" ? "#fef3c7" : "#d1fae5", color: completionMode === "draft" ? "#92400e" : "#065f46", fontSize: "13px", fontWeight: "700", letterSpacing: "0.5px" }}>
+                  {completionMode === "draft" ? "Draft Saved" : "Event Confirmation"}
+                </span>
+
+                <h2 style={{ fontSize: "26px", fontWeight: "700", margin: "8px 0 6px", color: "#111827" }}>
+                  {eventTitle || "Created Event Details"}
+                </h2>
+
+                <p style={{ color: "#6b7280", fontSize: "14.5px", marginBottom: "20px" }}>
+                  {completionMode === "draft"
+                    ? "Your event is saved as a draft. You can recall or continue editing anytime."
+                    : "Your event invitation has been created successfully."}
+                </p>
+
+                {recallMessage && (
+                  <div className={`alert ${recallMessage.type === "success" ? "alert-success" : "alert-danger"} text-center my-3 py-2.5 px-4 rounded-3 shadow-sm`} style={{ fontSize: "14px", fontWeight: "500" }}>
+                    <i className={`fa-solid ${recallMessage.type === "success" ? "fa-circle-check" : "fa-circle-exclamation"} me-2`}></i>
+                    {recallMessage.text}
+                  </div>
+                )}
+
+                {/* Event Details Card */}
+                <div className="card border-0 shadow-sm rounded-4 text-start mb-4 overflow-hidden" style={{ background: "#ffffff", border: "1px solid #e5e7eb" }}>
+                  {eventImage && (
+                    <div style={{ width: "100%", height: "220px", position: "relative", backgroundColor: "#f3f4f6" }}>
+                      <img src={eventImage} alt={eventTitle} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                  )}
+                  <div className="card-body p-4">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <span className="badge rounded-pill px-3 py-2" style={{ background: "#e0e7ff", color: "#4338ca", fontSize: "12px", fontWeight: "600" }}>
+                        {category} {eventType ? `• ${eventType}` : ""}
+                      </span>
+                      <span className="badge rounded-pill px-3 py-2" style={{ background: completionMode === "draft" ? "#fef3c7" : "#d1fae5", color: completionMode === "draft" ? "#92400e" : "#065f46", fontSize: "12px", fontWeight: "600" }}>
+                        {completionMode === "draft" ? "Draft" : "Published"}
+                      </span>
+                    </div>
+
+                    <div className="row g-3 mb-3">
+                      <div className="col-12 col-md-6">
+                        <div className="d-flex align-items-start gap-2.5">
+                          <i className="fa-solid fa-calendar-day text-primary mt-1" style={{ fontSize: "16px" }}></i>
+                          <div>
+                            <small className="text-muted d-block fw-semibold">Date & Time</small>
+                            <strong style={{ fontSize: "14px", color: "#1f2937" }}>
+                              {selectedDate} {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month]} 2026
+                              {startTime ? `, ${startTime}` : ""} {endTime ? ` - ${endTime}` : ""}
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="col-12 col-md-6">
+                        <div className="d-flex align-items-start gap-2.5">
+                          <i className="fa-solid fa-location-dot text-danger mt-1" style={{ fontSize: "16px" }}></i>
+                          <div>
+                            <small className="text-muted d-block fw-semibold">Venue / Location</small>
+                            <strong style={{ fontSize: "14px", color: "#1f2937" }}>
+                              {createdMerchantName || selectedLocation?.addressName || selectedLocation?.address1 || place || "Not specified"}
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {invitationMessage && (
+                      <div className="mb-3 p-3 rounded-3" style={{ background: "#f9fafb", borderLeft: "4px solid #5b5fc7" }}>
+                        <small className="text-muted d-block mb-1 fw-semibold">Invitation Message</small>
+                        <p className="mb-0 text-dark" style={{ fontSize: "13.5px", whiteSpace: "pre-line" }}>
+                          {invitationMessage}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="d-flex align-items-center justify-content-between pt-3 border-top">
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="fa-solid fa-users text-secondary"></i>
+                        <small className="text-muted">Invited Guests: <strong className="text-dark">{selectedGuests?.length || 0}</strong></small>
+                      </div>
+                      {bringGuests === "Yes" && (
+                        <div className="d-flex align-items-center gap-2">
+                          <i className="fa-solid fa-user-plus text-secondary"></i>
+                          <small className="text-muted">Allow Guests: <strong className="text-dark">Yes ({maxGuests || 1} max)</strong></small>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Buttons: Home and Recall */}
+                <div className="d-flex align-items-center justify-content-center gap-3 mt-4">
                   <button
-                    onClick={() => { setResSuccess(false); setResError(""); setResAdultCount(""); setResInstruction(""); setReservationModal(true); }}
+                    onClick={() => router.push("/")}
+                    className="btn btn-outline-secondary rounded-pill px-4 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                    style={{ minWidth: "150px", fontSize: "15px", height: "46px" }}
+                  >
+                    <i className="fa-solid fa-house"></i> Home
+                  </button>
+
+                  <button
+                    onClick={handleRecallEvent}
+                    disabled={isRecalling}
+                    className="btn btn-primary rounded-pill px-4 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 text-white shadow-sm"
                     style={{
-                      marginTop: "28px",
-                      width: "100%",
-                      maxWidth: "340px",
                       background: "#5b5fc7",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: "10px",
-                      padding: "14px 0",
-                      fontSize: "16px",
-                      fontWeight: "700",
-                      letterSpacing: "1.5px",
-                      cursor: "pointer",
-                      display: "block",
-                      marginLeft: "auto",
-                      marginRight: "auto",
+                      borderColor: "#5b5fc7",
+                      minWidth: "150px",
+                      fontSize: "15px",
+                      height: "46px"
                     }}
                   >
-                    ADD RESERVATION
+                    {isRecalling ? (
+                      <><i className="fa-solid fa-spinner fa-spin"></i> Recalling...</>
+                    ) : (
+                      <><i className="fa-solid fa-rotate-left"></i> Recall</>
+                    )}
                   </button>
-                )}
+                </div>
               </section>
             ) : (
               <div className={styles.wizard}>
@@ -1453,137 +1591,6 @@ export default function CreateEventPage() {
                 )}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {reservationModal && (
-        <div className={styles.dialogBackdrop} role="presentation" style={{ background: "rgba(5, 2, 62, 0.65)" }}>
-          <div className={`${styles.dialog} ${styles.contactDialog}`} role="dialog" aria-modal="true" style={{ maxWidth: "480px", borderRadius: "20px", overflow: "hidden" }}>
-            <div className={styles.contactDialogHeader} style={{ padding: "20px 24px" }}>
-              <div className="d-flex align-items-center gap-3">
-                <button 
-                  onClick={() => setReservationModal(false)} 
-                  style={{ border: "none", background: "none", fontSize: "18px", color: "#333", cursor: "pointer", padding: 0 }}
-                  aria-label="Back"
-                >
-                  <i className="fa-solid fa-arrow-left"></i>
-                </button>
-                <div>
-                  <h2 style={{ fontSize: "19px", fontWeight: "700", color: "#111", margin: 0 }}>Restaurant Reservation</h2>
-                </div>
-              </div>
-            </div>
-            
-            <form onSubmit={handleMakeReservation}>
-              <div className={styles.contactFields} style={{ padding: "24px" }}>
-                {/* Notice banner */}
-                <div style={{
-                  background: "#fff5f5",
-                  border: "1px solid #ffe3e3",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
-                  marginBottom: "20px",
-                  color: "#e53e3e",
-                  fontSize: "13px",
-                  lineHeight: "1.5",
-                  fontWeight: "500"
-                }}>
-                  Note : You are making reservation for yourself only as an invited guest. allow to bring others box is not checked, so only the account owner can attend
-                </div>
-
-                <div className="mb-4">
-                  <label style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#222", marginBottom: "8px" }}>
-                    Only one ADULT seats is allowed to reserve
-                  </label>
-                  <input
-                    type="number"
-                    value={resAdultCount}
-                    onChange={(e) => setResAdultCount(e.target.value)}
-                    placeholder="Number"
-                    required
-                    min="1"
-                    disabled={resSubmitting || resSuccess}
-                    style={{
-                      width: "100%",
-                      height: "48px",
-                      border: "1px solid #d5d8df",
-                      borderRadius: "10px",
-                      padding: "0 16px",
-                      fontSize: "14px",
-                      background: "#fff"
-                    }}
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label style={{ display: "block", fontSize: "14px", fontWeight: "600", color: "#222", marginBottom: "8px" }}>
-                    Special Instruction
-                  </label>
-                  <textarea
-                    value={resInstruction}
-                    onChange={(e) => setResInstruction(e.target.value)}
-                    placeholder="Message Details"
-                    disabled={resSubmitting || resSuccess}
-                    rows="4"
-                    style={{
-                      width: "100%",
-                      border: "1px solid #d5d8df",
-                      borderRadius: "10px",
-                      padding: "12px 16px",
-                      fontSize: "14px",
-                      background: "#fff",
-                      resize: "none"
-                    }}
-                  />
-                </div>
-
-                {resError && (
-                  <p className="text-danger small mt-2 mb-0 fw-medium">
-                    <i className="fa-solid fa-circle-exclamation me-1"></i>
-                    {resError}
-                  </p>
-                )}
-
-                {resSuccess && (
-                  <p className="text-success small mt-2 mb-0 fw-medium">
-                    <i className="fa-solid fa-circle-check me-1"></i>
-                    Reservation updated successfully. Redirecting...
-                  </p>
-                )}
-              </div>
-
-              <div style={{ padding: "0 24px 24px" }}>
-                <button
-                  type="submit"
-                  disabled={resSubmitting || resSuccess}
-                  style={{
-                    width: "100%",
-                    background: "#5b5fc7",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "10px",
-                    padding: "14px 0",
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px"
-                  }}
-                >
-                  {resSubmitting ? (
-                    <>
-                      <i className="fa-solid fa-spinner fa-spin"></i>
-                      Reserving...
-                    </>
-                  ) : (
-                    "Restaurant Reservation"
-                  )}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

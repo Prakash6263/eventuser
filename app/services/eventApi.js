@@ -89,6 +89,13 @@ export const updateEventApi = async (payload) => {
   });
 };
 
+// 11. Mark Event as Draft (Recall) API
+export const markEventAsDraftApi = async (eventId) => {
+  return await apiRequest(`/event/mark-draft/${eventId}`, {
+    method: "POST",
+  });
+};
+
 export const eventApi = {
   getEventTypes: getEventTypesApi,
   getEventCategoriesByTypeId: getEventCategoriesByTypeIdApi,
@@ -101,6 +108,7 @@ export const eventApi = {
   getMyCreatedEvents: getMyCreatedEventsApi,
   getEventMedia: getEventMediaApi,
   rateEvent: rateEventApi,
+  markEventAsDraft: markEventAsDraftApi,
 };
 
 export default eventApi;
