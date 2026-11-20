@@ -68,7 +68,7 @@ export default function MyReservationsPage() {
       if (rawStatus === "cancelled" || rawStatus === "rejected") {
         displayStatus = "Cancelled";
       } else {
-        displayStatus = "Reservation Confirmed";
+        displayStatus = "Confirmed";
       }
     } else {
       displayStatus = "Rejected";
@@ -201,17 +201,30 @@ export default function MyReservationsPage() {
       return;
     }
     const resObj = res.rawItem?.makeReservation || {};
+    setResError("");
     setModifyModal({
       show: true,
       id: res.id,
       eventId: res.eventId || res.id,
       reservationId: realReservationId,
-      adultCount: resObj.adultCount || "",
-      childCount: resObj.childCount || "",
+      adultCount: String(resObj.adultCount || "1"),
+      childCount: String(resObj.childCount || "0"),
       instruction: resObj.instruction || "",
       couponId: "",
       guestType: resObj.guestType || "All",
     });
+  };
+
+  const handleAdultCountChange = (delta) => {
+    const current = parseInt(modifyModal.adultCount, 10) || 0;
+    const next = Math.max(1, current + delta);
+    setModifyModal((prev) => ({ ...prev, adultCount: String(next) }));
+  };
+
+  const handleChildCountChange = (delta) => {
+    const current = parseInt(modifyModal.childCount, 10) || 0;
+    const next = Math.max(0, current + delta);
+    setModifyModal((prev) => ({ ...prev, childCount: String(next) }));
   };
 
   const handleModifyReservation = async (e) => {
@@ -224,9 +237,11 @@ export default function MyReservationsPage() {
         adultCount: modifyModal.adultCount,
         childCount: modifyModal.childCount,
         instruction: modifyModal.instruction,
-        couponId: modifyModal.couponId,
         guestType: modifyModal.guestType || "All",
       };
+      if (modifyModal.couponId) {
+        payload.couponId = modifyModal.couponId;
+      }
       const res = await makeReservationApi(payload);
       if (res && res.status === true) {
         setModifyModal({ show: false, id: null, eventId: null, reservationId: null, adultCount: "", childCount: "", instruction: "", couponId: "", guestType: "All" });
@@ -334,7 +349,7 @@ export default function MyReservationsPage() {
   });
 
   // Calculate dynamic stats
-  const upcomingCount = reservations.filter((r) => r.status === "Confirmed").length;
+  const upcomingCount = reservations.filter((r) => r.status === "Reservation Confirmed" || r.status === "Confirmed" || r.status === "active").length;
   const completedCount = reservations.filter((r) => r.status === "Completed").length;
   const cancelledCount = reservations.filter((r) => r.status === "Cancelled").length;
 
@@ -342,28 +357,422 @@ export default function MyReservationsPage() {
     <>
       <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
       <style>{`
-        .res-btn {
-          font-size: 14px;
-          min-width: 80px;
-          font-weight: 500;
-          padding: 6px 14px;
-          border-radius: 8px;
-          border: 1.5px solid #3e56f0;
-          color: #3e56f0 !important;
-          background: #fff;
-          cursor: pointer;
-          transition: background 0.18s, color 0.18s;
-          white-space: nowrap;
+        /* Modern Dashboard & Reservation Styles */
+        .res-dashboard-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 24px;
+          flex-wrap: wrap;
+          gap: 12px;
         }
-        .res-btn:hover, .res-btn:focus {
-          background: #e8eeff !important;
-          color: #3e56f0 !important;
+        .res-dashboard-title {
+          font-size: 24px;
+          font-weight: 800;
+          color: #0f172a;
+          letter-spacing: -0.4px;
+          margin: 0;
+        }
+        .res-dashboard-sub {
+          font-size: 14px;
+          color: #64748b;
+          margin: 4px 0 0 0;
+        }
+
+        /* Stat Cards */
+        .res-stat-card {
+          background: #ffffff;
+          border-radius: 16px;
+          padding: 20px 22px;
+          border: 1px solid #eef2f6;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .res-stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+        }
+        .res-stat-icon-wrap {
+          width: 50px;
+          height: 50px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 22px;
+          flex-shrink: 0;
+        }
+        .stat-upcoming .res-stat-icon-wrap {
+          background: #eff6ff;
+          color: #2563eb;
+        }
+        .stat-completed .res-stat-icon-wrap {
+          background: #ecfdf5;
+          color: #059669;
+        }
+        .stat-cancelled .res-stat-icon-wrap {
+          background: #fff1f2;
+          color: #e11d48;
+        }
+        .res-stat-number {
+          font-size: 26px;
+          font-weight: 800;
+          color: #0f172a;
+          line-height: 1.1;
+          margin: 0;
+        }
+        .res-stat-label {
+          font-size: 13px;
+          font-weight: 500;
+          color: #64748b;
+          margin: 4px 0 0 0;
+        }
+
+        /* Search bar */
+        .res-search-input-wrap {
+          position: relative;
+          max-width: 420px;
+        }
+        .res-search-input {
+          width: 100%;
+          height: 44px;
+          border-radius: 12px;
+          border: 1.5px solid #e2e8f0;
+          background: #ffffff;
+          padding: 10px 16px 10px 42px;
+          font-size: 14px;
+          color: #1e293b;
+          transition: all 0.2s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+        .res-search-input:focus {
           border-color: #3e56f0;
+          box-shadow: 0 0 0 3px rgba(62, 86, 240, 0.12);
           outline: none;
         }
-        .res-btn:disabled {
-          opacity: 0.5;
+        .res-search-icon {
+          position: absolute;
+          top: 50%;
+          left: 14px;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          font-size: 15px;
+          pointer-events: none;
+        }
+
+        /* Modern Reservation Card */
+        .modern-reservation-card {
+          background: #ffffff;
+          border-radius: 18px;
+          border: 1px solid #eef2f6;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+          margin-bottom: 20px;
+          overflow: hidden;
+          transition: all 0.25s ease;
+        }
+        .modern-reservation-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 10px 24px rgba(30, 41, 59, 0.07);
+          transform: translateY(-2px);
+        }
+        .modern-reservation-body {
+          padding: 22px 24px;
+        }
+        .modern-event-thumb {
+          width: 130px;
+          height: 110px;
+          border-radius: 14px;
+          overflow: hidden;
+          flex-shrink: 0;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          background: #f1f5f9;
+        }
+        .modern-event-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 8px;
+          letter-spacing: -0.2px;
+        }
+        .modern-event-meta-line {
+          font-size: 13px;
+          color: #475569;
+          margin-bottom: 6px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .modern-event-meta-line i {
+          font-size: 14px;
+          width: 16px;
+          text-align: center;
+        }
+
+        /* Modern Status Badge / Pill */
+        .res-status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 12px;
+          border-radius: 9999px;
+          font-size: 12px;
+          font-weight: 600;
+          white-space: nowrap;
+          letter-spacing: 0.2px;
+          line-height: 1.2;
+        }
+        .pill-confirmed {
+          background: #ecfdf5;
+          color: #047857;
+          border: 1px solid #a7f3d0;
+        }
+        .pill-confirmed .res-status-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #10b981;
+          box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+          flex-shrink: 0;
+        }
+        .pill-cancelled {
+          background: #fef2f2;
+          color: #b91c1c;
+          border: 1px solid #fecaca;
+        }
+        .pill-cancelled .res-status-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #ef4444;
+          box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+          flex-shrink: 0;
+        }
+
+        /* Modern Action Buttons */
+        .res-btn-view {
+          background: #3e56f0;
+          color: #ffffff !important;
+          border: none;
+          font-weight: 600;
+          font-size: 13px;
+          padding: 8px 16px;
+          border-radius: 10px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(62, 86, 240, 0.25);
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .res-btn-view:hover {
+          background: #2f45d8;
+          box-shadow: 0 4px 12px rgba(62, 86, 240, 0.35);
+          transform: translateY(-1px);
+        }
+
+        .res-btn-secondary {
+          background: #f8fafc;
+          color: #334155 !important;
+          border: 1.5px solid #e2e8f0;
+          font-weight: 600;
+          font-size: 13px;
+          padding: 7px 14px;
+          border-radius: 10px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .res-btn-secondary:hover {
+          background: #eef2ff;
+          border-color: #3e56f0;
+          color: #3e56f0 !important;
+          transform: translateY(-1px);
+        }
+
+        .res-btn-cancel {
+          background: #fff;
+          color: #e11d48 !important;
+          border: 1.5px solid #fecdd3;
+          font-weight: 600;
+          font-size: 13px;
+          padding: 7px 14px;
+          border-radius: 10px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .res-btn-cancel:hover:not(:disabled) {
+          background: #fff1f2;
+          border-color: #e11d48;
+          transform: translateY(-1px);
+        }
+        .res-btn-cancel:disabled {
+          opacity: 0.4;
           cursor: not-allowed;
+          border-color: #e2e8f0;
+          color: #94a3b8 !important;
+        }
+
+        /* Modern Bottom Meta Strip */
+        .modern-card-footer {
+          background: #f8fafc;
+          border-top: 1px solid #f1f5f9;
+          padding: 12px 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .modern-footer-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+        }
+        .modern-footer-label {
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 500;
+        }
+        .modern-footer-val {
+          color: #1e293b;
+          font-weight: 600;
+          font-size: 13px;
+        }
+        .res-id-chip {
+          font-family: monospace;
+          background: #e2e8f0;
+          padding: 3px 8px;
+          border-radius: 6px;
+          font-size: 12px;
+          color: #334155;
+          letter-spacing: 0.3px;
+        }
+
+        /* Modern Modal Styling */
+        .modal-custom-backdrop {
+          background: rgba(15, 23, 42, 0.55);
+          backdrop-filter: blur(4px);
+        }
+        .modern-modal-card {
+          border-radius: 20px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          background: #ffffff;
+        }
+        .guest-counter-box {
+          background: #f8fafc;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 14px;
+          padding: 12px 16px;
+          transition: all 0.2s ease;
+        }
+        .guest-counter-box:hover {
+          border-color: #cbd5e1;
+        }
+        .guest-counter-box:focus-within {
+          border-color: #3e56f0;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(62, 86, 240, 0.12);
+        }
+        .stepper-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          border: 1.5px solid #cbd5e1;
+          background: #ffffff;
+          color: #334155;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 16px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .stepper-btn:hover:not(:disabled) {
+          border-color: #3e56f0;
+          color: #3e56f0;
+          background: #eef2ff;
+        }
+        .stepper-btn:disabled {
+          opacity: 0.35;
+          cursor: not-allowed;
+          background: #f1f5f9;
+        }
+        .stepper-input {
+          width: 48px;
+          text-align: center;
+          font-weight: 700;
+          font-size: 16px;
+          border: none;
+          background: transparent;
+          color: #0f172a;
+          outline: none;
+        }
+        .stepper-input::-webkit-outer-spin-button,
+        .stepper-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        .stepper-input {
+          -moz-appearance: textfield;
+        }
+        .modern-form-input {
+          border: 1.5px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 10px 14px;
+          font-size: 14px;
+          color: #1e293b;
+          transition: all 0.2s ease;
+          background: #f8fafc;
+        }
+        .modern-form-input:focus {
+          border-color: #3e56f0;
+          background: #ffffff;
+          box-shadow: 0 0 0 3px rgba(62, 86, 240, 0.12);
+          outline: none;
+        }
+        .modern-primary-btn {
+          background: linear-gradient(135deg, #3e56f0 0%, #2b3fc2 100%);
+          border: none;
+          border-radius: 12px;
+          padding: 12px 20px;
+          font-weight: 600;
+          font-size: 15px;
+          color: #ffffff;
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(62, 86, 240, 0.25);
+        }
+        .modern-primary-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(62, 86, 240, 0.35);
+          color: #ffffff;
+        }
+        .modern-secondary-btn {
+          background: #f1f5f9;
+          border: 1.5px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 12px 18px;
+          font-weight: 600;
+          font-size: 15px;
+          color: #475569;
+          transition: all 0.2s ease;
+        }
+        .modern-secondary-btn:hover {
+          background: #e2e8f0;
+          color: #1e293b;
         }
       `}</style>
       <Header />
@@ -387,7 +796,18 @@ export default function MyReservationsPage() {
               <div className="col-lg-3">
                 <div className="user-profile-sidebar">
                   <div className="user-profile-sidebar-top">
-                    <div className="user-profile-img" style={{ overflow: "hidden" }}>
+                    <div
+                      className="user-profile-img"
+                      style={{
+                        width: "90px",
+                        height: "90px",
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        margin: "0 auto 12px",
+                        border: "3px solid #3e56f0",
+                        boxShadow: "0 4px 12px rgba(62, 86, 240, 0.15)"
+                      }}
+                    >
                       <SafeImage
                         alt="Profile avatar"
                         src={profile?.profilePic || "images/05.jpg"}
@@ -395,7 +815,7 @@ export default function MyReservationsPage() {
                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                       />
                     </div>
-                    <h5>{profile?.fullName || "User Profile"}</h5>
+                    <h5 className="fw-bold mb-1">{profile?.fullName || "User Profile"}</h5>
                   </div>
                   <ul className="user-profile-sidebar-list">
                     <li>
@@ -448,70 +868,68 @@ export default function MyReservationsPage() {
                   )}
 
                   {/* Dashboard Welcome Header */}
-                  <div className="welcome-section">
+                  <div className="res-dashboard-header">
                     <div>
-                      <h2>My Reservation</h2>
-                      <p>View and manage all your event reservations in one place.</p>
+                      <h2 className="res-dashboard-title">My Reservations</h2>
+                      <p className="res-dashboard-sub">View and manage all your event reservations, guests, and passes in one place.</p>
                     </div>
                   </div>
 
                   {/* Counters Section */}
-                  <div className="row g-3 mb-3">
+                  <div className="row g-3 mb-4">
                     {/* Counter 1: Upcoming */}
                     <div className="col-md-4">
-                      <div className="reserve-card">
-                        <div className="reserve-icon">
-                          <i className="bi bi-calendar-check"></i>
+                      <div className="res-stat-card stat-upcoming">
+                        <div className="res-stat-icon-wrap">
+                          <i className="bi bi-calendar2-check"></i>
                         </div>
                         <div>
-                          <h4>{String(upcomingCount).padStart(2, "0")}</h4>
-                          <p>Upcoming Reservations</p>
+                          <div className="res-stat-number">{String(upcomingCount).padStart(2, "0")}</div>
+                          <div className="res-stat-label">Upcoming Reservations</div>
                         </div>
                       </div>
                     </div>
 
                     {/* Counter 2: Completed */}
                     <div className="col-md-4">
-                      <div className="reserve-card">
-                        <div className="reserve-icon">
+                      <div className="res-stat-card stat-completed">
+                        <div className="res-stat-icon-wrap">
                           <i className="bi bi-check-circle"></i>
                         </div>
                         <div>
-                          <h4>{String(completedCount).padStart(2, "0")}</h4>
-                          <p>Completed Reservations</p>
+                          <div className="res-stat-number">{String(completedCount).padStart(2, "0")}</div>
+                          <div className="res-stat-label">Completed Reservations</div>
                         </div>
                       </div>
                     </div>
 
                     {/* Counter 3: Cancelled */}
                     <div className="col-md-4">
-                      <div className="reserve-card">
-                        <div className="reserve-icon">
+                      <div className="res-stat-card stat-cancelled">
+                        <div className="res-stat-icon-wrap">
                           <i className="bi bi-x-circle"></i>
                         </div>
                         <div>
-                          <h4>{String(cancelledCount).padStart(2, "0")}</h4>
-                          <p>Cancelled Reservations</p>
+                          <div className="res-stat-number">{String(cancelledCount).padStart(2, "0")}</div>
+                          <div className="res-stat-label">Cancelled Reservations</div>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Search Section */}
-                  <div className="row mb-3">
-                    <div className="col-md-5">
-                      <div className="position-relative">
-                        <span className="position-absolute top-50 start-0 translate-middle-y ps-3 text-muted">
-                          <i className="bi bi-search"></i>
-                        </span>
-                        <input
-                          type="text"
-                          className="form-control ps-5 py-2"
-                          placeholder="Search by name, phone, or email..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                      </div>
+                  <div className="mb-4">
+                    <div className="res-search-input-wrap">
+                      <span className="res-search-icon">
+                        <i className="bi bi-search"></i>
+                      </span>
+                      <input
+                        type="text"
+                        className="res-search-input"
+                        placeholder="Search reservations by event title, ID, or location..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
                     </div>
                   </div>
 
@@ -519,18 +937,19 @@ export default function MyReservationsPage() {
                   <div className="reservation-tab-content">
                     {filteredReservations.length > 0 ? (
                       filteredReservations.map((res) => (
-                        <div key={res.id} className="reservation-card" data-search={`${res.eventTitle.toLowerCase()} ${res.id.toLowerCase()}`}>
-                          <div className="reservation-main">
+                        <div key={res.id} className="modern-reservation-card" data-search={`${res.eventTitle.toLowerCase()} ${res.id.toLowerCase()}`}>
+                          <div className="modern-reservation-body">
                             <div className="row align-items-center g-3">
                               {/* Event Image */}
                               <div className="col-lg-auto">
-                                <div className="event-image1">
+                                <div className="modern-event-thumb">
                                   <SafeImage
                                     src={res.img}
                                     alt={res.eventTitle}
                                     variant="reservation"
                                     fallbackLabel={res.eventTitle}
                                     fallbackSubLabel="Reservation"
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                   />
                                 </div>
                               </div>
@@ -539,56 +958,56 @@ export default function MyReservationsPage() {
                               <div className="col-lg">
                                 <div className="event-info">
                                   <div className="mb-2">
-                                    <span className={`status-badge ${res.hasReservation && res.status !== "Cancelled" ? "status-confirmed" : "status-cancelled"}`}>
-                                      <i className={`bi ${res.hasReservation && res.status !== "Cancelled" ? "bi-check-circle" : "bi-arrow-repeat"} me-1`}></i>
-                                      {res.status}
+                                    <span className={`res-status-pill ${res.hasReservation && res.status !== "Cancelled" && res.status !== "Rejected" ? "pill-confirmed" : "pill-cancelled"}`}>
+                                      <span className="res-status-dot"></span>
+                                      {res.status === "Reservation Confirmed" ? "Confirmed" : res.status}
                                     </span>
                                   </div>
-                                  <h5>{res.eventTitle}</h5>
-                                  <p>
-                                    <i className="bi bi-calendar3"></i>
-                                    {res.eventDate}
-                                  </p>
-                                  <p>
-                                    <i className="bi bi-clock"></i>
-                                    {res.eventStartTime} - {res.eventEndTime}
-                                  </p>
-                                  <p>
-                                    <i className="bi bi-geo-alt"></i>
-                                    {res.venue}
-                                  </p>
+                                  <h5 className="modern-event-title">{res.eventTitle}</h5>
+                                  <div className="modern-event-meta-line">
+                                    <i className="bi bi-calendar3 text-primary"></i>
+                                    <span>{res.eventDate}</span>
+                                  </div>
+                                  <div className="modern-event-meta-line">
+                                    <i className="bi bi-clock text-secondary"></i>
+                                    <span>{res.eventStartTime} - {res.eventEndTime}</span>
+                                  </div>
+                                  <div className="modern-event-meta-line">
+                                    <i className="bi bi-geo-alt text-danger"></i>
+                                    <span>{res.venue}</span>
+                                  </div>
                                 </div>
                               </div>
 
                               {/* Action buttons */}
                               <div className="col-lg-auto">
-                                <div className="reservation-actions d-flex gap-2">
+                                <div className="d-flex flex-wrap gap-2">
                                   <button
-                                    className="res-btn"
+                                    className="res-btn-view"
                                     onClick={() => handleViewDetails(res)}
                                   >
-                                    View
+                                    <i className="bi bi-eye"></i> View
                                   </button>
                                   {res.hasReservation && (
                                     <>
                                       <button
-                                        className="res-btn"
+                                        className="res-btn-secondary"
                                         onClick={() => handleModifyClick(res)}
                                       >
-                                        Modify
+                                        <i className="bi bi-pencil-square"></i> Modify
                                       </button>
                                       <button
-                                        className="res-btn"
+                                        className="res-btn-secondary"
                                         onClick={() => handleResend(res)}
                                       >
-                                        Resend
+                                        <i className="bi bi-send"></i> Resend
                                       </button>
                                       <button
-                                        className="res-btn"
+                                        className="res-btn-cancel"
                                         onClick={() => handleCancelClick(res)}
                                         disabled={res.status === "Cancelled" || res.status === "Rejected"}
                                       >
-                                        Cancel
+                                        <i className="bi bi-x-circle"></i> Cancel
                                       </button>
                                     </>
                                   )}
@@ -597,28 +1016,30 @@ export default function MyReservationsPage() {
                             </div>
                           </div>
 
-                          {/* Reservation Meta & Cancel Button */}
-                          <div className="reservation-meta">
-                            <div className="meta-item">
-                              <span>Reservation ID</span>
-                              <strong>{res.id}</strong>
+                          {/* Reservation Meta & Bottom Strip */}
+                          <div className="modern-card-footer">
+                            <div className="modern-footer-item">
+                              <span className="modern-footer-label">Reservation ID:</span>
+                              <span className="res-id-chip">{res.id}</span>
                             </div>
-                            <div className="meta-item">
-                              <span>Guests</span>
-                              <strong>{res.guestsCount}</strong>
+                            <div className="modern-footer-item">
+                              <i className="bi bi-people text-muted"></i>
+                              <span className="modern-footer-label">Guests:</span>
+                              <span className="modern-footer-val">{res.guestsCount}</span>
                             </div>
-                            <div className="meta-item">
-                              <span>Reserved On</span>
-                              <strong>{res.reservedOn}</strong>
+                            <div className="modern-footer-item">
+                              <i className="bi bi-clock-history text-muted"></i>
+                              <span className="modern-footer-label">Reserved On:</span>
+                              <span className="modern-footer-val">{res.reservedOn}</span>
                             </div>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="empty-state d-block">
-                        <i className="bi bi-calendar-x"></i>
-                        <h5>No reservations found</h5>
-                        <p>Try adjusting your search criteria.</p>
+                      <div className="empty-state d-block text-center py-5 bg-white rounded-4 border">
+                        <i className="bi bi-calendar-x fs-1 text-muted mb-3 d-block"></i>
+                        <h5 className="fw-bold text-dark">No reservations found</h5>
+                        <p className="text-muted small mb-0">Try adjusting your search criteria.</p>
                       </div>
                     )}
                   </div>
@@ -632,26 +1053,50 @@ export default function MyReservationsPage() {
 
       {/* Cancel Reservation Modal */}
       {cancelModal.show && (
-        <div className="modal fade show d-block" style={{ background: "rgba(0, 0, 0, 0.45)", zIndex: 1050 }}>
-          <div className="modal-dialog modal-dialog-centered px-3" style={{ maxWidth: "420px" }}>
-            <div className="modal-content border-0 rounded-4 overflow-hidden shadow-lg" style={{ background: "#fff" }}>
-              <div className="modal-header border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center gap-2">
-                  <button type="button" className="btn p-0 border-0 text-dark" onClick={() => setCancelModal({ show: false, id: null, reservationId: null, comment: "", reason: "" })}>
-                    <i className="bi bi-arrow-left fs-5"></i>
-                  </button>
-                  <h5 className="modal-title fw-bold text-dark mb-0" style={{ fontSize: "17px" }}>Cancel Reservation</h5>
-                </div>
-              </div>
-              <div className="modal-body p-4">
-                <form onSubmit={(e) => { e.preventDefault(); confirmCancel(); }}>
-                  <div className="mb-4">
-                    <label className="form-label text-dark fw-medium mb-2" style={{ fontSize: "14px" }}>
+        <div className="modal fade show d-block modal-custom-backdrop" style={{ zIndex: 1050 }}>
+          <div className="modal-dialog modal-dialog-centered px-3" style={{ maxWidth: "440px" }}>
+            <div className="modal-content modern-modal-card overflow-hidden">
+              <div className="modal-header border-0 pb-0 pt-4 px-4 d-flex align-items-start justify-content-between">
+                <div className="d-flex align-items-center gap-3">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center text-white"
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                      boxShadow: "0 4px 10px rgba(239, 68, 68, 0.3)",
+                      fontSize: "18px",
+                      flexShrink: 0
+                    }}
+                  >
+                    <i className="bi bi-x-circle"></i>
+                  </div>
+                  <div>
+                    <h5 className="modal-title fw-bold text-dark mb-0" style={{ fontSize: "18px", letterSpacing: "-0.2px" }}>
+                      Cancel Reservation
+                    </h5>
+                    <p className="text-muted mb-0" style={{ fontSize: "13px" }}>
                       Please select reason for cancellation
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close shadow-none"
+                  style={{ fontSize: "13px", marginTop: "2px" }}
+                  onClick={() => setCancelModal({ show: false, id: null, reservationId: null, comment: "", reason: "" })}
+                  aria-label="Close"
+                ></button>
+              </div>
+
+              <div className="modal-body px-4 pt-3 pb-4">
+                <form onSubmit={(e) => { e.preventDefault(); confirmCancel(); }}>
+                  <div className="mb-3">
+                    <label className="form-label text-dark fw-semibold mb-1 ps-1" style={{ fontSize: "13px" }}>
+                      Reason for Cancellation <span className="text-danger">*</span>
                     </label>
                     <select
-                      className="form-select py-2.5 px-3 rounded-3"
-                      style={{ border: "1.5px solid #dcdcdc", fontSize: "14px" }}
+                      className="form-select modern-form-input"
                       value={cancelModal.reason}
                       onChange={(e) => setCancelModal({ ...cancelModal, reason: e.target.value })}
                       required
@@ -667,27 +1112,50 @@ export default function MyReservationsPage() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="form-label text-dark fw-medium mb-2" style={{ fontSize: "14px" }}>
-                      Provide optional suggestion or comments to helps us keep you as a customer
+                    <label className="form-label text-dark fw-semibold mb-1 ps-1" style={{ fontSize: "13px" }}>
+                      Feedback or Comments <span className="text-muted fw-normal">(Optional)</span>
                     </label>
                     <textarea
-                      className="form-control p-3 rounded-3"
-                      style={{ border: "1.5px solid #dcdcdc", fontSize: "14px", resize: "none" }}
-                      rows="4"
+                      className="form-control modern-form-input"
+                      rows="3"
                       value={cancelModal.comment}
                       onChange={(e) => setCancelModal({ ...cancelModal, comment: e.target.value })}
-                      placeholder="This is for test"
+                      placeholder="Let us know how we can improve..."
+                      style={{ resize: "none" }}
                     />
                   </div>
 
-                  <div className="d-grid mt-4">
+                  <div className="d-flex align-items-center gap-2 pt-2">
                     <button
-                      type="submit"
-                      className="btn py-2.5 fw-bold text-white rounded-3"
-                      style={{ background: "#283b9b", fontSize: "15px", letterSpacing: "0.5px" }}
+                      type="button"
+                      className="modern-secondary-btn flex-fill"
+                      onClick={() => setCancelModal({ show: false, id: null, reservationId: null, comment: "", reason: "" })}
                       disabled={resSubmitting}
                     >
-                      {resSubmitting ? "SUBMITTING..." : "SUBMIT"}
+                      Keep Reservation
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn flex-fill d-flex align-items-center justify-content-center gap-2 text-white fw-bold py-2.5 rounded-3"
+                      style={{
+                        background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                        boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
+                        border: "none",
+                        fontSize: "14px"
+                      }}
+                      disabled={resSubmitting}
+                    >
+                      {resSubmitting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          <span>Cancelling...</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-x-octagon fs-6"></i>
+                          <span>Confirm Cancel</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>
@@ -723,87 +1191,203 @@ export default function MyReservationsPage() {
 
       {/* Modify Reservation Modal */}
       {modifyModal.show && (
-        <div className="modal fade show d-block" style={{ background: "rgba(0, 0, 0, 0.45)", zIndex: 1050 }}>
-          <div className="modal-dialog modal-dialog-centered px-3" style={{ maxWidth: "440px" }}>
-            <div className="modal-content border-0 rounded-4 overflow-hidden shadow-lg" style={{ background: "#fff" }}>
-              <div className="modal-header border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center gap-2">
-                  <button type="button" className="btn p-0 border-0 text-dark" onClick={() => setModifyModal({ show: false, id: null, eventId: null, reservationId: null, adultCount: "", childCount: "", instruction: "", couponId: "", guestType: "All" })}>
-                    <i className="bi bi-arrow-left fs-5"></i>
-                  </button>
-                  <h5 className="modal-title fw-bold text-dark mb-0" style={{ fontSize: "17px" }}>Modify Reservation</h5>
+        <div className="modal fade show d-block modal-custom-backdrop" style={{ zIndex: 1050 }}>
+          <div className="modal-dialog modal-dialog-centered px-3" style={{ maxWidth: "460px" }}>
+            <div className="modal-content modern-modal-card overflow-hidden">
+              {/* Header */}
+              <div className="modal-header border-0 pb-0 pt-4 px-4 d-flex align-items-start justify-content-between">
+                <div className="d-flex align-items-center gap-3">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center text-white"
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      background: "linear-gradient(135deg, #3e56f0 0%, #2b3fc2 100%)",
+                      boxShadow: "0 4px 10px rgba(62, 86, 240, 0.3)",
+                      fontSize: "18px",
+                      flexShrink: 0
+                    }}
+                  >
+                    <i className="bi bi-pencil-square"></i>
+                  </div>
+                  <div>
+                    <h5 className="modal-title fw-bold text-dark mb-0" style={{ fontSize: "18px", letterSpacing: "-0.2px" }}>
+                      Modify Reservation
+                    </h5>
+                    <p className="text-muted mb-0" style={{ fontSize: "13px" }}>
+                      Update guests and reservation requests
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  className="btn-close shadow-none"
+                  style={{ fontSize: "13px", marginTop: "2px" }}
+                  onClick={() => setModifyModal({ show: false, id: null, eventId: null, reservationId: null, adultCount: "", childCount: "", instruction: "", couponId: "", guestType: "All" })}
+                  aria-label="Close"
+                ></button>
               </div>
-              <div className="modal-body p-4">
-                <div className="text-primary mb-3" style={{ fontSize: "18px" }}>
-                  <i className="bi bi-plus-lg"></i>
-                </div>
+
+              {/* Body */}
+              <div className="modal-body px-4 pt-3 pb-4">
+                {resError && (
+                  <div className="alert alert-danger py-2 px-3 rounded-3 mb-3 d-flex align-items-center gap-2" style={{ fontSize: "13px" }}>
+                    <i className="bi bi-exclamation-circle-fill"></i>
+                    <div>{resError}</div>
+                  </div>
+                )}
+
                 <form onSubmit={handleModifyReservation}>
-                  <div className="mb-3">
-                    <label className="form-label text-dark fw-semibold mb-1" style={{ fontSize: "14px" }}>
-                      Enter the number of ADULT guests
-                    </label>
-                    <input
-                      type="number"
-                      className="form-control py-2 px-3 rounded-3"
-                      style={{ border: "1.5px solid #dcdcdc", fontSize: "14px" }}
-                      value={modifyModal.adultCount}
-                      onChange={(e) => setModifyModal({ ...modifyModal, adultCount: e.target.value })}
-                      placeholder="25"
-                      required
-                    />
+                  {/* Guest counters heading */}
+                  <div className="text-uppercase fw-bold text-muted mb-2 ps-1" style={{ fontSize: "11px", letterSpacing: "0.6px" }}>
+                    Guests Count
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label text-dark fw-semibold mb-1" style={{ fontSize: "14px" }}>
-                      Enter the number of CHILD guests
-                    </label>
-                    <input
-                      type="number"
-                      className="form-control py-2 px-3 rounded-3"
-                      style={{ border: "1.5px solid #dcdcdc", fontSize: "14px" }}
-                      value={modifyModal.childCount}
-                      onChange={(e) => setModifyModal({ ...modifyModal, childCount: e.target.value })}
-                      placeholder="25"
-                    />
+                  {/* Adult Guests Stepper */}
+                  <div className="guest-counter-box mb-3 d-flex align-items-center justify-content-between">
+                    <div className="d-flex align-items-center gap-3">
+                      <div
+                        className="rounded-circle d-flex align-items-center justify-content-center"
+                        style={{ width: "38px", height: "38px", background: "#eef2ff", color: "#3e56f0" }}
+                      >
+                        <i className="bi bi-person-fill fs-5"></i>
+                      </div>
+                      <div>
+                        <div className="fw-bold text-dark" style={{ fontSize: "14px", lineHeight: "1.2" }}>Adult Guests</div>
+                        <div className="text-muted" style={{ fontSize: "12px" }}>Ages 13 and above</div>
+                      </div>
+                    </div>
+                    <div className="d-flex align-items-center gap-2">
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        onClick={() => handleAdultCountChange(-1)}
+                        disabled={parseInt(modifyModal.adultCount || 0, 10) <= 1}
+                        aria-label="Decrease adult count"
+                      >
+                        <i className="bi bi-dash"></i>
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        className="stepper-input"
+                        value={modifyModal.adultCount}
+                        onChange={(e) => setModifyModal({ ...modifyModal, adultCount: e.target.value.replace(/\D/g, '') })}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        onClick={() => handleAdultCountChange(1)}
+                        aria-label="Increase adult count"
+                      >
+                        <i className="bi bi-plus"></i>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="mb-3">
-                    <label className="form-label text-dark fw-semibold mb-1" style={{ fontSize: "14px" }}>
-                      Enter Coupon
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control py-2 px-3 rounded-3"
-                      style={{ border: "1.5px solid #dcdcdc", fontSize: "14px" }}
-                      value={modifyModal.couponId}
-                      onChange={(e) => setModifyModal({ ...modifyModal, couponId: e.target.value })}
-                      placeholder="Ex. ABCDES1234"
-                    />
+                  {/* Child Guests Stepper */}
+                  <div className="guest-counter-box mb-3 d-flex align-items-center justify-content-between">
+                    <div className="d-flex align-items-center gap-3">
+                      <div
+                        className="rounded-circle d-flex align-items-center justify-content-center"
+                        style={{ width: "38px", height: "38px", background: "#fef3c7", color: "#d97706" }}
+                      >
+                        <i className="bi bi-emoji-smile-fill fs-5"></i>
+                      </div>
+                      <div>
+                        <div className="fw-bold text-dark" style={{ fontSize: "14px", lineHeight: "1.2" }}>Child Guests</div>
+                        <div className="text-muted" style={{ fontSize: "12px" }}>Ages 2 to 12</div>
+                      </div>
+                    </div>
+                    <div className="d-flex align-items-center gap-2">
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        onClick={() => handleChildCountChange(-1)}
+                        disabled={parseInt(modifyModal.childCount || 0, 10) <= 0}
+                        aria-label="Decrease child count"
+                      >
+                        <i className="bi bi-dash"></i>
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        className="stepper-input"
+                        value={modifyModal.childCount}
+                        onChange={(e) => setModifyModal({ ...modifyModal, childCount: e.target.value.replace(/\D/g, '') })}
+                      />
+                      <button
+                        type="button"
+                        className="stepper-btn"
+                        onClick={() => handleChildCountChange(1)}
+                        aria-label="Increase child count"
+                      >
+                        <i className="bi bi-plus"></i>
+                      </button>
+                    </div>
                   </div>
 
+                  {/* Coupon Code Input */}
+                  <div className="mb-3">
+                    <label className="form-label text-dark fw-semibold mb-1 ps-1" style={{ fontSize: "13px" }}>
+                      Coupon Code <span className="text-muted fw-normal">(Optional)</span>
+                    </label>
+                    <div className="position-relative">
+                      <span className="position-absolute top-50 start-0 translate-middle-y ps-3 text-muted" style={{ fontSize: "15px" }}>
+                        <i className="bi bi-ticket-perforated"></i>
+                      </span>
+                      <input
+                        type="text"
+                        className="form-control modern-form-input ps-5"
+                        value={modifyModal.couponId}
+                        onChange={(e) => setModifyModal({ ...modifyModal, couponId: e.target.value.toUpperCase() })}
+                        placeholder="e.g. EVENTUNA50"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Special Instruction */}
                   <div className="mb-4">
-                    <label className="form-label text-dark fw-semibold mb-1" style={{ fontSize: "14px" }}>
-                      Any instruction or Request
+                    <label className="form-label text-dark fw-semibold mb-1 ps-1" style={{ fontSize: "13px" }}>
+                      Special Instruction or Request <span className="text-muted fw-normal">(Optional)</span>
                     </label>
                     <textarea
-                      className="form-control p-3 rounded-3"
-                      style={{ border: "1.5px solid #dcdcdc", fontSize: "14px", resize: "none" }}
+                      className="form-control modern-form-input"
                       rows="3"
                       value={modifyModal.instruction}
                       onChange={(e) => setModifyModal({ ...modifyModal, instruction: e.target.value })}
-                      placeholder="Jjhhj"
+                      placeholder="e.g. Corner table preferred, anniversary celebration, high chair needed..."
+                      style={{ resize: "none" }}
                     />
                   </div>
 
-                  <div className="d-grid mt-4">
+                  {/* Action Buttons */}
+                  <div className="d-flex align-items-center gap-2 pt-2">
                     <button
-                      type="submit"
-                      className="btn py-2.5 fw-bold text-white rounded-3"
-                      style={{ background: "#495ef4", fontSize: "15px" }}
+                      type="button"
+                      className="modern-secondary-btn flex-fill"
+                      onClick={() => setModifyModal({ show: false, id: null, eventId: null, reservationId: null, adultCount: "", childCount: "", instruction: "", couponId: "", guestType: "All" })}
                       disabled={resSubmitting}
                     >
-                      {resSubmitting ? "Modifying..." : "Modify"}
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="modern-primary-btn flex-fill d-flex align-items-center justify-content-center gap-2"
+                      disabled={resSubmitting}
+                    >
+                      {resSubmitting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          <span>Updating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-check2-circle fs-6"></i>
+                          <span>Save Changes</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>

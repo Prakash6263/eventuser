@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import SiteHeader from "../components/Header";
 import Footer from "../components/Footer";
@@ -36,9 +36,10 @@ const locations = [
 
 
 function getCalendarDays(month) {
-  const firstDay = new Date(2026, month, 1).getDay();
-  const monthLength = new Date(2026, month + 1, 0).getDate();
-  const previousMonthLength = new Date(2026, month, 0).getDate();
+  const currentYear = new Date().getFullYear();
+  const firstDay = new Date(currentYear, month, 1).getDay();
+  const monthLength = new Date(currentYear, month + 1, 0).getDate();
+  const previousMonthLength = new Date(currentYear, month, 0).getDate();
   const days = [];
 
   for (let index = firstDay - 1; index >= 0; index -= 1) {
@@ -56,13 +57,14 @@ function getCalendarDays(month) {
 
 export default function CreateEventPage() {
   const router = useRouter();
+  const currentDate = new Date();
   const [step, setStep] = useState("date");
   const [isEditingFromReview, setIsEditingFromReview] = useState(false);
-  const [month, setMonth] = useState(6);
-  const [selectedDate, setSelectedDate] = useState(14);
-  const [eventEndDate, setEventEndDate] = useState(14);
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [month, setMonth] = useState(currentDate.getMonth());
+  const [selectedDate, setSelectedDate] = useState(currentDate.getDate());
+  const [eventEndDate, setEventEndDate] = useState(currentDate.getDate());
+  const [startTime, setStartTime] = useState("18:00");
+  const [endTime, setEndTime] = useState("21:00");
   const [category, setCategory] = useState("Birthday");
   const [eventType, setEventType] = useState("Family Celebration");
   const [place, setPlace] = useState("");
@@ -84,12 +86,15 @@ export default function CreateEventPage() {
   const [eventImage, setEventImage] = useState(null);
   const [eventImageFile, setEventImageFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const activeStepRef = useRef(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [subview, setSubview] = useState(null);
   const [placeSearch, setPlaceSearch] = useState("");
   const [dialog, setDialog] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [completionMode, setCompletionMode] = useState("sent");
+  const [createdInvitationUrl, setCreatedInvitationUrl] = useState("");
+  const [copySuccess, setCopySuccess] = useState(false);
   const [isRecalling, setIsRecalling] = useState(false);
   const [recallMessage, setRecallMessage] = useState(null);
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -264,10 +269,23 @@ export default function CreateEventPage() {
   }, []);
 
   const currentServiceId = useMemo(() => {
-    if (place === "Restaurant from list" || place === "restaurant" || place === "6877a86668d1e0b9fcdf5006") {
+    const p = String(place || "").toLowerCase();
+    if (
+      p === "restaurant" ||
+      p === "restaurant from list" ||
+      p.includes("restaurant") ||
+      place === "6877a86668d1e0b9fcdf5006"
+    ) {
       return "686fb6ced46e9740ee8277ec";
     }
-    if (place === "Other participating facilities" || place === "facility" || place === "6877a87c68d1e0b9fcdf5010") {
+    if (
+      p === "other facilities" ||
+      p === "other participating facilities" ||
+      p === "facility" ||
+      p.includes("facilit") ||
+      place === "6877a86f68d1e0b9fcdf5008" ||
+      place === "6877a87c68d1e0b9fcdf5010"
+    ) {
       return "686fb6dcd46e9740ee8277ee";
     }
     return null;
@@ -338,7 +356,7 @@ export default function CreateEventPage() {
   const calendarDays = useMemo(() => getCalendarDays(month), [month]);
   const activeIndex = steps.findIndex((item) => item.id === step);
   const visibleGuests = contacts.filter((guest) =>
-    `${guest.name} ${guest.id} ${guest.email}`.toLowerCase().includes(guestSearch.toLowerCase())
+    `${guest.name || ""} ${guest.id || ""} ${guest.email || ""}`.toLowerCase().includes(guestSearch.toLowerCase())
   );
 
   const fetchContacts = async () => {
@@ -577,8 +595,9 @@ export default function CreateEventPage() {
 
       const startDay = Number(selectedDate);
       const endDay = Number(eventEndDate ?? selectedDate);
-      const formattedDate = `2026-${(month + 1).toString().padStart(2, "0")}-${startDay.toString().padStart(2, "0")}`;
-      const formattedEndDate = `2026-${(month + 1).toString().padStart(2, "0")}-${endDay.toString().padStart(2, "0")}`;
+      const currentYear = new Date().getFullYear();
+      const formattedDate = `${currentYear}-${(month + 1).toString().padStart(2, "0")}-${startDay.toString().padStart(2, "0")}`;
+      const formattedEndDate = `${currentYear}-${(month + 1).toString().padStart(2, "0")}-${endDay.toString().padStart(2, "0")}`;
       formData.append("eventDate", formattedDate);
       formData.append("eventEndDate", formattedEndDate);
       formData.append("eventStartTime", startTime);
@@ -595,12 +614,15 @@ export default function CreateEventPage() {
         formData.append("merchantId", selectedRestaurant);
       }
       if (selectedLocation && selectedLocation._id) {
+        formData.append("addressId", selectedLocation._id);
         formData.append("serviceLocationId", selectedLocation._id);
       }
       if (eventImageFile) {
         formData.append("image", eventImageFile);
       }
-      const selectedPlaceOption = placePreferencesList.find((p) => p.preferences === place);
+      const selectedPlaceOption = placePreferencesList.find(
+        (p) => p.preferences === place || p._id === place
+      ) || placePreferencesList[0];
       if (selectedPlaceOption && selectedPlaceOption._id) {
         formData.append("placeId", selectedPlaceOption._id);
       }
@@ -669,9 +691,11 @@ export default function CreateEventPage() {
         console.error(e);
       }
 
-      if (finalSelectedGuests.length > 0) {
-        formData.append("contactListIds", JSON.stringify(finalSelectedGuests));
+      if (finalSelectedGuests.length === 0) {
+        throw new Error("Please select at least 1 guest from your contacts list to invite.");
       }
+
+      formData.append("contactListIds", JSON.stringify(finalSelectedGuests));
 
       // Call API
       const response = await createEventApi(formData);
@@ -682,7 +706,8 @@ export default function CreateEventPage() {
 
       // Success: Save backend response to localStorage as source of truth
       const backendEvent = response.event || response.data || response.eventData || response.data?.event || response || {};
-      const resolvedId = backendEvent._id || backendEvent.id || response._id || response.id || response.data?._id || response.data?.id || "";
+      const resolvedId = backendEvent.eventId || backendEvent._id || backendEvent.id || response._id || response.id || response.data?._id || response.data?.id || response.data?.eventId || "";
+      const invitationLink = response.data?.invitationUrl || response.invitationUrl || "";
       
       const resolvedEvent = {
         eventTitle: backendEvent.eventTitle || eventTitle,
@@ -715,6 +740,7 @@ export default function CreateEventPage() {
 
       // Store created event ID and merchant name for the reservation modal
       setCreatedEventId(resolvedId);
+      setCreatedInvitationUrl(invitationLink);
       const selectedMerchant = merchantRestaurants.find((m) => m._id === selectedRestaurant || m._id === backendEvent.merchantId);
       setCreatedMerchantName(selectedMerchant?.serviceName || selectedMerchant?.name || "");
 
@@ -950,8 +976,11 @@ export default function CreateEventPage() {
   };
 
   const canContinue =
+    (step !== "date" || (Boolean(startTime) && Boolean(endTime) && endTime > startTime)) &&
+    (step !== "category" || (Boolean(selectedEventTypeId) && Boolean(selectedCategoryId))) &&
     (step !== "place" || Boolean(place)) &&
     (step !== "restaurants" || Boolean(selectedRestaurant)) &&
+    (step !== "guests" || selectedGuests.length > 0) &&
     (step !== "guestInfo" || (bringGuests === "No" || Boolean(maxGuests))) &&
     (step !== "guestInfo" || (rsvp === "No" || Boolean(rsvpBy))) &&
     (step !== "content" || (Boolean(eventTitle.trim()) && Boolean(invitationMessage.trim())));
@@ -1051,7 +1080,7 @@ export default function CreateEventPage() {
                           <div>
                             <small className="text-muted d-block fw-semibold">Date & Time</small>
                             <strong style={{ fontSize: "14px", color: "#1f2937" }}>
-                              {selectedDate} {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month]} 2026
+                              {selectedDate} {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month]} {new Date().getFullYear()}
                               {startTime ? `, ${startTime}` : ""} {endTime ? ` - ${endTime}` : ""}
                             </strong>
                           </div>
@@ -1080,6 +1109,32 @@ export default function CreateEventPage() {
                       </div>
                     )}
 
+                    {createdInvitationUrl && (
+                      <div className="mb-3 p-3 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                        <div style={{ minWidth: "220px", flex: 1 }}>
+                          <small className="text-success fw-bold d-block mb-0.5"><i className="fa-solid fa-link me-1"></i> Public Invitation Link</small>
+                          <span className="text-dark small text-truncate d-block" style={{ fontSize: "12.5px" }}>{createdInvitationUrl}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-success rounded-pill px-3 fw-semibold shadow-sm"
+                          onClick={() => {
+                            if (typeof navigator !== "undefined" && navigator.clipboard) {
+                              navigator.clipboard.writeText(createdInvitationUrl);
+                              setCopySuccess(true);
+                              setTimeout(() => setCopySuccess(false), 2500);
+                            }
+                          }}
+                        >
+                          {copySuccess ? (
+                            <><i className="fa-solid fa-check me-1"></i> Copied!</>
+                          ) : (
+                            <><i className="fa-regular fa-copy me-1"></i> Copy Link</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
                     <div className="d-flex align-items-center justify-content-between pt-3 border-top">
                       <div className="d-flex align-items-center gap-2">
                         <i className="fa-solid fa-users text-secondary"></i>
@@ -1095,33 +1150,49 @@ export default function CreateEventPage() {
                   </div>
                 </div>
 
-                {/* Buttons: Home and Recall */}
-                <div className="d-flex align-items-center justify-content-center gap-3 mt-4">
+                {/* Action Buttons */}
+                <div className="d-flex flex-wrap align-items-center justify-content-center gap-2.5 mt-4">
                   <button
-                    onClick={() => router.push("/")}
-                    className="btn btn-outline-secondary rounded-pill px-4 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm"
-                    style={{ minWidth: "150px", fontSize: "15px", height: "46px" }}
-                  >
-                    <i className="fa-solid fa-house"></i> Home
-                  </button>
-
-                  <button
-                    onClick={handleRecallEvent}
-                    disabled={isRecalling}
+                    onClick={() => router.push(createdEventId ? `/event-details?eventId=${createdEventId}` : "/my-events")}
                     className="btn btn-primary rounded-pill px-4 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 text-white shadow-sm"
                     style={{
                       background: "#5b5fc7",
                       borderColor: "#5b5fc7",
                       minWidth: "150px",
-                      fontSize: "15px",
+                      fontSize: "14.5px",
                       height: "46px"
                     }}
+                  >
+                    <i className="fa-solid fa-calendar-check"></i> View Event Details
+                  </button>
+
+                  <button
+                    onClick={() => router.push("/my-events")}
+                    className="btn btn-outline-primary rounded-pill px-4 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                    style={{ minWidth: "130px", fontSize: "14.5px", height: "46px" }}
+                  >
+                    <i className="fa-solid fa-list-check"></i> My Events
+                  </button>
+
+                  <button
+                    onClick={handleRecallEvent}
+                    disabled={isRecalling}
+                    className="btn btn-outline-warning rounded-pill px-3.5 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                    style={{ minWidth: "120px", fontSize: "14px", height: "46px" }}
                   >
                     {isRecalling ? (
                       <><i className="fa-solid fa-spinner fa-spin"></i> Recalling...</>
                     ) : (
                       <><i className="fa-solid fa-rotate-left"></i> Recall</>
                     )}
+                  </button>
+
+                  <button
+                    onClick={() => router.push("/")}
+                    className="btn btn-outline-secondary rounded-pill px-3.5 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                    style={{ minWidth: "100px", fontSize: "14px", height: "46px" }}
+                  >
+                    <i className="fa-solid fa-house"></i> Home
                   </button>
                 </div>
               </section>
@@ -1134,7 +1205,7 @@ export default function CreateEventPage() {
                   </div>
                   <ol>
                     {steps.map((item, index) => (
-                      <li key={item.id} className={index === activeIndex ? styles.activeStep : index < activeIndex ? styles.finishedStep : ""}>
+                      <li key={item.id} ref={index === activeIndex ? activeStepRef : null} className={index === activeIndex ? styles.activeStep : index < activeIndex ? styles.finishedStep : ""}>
                         <span className={styles.stepIcon}><i className={`fa-solid ${index < activeIndex ? "fa-check" : item.icon}`}></i></span>
                         <span><strong>{item.label}</strong><small>{index < activeIndex ? "Completed" : index === activeIndex ? "In progress" : "Not started"}</small></span>
                       </li>
@@ -1649,7 +1720,8 @@ function Field({ label, hint, children }) {
 }
 
 function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, eventEndDate, setEventEndDate, onDateClick, resetDateRange, calendarDays, startTime, setStartTime, endTime, setEndTime }) {
-  const monthName = new Date(2026, month, 1).toLocaleString("en-US", { month: "long" });
+  const currentYear = new Date().getFullYear();
+  const monthName = new Date(currentYear, month, 1).toLocaleString("en-US", { month: "long" });
   const rangeStart = Math.min(selectedDate, eventEndDate ?? selectedDate);
   const rangeEnd = Math.max(selectedDate, eventEndDate ?? selectedDate);
 
@@ -1658,7 +1730,7 @@ function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, eventEnd
       <div className={styles.calendarPanel}>
         <div className={styles.monthControls}>
           <button onClick={() => setMonth((month + 11) % 12)} aria-label="Previous month"><i className="fa-solid fa-chevron-left"></i></button>
-          <strong>{monthName} 2026</strong>
+          <strong>{monthName} {currentYear}</strong>
           <button onClick={() => setMonth((month + 1) % 12)} aria-label="Next month"><i className="fa-solid fa-chevron-right"></i></button>
         </div>
         <div className={styles.weekdays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <span key={day}>{day}</span>)}</div>
@@ -1697,7 +1769,7 @@ function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, eventEnd
           <i className="fa-regular fa-calendar"></i>
           <span>
             <small>Selected date</small>
-            <strong>{monthName} {selectedDate}{eventEndDate && eventEndDate !== selectedDate ? ` - ${eventEndDate}` : ""}, 2026</strong>
+            <strong>{monthName} {selectedDate}{eventEndDate && eventEndDate !== selectedDate ? ` - ${eventEndDate}` : ""}, {currentYear}</strong>
           </span>
         </div>
         <button type="button" className={styles.resetRangeButton} onClick={resetDateRange}>
@@ -1913,7 +1985,22 @@ function RestaurantList({
           )}
         </>
       ) : (
-        <div className="text-center py-5 text-muted">No participating restaurants found.</div>
+        <div className="text-center py-5 text-muted">
+          <i className="fa-solid fa-utensils fa-2x mb-2 d-block text-secondary opacity-50"></i>
+          <div>No participating restaurants found{filterCoords ? " near this location." : "."}</div>
+          {filterCoords && (
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-sm rounded-pill mt-3 px-3.5 py-1.5 fw-semibold"
+              onClick={() => {
+                setFilterCoords(null);
+                setPlaceSearch("");
+              }}
+            >
+              <i className="fa-solid fa-rotate-left me-1"></i> Show all available restaurants
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -2166,10 +2253,12 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
   const invitedGuests = contacts.filter((guest) => selectedGuests.includes(guest.id));
   const allNotes = [...selectedNotes, ...(customNote.trim() ? [customNote.trim()] : [])];
   
-  const monthName = new Date(2026, month, 1).toLocaleString("en-US", { month: "long" });
+  const currentYear = new Date().getFullYear();
+  const monthName = new Date(currentYear, month, 1).toLocaleString("en-US", { month: "long" });
 
   const isRestaurantOption = place === "At a participating restaurant" || 
                              place === "restaurant" || 
+                             place === "Restaurant" ||
                              place === "Restaurant from list" || 
                              place === "6877a86668d1e0b9fcdf5006";
 
@@ -2243,7 +2332,7 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
             <i className="fa-regular fa-calendar"></i>
             <span>
               <small>Date and time</small>
-              <strong>{monthName} {selectedDate}{eventEndDate && eventEndDate !== selectedDate ? ` - ${eventEndDate}` : ""}, 2026 | {startTime || "--:--"} - {endTime || "--:--"}</strong>
+              <strong>{monthName} {selectedDate}{eventEndDate && eventEndDate !== selectedDate ? ` - ${eventEndDate}` : ""}, {currentYear} | {startTime || "--:--"} - {endTime || "--:--"}</strong>
             </span>
             <button 
               type="button" 
@@ -2333,7 +2422,7 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
             <div className={styles.guestAvatars}>
               {invitedGuests.slice(0, 4).map((guest) => (
                 <div key={guest.id}>
-                  <span>{guest.name.slice(0, 1)}</span>
+                  <span>{((guest.name || guest.fullName || "G").trim() || "G").slice(0, 1).toUpperCase()}</span>
                   <small>{guest.name}</small>
                 </div>
               ))}
@@ -2430,7 +2519,7 @@ function GuestsStep({ guests: guestResults, search, setSearch, selectedGuests, t
                       style={{ borderRadius: "50%", objectFit: "cover" }}
                     />
                   ) : (
-                    guest.name.slice(0, 1)
+                    ((guest.name || guest.fullName || "G").trim() || "G").slice(0, 1).toUpperCase()
                   )}
                 </span>
                 <span className={styles.guestMeta}>
@@ -2451,11 +2540,25 @@ function GuestsStep({ guests: guestResults, search, setSearch, selectedGuests, t
               </label>
             ))}
           </div>
+          {guestResults.length > 0 && selectedGuests.length === 0 && (
+            <div className="alert alert-warning py-2.5 px-3 mt-3 mb-0 d-flex align-items-center gap-2 rounded-3" style={{ fontSize: "13.5px" }}>
+              <i className="fa-solid fa-triangle-exclamation text-warning"></i>
+              <span>Please select at least 1 guest to proceed with creating your event.</span>
+            </div>
+          )}
           {!guestResults.length && (
             <div className={styles.emptyState}>
               <i className="fa-regular fa-user"></i>
               <strong>No contacts found</strong>
-              <span>Add a new contact or try another search.</span>
+              <span>Add a contact to invite them to your event.</span>
+              <button
+                type="button"
+                className="btn btn-primary rounded-pill px-3.5 py-2 mt-3 fw-semibold btn-sm shadow-sm"
+                onClick={openAddContact}
+                style={{ background: "#5b5fc7", borderColor: "#5b5fc7" }}
+              >
+                <i className="fa-solid fa-user-plus me-1.5"></i> Add New Contact
+              </button>
             </div>
           )}
         </>

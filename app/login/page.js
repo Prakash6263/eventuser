@@ -24,11 +24,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [isUnverified, setIsUnverified] = useState(false);
 
   const handleTabChange = (type) => {
     setLoginType(type);
     setErrorMsg("");
     setSuccessMsg("");
+    setIsUnverified(false);
     if (type === "email") {
       setMobileStep(1);
     }
@@ -38,6 +40,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
+    setIsUnverified(false);
     setLoading(true);
 
     try {
@@ -50,7 +53,11 @@ export default function LoginPage() {
             router.push("/user-profile");
           }, 1000);
         } else {
-          setErrorMsg(res?.message || "Invalid credentials. Please try again.");
+          const msg = res?.message || "Invalid credentials. Please try again.";
+          setErrorMsg(msg);
+          if (msg.toLowerCase().includes("not verified")) {
+            setIsUnverified(true);
+          }
         }
       } else {
         // Mobile OTP Flow
@@ -182,8 +189,21 @@ export default function LoginPage() {
             {/* Error & Success Messages */}
             {errorMsg && (
               <div className="alert alert-danger py-2 fs-6 rounded-3 mb-3" role="alert">
-                <i className="fa-solid fa-circle-exclamation me-2"></i>
-                {errorMsg}
+                <div className="d-flex align-items-center">
+                  <i className="fa-solid fa-circle-exclamation me-2"></i>
+                  <span>{errorMsg}</span>
+                </div>
+                {isUnverified && (
+                  <div className="mt-2.5 pt-2 border-top border-danger-subtle text-center">
+                    <Link
+                      href={`/verification?email=${encodeURIComponent(email)}`}
+                      className="btn btn-sm btn-danger rounded-pill px-3 py-1 fw-bold text-white shadow-sm"
+                      style={{ fontSize: "13px" }}
+                    >
+                      <i className="fa-solid fa-shield-halved me-1"></i> Verify Account Now
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
 

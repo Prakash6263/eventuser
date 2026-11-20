@@ -7,7 +7,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { authService } from "../services/authService";
 import { getEventGroupChatApi, getChatMessagesApi, sendChatMessageApi } from "../services/chatApi";
-import { handleAuthFailure, isAuthFailureResponse } from "../services/apiClient";
+import { handleAuthFailure, isAuthFailureResponse, apiRequest } from "../services/apiClient";
 
 function ChatContent() {
   const router = useRouter();
@@ -65,24 +65,12 @@ function ChatContent() {
   useEffect(() => {
     async function loadEventDetails() {
       if (!eventId) return;
-      const token = typeof window !== "undefined" ? localStorage.getItem("user_token") : null;
       try {
-        const res = await fetch("https://eventuna.com/api/event/events", {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
-        const json = await res.json();
-        if (isAuthFailureResponse(res, json)) {
-          handleAuthFailure();
-          return;
-        }
-        if (res.ok) {
-          if (json.status && Array.isArray(json.data)) {
-            const match = json.data.find(e => e._id === eventId);
-            if (match) {
-              setEventDetails(match);
-            }
+        const json = await apiRequest("/event/events");
+        if (json && json.status && Array.isArray(json.data)) {
+          const match = json.data.find(e => e._id === eventId);
+          if (match) {
+            setEventDetails(match);
           }
         }
       } catch (err) {

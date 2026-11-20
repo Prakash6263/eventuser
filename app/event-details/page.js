@@ -95,7 +95,7 @@ const mapEventData = (data, loggedInUser) => {
 
 function EventDetailsContent() {
   const searchParams = useSearchParams();
-  const eventId = searchParams.get("id");
+  const eventId = searchParams.get("id") || searchParams.get("eventId") || "";
 
   const [event, setEvent] = useState(null);
   const [detailsLoaded, setDetailsLoaded] = useState(false);
@@ -108,7 +108,7 @@ function EventDetailsContent() {
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [thanksMessage, setThanksMessage] = useState("");
   const [suggestionMessage, setSuggestionMessage] = useState("");
-  const [alongGuest, setAlongGuest] = useState("ye");
+  const [alongGuest, setAlongGuest] = useState("0");
 
   // Decline Invitation Modal inputs & loading
   const [showDeclineModal, setShowDeclineModal] = useState(false);
@@ -187,7 +187,7 @@ function EventDetailsContent() {
 
       const payload = {
         status: "accepted",
-        along_guest: String(alongGuest || "ye").toLowerCase(),
+        along_guest: String(alongGuest ?? "0").trim(),
         thanks_message: thanksMessage || "",
         suggestion_message: suggestionMessage || "",
         eventId: event.eventId
@@ -1338,9 +1338,10 @@ function EventDetailsContent() {
                 <div className="mb-2">
                   <label className="form-label text-dark small fw-bold mb-1.5">Can bring along guests</label>
                   <input
-                    type="text"
+                    type="number"
+                    min="0"
                     className="form-control border-light-subtle shadow-sm rounded-pill px-4"
-                    placeholder="ye"
+                    placeholder="0"
                     value={alongGuest}
                     onChange={(e) => setAlongGuest(e.target.value)}
                     style={{ fontSize: "14px", height: "42px", borderColor: "#e5e7eb" }}

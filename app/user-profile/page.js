@@ -92,6 +92,7 @@ export default function UserProfilePage() {
 
     try {
       const formData = new FormData();
+      if (fullName) formData.append("fullName", fullName);
       if (profilePicFile) {
         formData.append("profilePic", profilePicFile);
       }

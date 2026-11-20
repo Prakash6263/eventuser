@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { getMerchantChatApi, sendMerchantChatMessageApi } from "../services/chatApi";
+import { getMerchantsByServiceApi } from "../services/eventApi";
 
 function MerchantChatContent() {
   const router = useRouter();
@@ -24,19 +25,40 @@ function MerchantChatContent() {
 
   const chatBodyRef = useRef(null);
   const chatIdRef = useRef(null);
+  const resolvedMerchantIdRef = useRef(merchantId);
 
   const getInitials = (name) => (name ? name.trim().charAt(0).toUpperCase() : "?");
 
   // ── Fetch (or create) the merchant chat + messages ──
   const fetchChat = async () => {
-    if (!merchantId) {
+    let targetMerchantId = resolvedMerchantIdRef.current || merchantId;
+    if (!targetMerchantId) {
       setError("Missing merchant reference.");
       setLoading(false);
       return;
     }
     try {
       const activeEventId = eventId || "general";
-      const res = await getMerchantChatApi(activeEventId, merchantId);
+      let res = await getMerchantChatApi(activeEventId, targetMerchantId);
+
+      // If server returns "Merchant not found.", the query ID might be a Service ID instead of Merchant ID
+      if (res && res.status === false && (res.message?.toLowerCase().includes("merchant not found") || res.message?.toLowerCase().includes("not found"))) {
+        try {
+          const serviceRes = await getMerchantsByServiceApi(targetMerchantId);
+          if (serviceRes && serviceRes.status && Array.isArray(serviceRes.data) && serviceRes.data.length > 0) {
+            const foundService = serviceRes.data.find(s => (s._id === targetMerchantId || s.id === targetMerchantId)) || serviceRes.data[0];
+            const realMerchantId = foundService?.merchant?._id || foundService?.merchant?.id || foundService?.merchantId?._id || foundService?.merchantId;
+            if (realMerchantId && String(realMerchantId) !== String(targetMerchantId)) {
+              resolvedMerchantIdRef.current = String(realMerchantId);
+              targetMerchantId = String(realMerchantId);
+              res = await getMerchantChatApi(activeEventId, targetMerchantId);
+            }
+          }
+        } catch (e) {
+          console.warn("Failed fallback service resolution for merchant:", e);
+        }
+      }
+
       if (res && res.status && res.data) {
         const data = res.data;
         const id = data.chat?._id || null;

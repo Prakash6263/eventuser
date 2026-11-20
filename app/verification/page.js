@@ -12,15 +12,30 @@ function VerificationForm() {
   const searchParams = useSearchParams();
 
   const userIdFromQuery = searchParams.get("userId") || "";
-  const mobileFromQuery = searchParams.get("mobile") || "+91 8052741232";
+  const emailFromQuery = searchParams.get("email") || "";
+  const mobileFromQuery = searchParams.get("mobile") || "";
 
+  const [targetUserId, setTargetUserId] = useState(userIdFromQuery);
   const [otp, setOtp] = useState(["", "", "", ""]);
   const otpRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
-  const [countdown, setCountdown] = useState(20);
+  const [countdown, setCountdown] = useState(30);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // If userId is missing, attempt to retrieve it using resendOtp if email or mobile is available
+  useEffect(() => {
+    if (!targetUserId && (emailFromQuery || mobileFromQuery)) {
+      authService.resendOtp({ email: emailFromQuery, mobile: mobileFromQuery })
+        .then((res) => {
+          if (res && res.status && res.userId) {
+            setTargetUserId(res.userId);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [emailFromQuery, mobileFromQuery, targetUserId]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -59,8 +74,9 @@ function VerificationForm() {
       return;
     }
 
-    if (!userIdFromQuery) {
-      setErrorMsg("User ID missing. Please return to signup and register again.");
+    const activeUserId = targetUserId || userIdFromQuery;
+    if (!activeUserId) {
+      setErrorMsg("User ID missing. Please return to signup or click Resend Code.");
       return;
     }
 
@@ -68,7 +84,7 @@ function VerificationForm() {
 
     try {
       const res = await authService.verifyOtp({
-        userId: userIdFromQuery,
+        userId: activeUserId,
         otp: enteredCode,
       });
 
@@ -92,25 +108,25 @@ function VerificationForm() {
     setSuccessMsg("");
     setLoading(true);
     try {
-      const rawMobile = searchParams.get("mobile") || "";
-      const cleanMobile = rawMobile.replace(/[^0-9]/g, "") || rawMobile;
-      if (cleanMobile) {
-        const res = await authService.sendLoginOtp({ mobile: cleanMobile });
-        if (res && res.status) {
-          setSuccessMsg(res.message || "Verification OTP code has been resent!");
-        } else {
-          setErrorMsg(res?.message || "Failed to resend OTP.");
+      const res = await authService.resendOtp({
+        email: emailFromQuery,
+        mobile: mobileFromQuery,
+      });
+      if (res && res.status) {
+        setSuccessMsg(res.message || "Verification code has been resent!");
+        if (res.userId) {
+          setTargetUserId(res.userId);
         }
       } else {
-        setSuccessMsg("Verification code has been re-sent!");
+        setErrorMsg(res?.message || "Failed to resend verification code.");
       }
-      setCountdown(20);
+      setCountdown(30);
       setOtp(["", "", "", ""]);
       if (otpRefs[0].current) {
         otpRefs[0].current.focus();
       }
     } catch (err) {
-      setErrorMsg("Failed to resend OTP code. Please try again.");
+      setErrorMsg(err.message || "Failed to resend OTP code. Please try again.");
     } finally {
       setLoading(false);
     }

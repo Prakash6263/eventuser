@@ -32,7 +32,7 @@ export default function EventsPage() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   // Filters state variables (date, myevent and status)
-  const [filterMyEvent, setFilterMyEvent] = useState("false");
+  const [filterMyEvent, setFilterMyEvent] = useState(""); // "" = All (created + invited), "true" = My Created, "false" = Invitations
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [galleryLoading, setGalleryLoading] = useState(false);
@@ -213,9 +213,23 @@ export default function EventsPage() {
       setError(null);
 
       const queryParams = new URLSearchParams();
-      queryParams.append("myevent", selectedMyEvent || "false");
+      // If "true" or "false" passed, send myevent. If empty ("" or "all"), omit so backend returns BOTH created and invited!
+      if (selectedMyEvent === "true" || selectedMyEvent === "false") {
+        queryParams.append("myevent", selectedMyEvent);
+      }
 
-      const res = await fetch(`https://eventuna.com/api/event/events?${queryParams.toString()}`, {
+      // If date selected, send to backend API
+      if (selectedDate && selectedDate.trim()) {
+        queryParams.append("date", selectedDate.trim());
+      }
+
+      // If status selected, send to backend API
+      if (selectedStatus && selectedStatus.trim() && selectedStatus.toLowerCase() !== "all") {
+        queryParams.append("status", selectedStatus.trim());
+      }
+
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+      const res = await fetch(`https://eventuna.com/api/event/events${queryString}`, {
         headers: {
           "Authorization": `Bearer ${activeToken}`
         }
@@ -278,7 +292,7 @@ export default function EventsPage() {
           uiStatus = "Draft";
         } else if (rawStatus === "cancelled" || rawStatus === "canceled") {
           uiStatus = "Canceled";
-        } else if (rawStatus === "rejected" || invStatus === "rejected") {
+        } else if (rawStatus === "rejected" || invStatus === "rejected" || invStatus === "declined") {
           uiStatus = "Rejected";
         } else if (rawStatus === "expired" || currentStatus === "expired") {
           uiStatus = "Expired";
@@ -310,8 +324,17 @@ export default function EventsPage() {
         mapped = mapped.filter((evt) => matchSelectedDate(evt, selectedDate));
       }
 
-      if (selectedStatus) {
-        mapped = mapped.filter((evt) => evt.status.toLowerCase() === selectedStatus.toLowerCase());
+      if (selectedStatus && selectedStatus.trim() && selectedStatus.toLowerCase() !== "all") {
+        const s = selectedStatus.toLowerCase();
+        mapped = mapped.filter((evt) => {
+          const evStatus = (evt.status || "").toLowerCase();
+          if (s === "upcoming") return ["upcoming", "ongoing", "ongoingevent"].includes(evStatus);
+          if (s === "completed") return evStatus === "completed";
+          if (s === "accepted") return evStatus === "accepted";
+          if (s === "pending") return evStatus === "pending";
+          if (s === "cancelled" || s === "canceled") return ["cancelled", "canceled", "rejected", "declined"].includes(evStatus);
+          return evStatus === s;
+        });
       }
 
       setEvents(mapped);
@@ -330,7 +353,8 @@ export default function EventsPage() {
       return;
     }
 
-    fetchFilteredEvents("false", "", "");
+    // Default: fetch all events (both created and invited)
+    fetchFilteredEvents("", "", "");
     fetchMyEventDates(token);
   }, [token, fetchMyEventDates]);
 
@@ -346,10 +370,11 @@ export default function EventsPage() {
   };
 
   const handleResetFilters = () => {
-    setFilterMyEvent("false");
+    setFilterMyEvent("");
     setFilterDate("");
     setFilterStatus("");
-    fetchFilteredEvents("false", "", "");
+    setCalendarSelectedDate("");
+    fetchFilteredEvents("", "", "");
   };
 
   const handleViewEventDetails = (evt) => {
@@ -482,14 +507,17 @@ export default function EventsPage() {
     if (s === "pending" || s === "waiting for action" || s === "waiting") {
       return <span className="badge bg-warning-subtle text-warning rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Pending</span>;
     }
-    if (s === "rejected" || s === "cancelled") {
+    if (s === "rejected" || s === "cancelled" || s === "canceled" || s === "declined") {
       return <span className="badge bg-danger-subtle text-danger rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Cancelled</span>;
     }
+    if (s === "completed") {
+      return <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Completed</span>;
+    }
     if (s === "ongoingevent" || s === "ongoing" || s === "upcoming") {
-      return <span className="badge bg-info-subtle text-info rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Upcoming</span>;
+      return <span className="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Upcoming</span>;
     }
     // Fallback display for dynamic status
-    return <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px", textTransform: "capitalize" }}>{status || "Pending"}</span>;
+    return <span className="badge bg-light text-dark border rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px", textTransform: "capitalize" }}>{status || "Event"}</span>;
   };
 
   const getMemberInvitationStatus = (memberId) => {
@@ -529,8 +557,11 @@ export default function EventsPage() {
                 <div className="col-lg-3 col-md-4 mb-4">
                   <div className="sidebar bg-white p-4 border rounded-3 shadow-sm">
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                      <h5 className="fw-bold text-dark m-0">Filter Events</h5>
-                      {(filterMyEvent || filterDate || filterStatus) && (
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="bi bi-funnel-fill text-primary"></i>
+                        <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px" }}>Filter Events</h5>
+                      </div>
+                      {(filterMyEvent || filterDate || filterStatus || calendarSelectedDate) && (
                         <button className="btn btn-link text-primary p-0 border-0 text-decoration-none small fw-bold" onClick={handleResetFilters}>
                           Reset All
                         </button>
@@ -539,14 +570,15 @@ export default function EventsPage() {
                     <hr className="mt-1 mb-4" />
 
                     <div className="mb-3">
-                      <label className="filter-label mb-2 fw-semibold text-dark small">My Event</label>
+                      <label className="filter-label mb-2 fw-semibold text-dark small">Event Scope</label>
                       <select 
-                        className="form-select"
+                        className="form-select form-select-sm py-2"
                         value={filterMyEvent}
                         onChange={(e) => setFilterMyEvent(e.target.value)}
                       >
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
+                        <option value="">All Events (All)</option>
+                        <option value="true">Organized by Me</option>
+                        <option value="false">Invitations (Joined)</option>
                       </select>
                     </div>
 
@@ -570,7 +602,7 @@ export default function EventsPage() {
                       </div>
                       <input
                         type="date"
-                        className="form-control"
+                        className="form-control form-control-sm py-2"
                         value={filterDate}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -583,18 +615,21 @@ export default function EventsPage() {
                     <div className="mb-4">
                       <label className="filter-label mb-2 fw-semibold text-dark small">Status</label>
                       <select 
-                        className="form-select"
+                        className="form-select form-select-sm py-2"
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
                       >
-                        <option value="">All</option>
-                        <option value="accepted">Accepted</option>
+                        <option value="">All Statuses</option>
                         <option value="upcoming">Upcoming</option>
+                        <option value="completed">Completed</option>
+                        <option value="accepted">Accepted (RSVP)</option>
+                        <option value="pending">Pending RSVP</option>
+                        <option value="cancelled">Cancelled</option>
                       </select>
                     </div>
 
-                    <button className="btn btn-primary w-100 rounded-1 py-2.5 fw-bold" onClick={handleApplyFilters}>
-                      Apply Filters
+                    <button className="btn btn-primary w-100 rounded-2 py-2.5 fw-bold shadow-sm" onClick={handleApplyFilters}>
+                      <i className="bi bi-search me-1.5"></i> Apply Filters
                     </button>
                   </div>
                 </div>
@@ -603,35 +638,69 @@ export default function EventsPage() {
                 <div className="col-lg-9 col-md-8">
                   <div className="bg-white border rounded-3 shadow-sm p-3 mb-4 mx-auto" style={{ width: "100%", maxWidth: "860px" }}>
                     <div className="d-flex justify-content-between align-items-center mb-2 px-1">
-                      <h6 className="fw-bold text-dark m-0">Upcoming Dates</h6>
-                      {calendarLoading && <span className="small text-muted">Loading...</span>}
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="bi bi-calendar-week text-primary"></i>
+                        <h6 className="fw-bold text-dark m-0">Upcoming Dates</h6>
+                        {eventDates.length > 0 && (
+                          <span className="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 fw-semibold" style={{ fontSize: "11px" }}>
+                            {eventDates.length} Events Scheduled
+                          </span>
+                        )}
+                      </div>
+                      <div className="d-flex align-items-center gap-2">
+                        {calendarSelectedDate && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary btn-sm rounded-pill py-0.5 px-2.5"
+                            style={{ fontSize: "11px" }}
+                            onClick={() => {
+                              setCalendarSelectedDate("");
+                              setFilterDate("");
+                              fetchFilteredEvents(filterMyEvent, "", filterStatus);
+                            }}
+                          >
+                            <i className="bi bi-x-circle me-1"></i>Clear Filter ({calendarSelectedDate})
+                          </button>
+                        )}
+                        {calendarLoading && <span className="small text-muted">Loading...</span>}
+                      </div>
                     </div>
 
-                    <div className="d-flex justify-content-between align-items-center mb-2">
+                    <div className="d-flex justify-content-between align-items-center mb-2 px-1 py-1 bg-light rounded-2">
                       <button
                         type="button"
-                        className="btn btn-link text-dark p-0 border-0"
+                        className="btn btn-sm btn-light border p-1 px-2.5 text-dark rounded-2"
                         onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
                         aria-label="Previous month"
                       >
-                        <i className="fa-solid fa-chevron-left"></i>
+                        <i className="fa-solid fa-chevron-left" style={{ fontSize: "12px" }}></i>
                       </button>
-                      <strong className="text-dark" style={{ fontSize: "0.95rem" }}>
-                        {calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-                      </strong>
+                      <div className="d-flex align-items-center gap-2">
+                        <strong className="text-dark" style={{ fontSize: "0.95rem" }}>
+                          {calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                        </strong>
+                        <button
+                          type="button"
+                          className="btn btn-link text-primary p-0 text-decoration-none fw-semibold"
+                          style={{ fontSize: "11px" }}
+                          onClick={() => setCalendarMonth(new Date())}
+                        >
+                          Today
+                        </button>
+                      </div>
                       <button
                         type="button"
-                        className="btn btn-link text-dark p-0 border-0"
+                        className="btn btn-sm btn-light border p-1 px-2.5 text-dark rounded-2"
                         onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
                         aria-label="Next month"
                       >
-                        <i className="fa-solid fa-chevron-right"></i>
+                        <i className="fa-solid fa-chevron-right" style={{ fontSize: "12px" }}></i>
                       </button>
                     </div>
 
-                    <div className="row g-1 text-center small text-muted fw-semibold mb-2 px-1">
+                    <div className="row g-1 text-center small text-muted fw-semibold mb-1 px-1">
                       {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                        <div key={day} className="col-12" style={{ width: "14.28%" }}>
+                        <div key={day} className="col-12" style={{ width: "14.28%", fontSize: "12px" }}>
                           {day}
                         </div>
                       ))}
@@ -648,23 +717,49 @@ export default function EventsPage() {
                               type="button"
                               onClick={() => day.isCurrentMonth && handleCalendarDateClick(day.key)}
                               disabled={!day.isCurrentMonth}
-                              className="btn btn-sm mx-auto d-flex align-items-center justify-content-center"
+                              className="btn btn-sm mx-auto d-flex flex-column align-items-center justify-content-center position-relative"
                               style={{
-                                height: "36px",
-                                width: isSelected ? "52px" : "36px",
+                                height: "38px",
+                                width: isSelected ? "46px" : "36px",
                                 padding: 0,
-                                background: isSelected ? "#e8f0ff" : hasEvent ? "#f3f7ff" : "transparent",
-                                color: isSelected ? "#1e3a8a" : day.isCurrentMonth ? "#1f2937" : "#9ca3af",
-                                border: isSelected ? "1px solid #dfe8ff" : hasEvent ? "1px solid #dfe8ff" : "1px solid transparent",
-                                borderRadius: isSelected ? "18px" : "50%",
-                                fontWeight: isSelected ? 700 : 500,
+                                background: isSelected 
+                                  ? "#2563eb" 
+                                  : hasEvent 
+                                    ? "#eff6ff" 
+                                    : "transparent",
+                                color: isSelected 
+                                  ? "#ffffff" 
+                                  : hasEvent 
+                                    ? "#1d4ed8" 
+                                    : day.isCurrentMonth 
+                                      ? "#1f2937" 
+                                      : "#d1d5db",
+                                border: isSelected 
+                                  ? "1px solid #1d4ed8" 
+                                  : hasEvent 
+                                    ? "1px solid #bfdbfe" 
+                                    : "1px solid transparent",
+                                borderRadius: isSelected ? "12px" : "50%",
+                                fontWeight: isSelected ? 700 : hasEvent ? 600 : 500,
                                 opacity: 1,
-                                boxShadow: isSelected ? "0 2px 8px rgba(59, 130, 246, 0.10)" : "none",
-                                transition: "all 0.2s ease",
+                                boxShadow: isSelected ? "0 4px 10px rgba(37, 99, 235, 0.25)" : "none",
+                                transition: "all 0.15s ease",
+                                cursor: day.isCurrentMonth ? "pointer" : "default",
                               }}
-                              title={hasEvent ? "Event date" : "No event"}
+                              title={hasEvent ? `Event scheduled on ${day.key}` : day.key}
                             >
-                              {day.date.getDate()}
+                              <span style={{ fontSize: "13px", lineHeight: "1" }}>{day.date.getDate()}</span>
+                              {hasEvent && !isSelected && (
+                                <span 
+                                  style={{ 
+                                    width: "4px", 
+                                    height: "4px", 
+                                    borderRadius: "50%", 
+                                    backgroundColor: "#2563eb", 
+                                    marginTop: "2px" 
+                                  }}
+                                ></span>
+                              )}
                             </button>
                           </div>
                         );

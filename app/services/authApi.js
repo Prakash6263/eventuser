@@ -33,6 +33,17 @@ export const verifyOtpApi = async ({ userId, otp }) => {
   });
 };
 
+// 2b. Resend OTP API
+export const resendOtpApi = async ({ email, mobile }) => {
+  const payload = {};
+  if (email) payload.email = email;
+  if (mobile) payload.mobile = mobile;
+  return await apiRequest("/auth/resend-otp", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
+
 // 3. Login API
 export const loginApi = async ({ email, mobile, countryCode, password }) => {
   const payload = email

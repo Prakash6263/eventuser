@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { authService } from "../services/authService";
+import CountryCodePicker from "../components/CountryCodePicker";
 
 export default function SignupPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -38,6 +40,7 @@ export default function SignupPage() {
         fullName,
         email,
         mobile,
+        countryCode,
         password,
         register_id: "34444",
       });
@@ -47,7 +50,7 @@ export default function SignupPage() {
         const targetUserId = res.userId || "";
         setTimeout(() => {
           router.push(
-            `/verification?userId=${encodeURIComponent(targetUserId)}&mobile=${encodeURIComponent(mobile)}`
+            `/verification?userId=${encodeURIComponent(targetUserId)}&email=${encodeURIComponent(email)}&mobile=${encodeURIComponent(mobile)}&countryCode=${encodeURIComponent(countryCode)}`
           );
         }, 1200);
       } else {
@@ -136,17 +139,23 @@ export default function SignupPage() {
                     />
                   </div>
 
-                  {/* Mobile Number */}
+                  {/* Mobile Number with Country Code */}
                   <div className="form-group mb-3">
                     <label className="form-label text-secondary small fw-medium mb-1">Mobile Number*</label>
-                    <input
-                      type="tel"
-                      className="form-control rounded-3 h_50"
-                      placeholder="Enter mobile number"
-                      value={mobile}
-                      onChange={(e) => setMobile(e.target.value)}
-                      required
-                    />
+                    <div className="input-group">
+                      <CountryCodePicker
+                        value={countryCode}
+                        onChange={(val) => setCountryCode(val)}
+                      />
+                      <input
+                        type="tel"
+                        className="form-control rounded-end-3 h_50"
+                        placeholder="Enter mobile number"
+                        value={mobile}
+                        onChange={(e) => setMobile(e.target.value)}
+                        required
+                      />
+                    </div>
                   </div>
 
                   {/* Password */}

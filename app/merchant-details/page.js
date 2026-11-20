@@ -167,12 +167,23 @@ function MerchantDetailsContent() {
       const payload = {
         products: selectedProducts.map(p => ({ productId: p._id, quantity: quantities[p._id] })),
         additionalServiceId,
-        finalAmount: finalAmount.toFixed(2),
+        finalAmount: Number(finalAmount.toFixed(2)),
         merchantId: merchant._id || merchant.id,
-        discountAmount: discountAmount.toFixed(1),
+        discountAmount: Number(discountAmount.toFixed(2)),
         eventId,
-        couponId: appliedCoupon?._id || "",
       };
+
+      if (appliedCoupon?._id) {
+        payload.couponId = appliedCoupon._id;
+      }
+
+      const defaultLocId = Array.isArray(merchant.serviceLocationIds) && merchant.serviceLocationIds.length > 0
+        ? (merchant.serviceLocationIds[0]._id || merchant.serviceLocationIds[0])
+        : (merchant.serviceLocationId?._id || merchant.serviceLocationId || null);
+
+      if (defaultLocId) {
+        payload.serviceLocationId = defaultLocId;
+      }
       const res = await apiRequest("/event/service-booking-request", { method: "POST", body: payload });
       if (res && res.status) {
         setBookingResult(res.booking || null);
@@ -726,20 +737,40 @@ function MerchantDetailsContent() {
       <div className="wrapper">
         {/* Hero Banner */}
         <div
-          className="topper d-flex align-items-end mb-0"
           style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,.55)),url('${merchant.bannerImage || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80"}')`,
-            backgroundSize: "cover", backgroundPosition: "center",
-            height: "380px", color: "#fff", paddingBottom: "40px"
+            backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.72) 100%), url('${merchant.bannerImage || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80"}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            minHeight: "340px",
+            color: "#fff",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            padding: "24px 0 36px",
+            borderRadius: 0,
+            marginBottom: 0
           }}
         >
+          {/* Top navigation inside banner */}
           <div className="container">
-            <div className="mb-3">
-              <button onClick={() => router.back()} className="btn btn-light btn-sm rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-2 shadow-sm border-0" style={{ fontSize: "13px", opacity: 0.9 }}>
-                <i className="fa-solid fa-arrow-left"></i> Back
-              </button>
-            </div>
-            <div className="d-flex align-items-center gap-2 mb-2">
+            <button
+              onClick={() => router.back()}
+              className="btn rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm text-white"
+              style={{
+                background: "rgba(0, 0, 0, 0.45)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                fontSize: "13px",
+                transition: "all 0.2s"
+              }}
+            >
+              <i className="fa-solid fa-arrow-left"></i> Back
+            </button>
+          </div>
+
+          {/* Banner Details at bottom */}
+          <div className="container">
+            <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
               <span className="badge bg-primary px-3 py-2 rounded-pill fw-bold" style={{ fontSize: "12px" }}>
                 {merchant.serviceId?.servicesName || "Merchant Partner"}
               </span>
@@ -749,22 +780,20 @@ function MerchantDetailsContent() {
                 </span>
               )}
             </div>
-            <h1 className="fw-bold m-0" style={{ fontSize: "38px", textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>{merchant.serviceName}</h1>
+            <h1 className="fw-bold m-0" style={{ fontSize: "36px", textShadow: "0 2px 8px rgba(0,0,0,0.5)", letterSpacing: "-0.4px" }}>
+              {merchant.serviceName}
+            </h1>
             {merchant.serviceSlogan && (
-              <p className="lead m-0 mt-1 opacity-90 fw-medium" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.4)" }}>{merchant.serviceSlogan}</p>
+              <p className="lead m-0 mt-1 opacity-90 fw-medium" style={{ fontSize: "16px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
+                {merchant.serviceSlogan}
+              </p>
             )}
           </div>
         </div>
 
         {/* Details body */}
-        <div className="event-dt-block p-80 bg-light" style={{ paddingTop: "40px" }}>
+        <div className="event-dt-block p-80 bg-light" style={{ paddingTop: "36px" }}>
           <div className="container">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <button onClick={() => router.back()} className="btn btn-outline-secondary rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2 bg-white shadow-sm border-0 text-dark">
-                <i className="fa-solid fa-arrow-left"></i> Back
-              </button>
-            </div>
-
             <div className="row g-4">
               {/* Left column */}
               <div className="col-lg-8">
@@ -901,7 +930,7 @@ function MerchantDetailsContent() {
                     <button
                       type="button"
                       onClick={() => {
-                        const mId = merchant._id || merchant.id || "";
+                        const mId = merchant.merchant?._id || merchant.merchant?.id || merchant.merchantId?._id || merchant.merchantId || merchant._id || merchant.id || "";
                         const mName = encodeURIComponent(merchant.serviceName || merchant.fullName || "Merchant");
                         const targetUrl = `/merchant-chat?${eventId ? `eventId=${eventId}&` : ""}merchantId=${mId}&merchantName=${mName}`;
                         router.push(targetUrl);
