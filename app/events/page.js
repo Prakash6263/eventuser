@@ -8,7 +8,7 @@ import Footer from "../components/Footer";
 import SafeImage from "../components/SafeImage";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { getEventMediaApi } from "../services/eventApi";
-import { handleAuthFailure, isAuthFailureResponse } from "../services/apiClient";
+import { handleAuthFailure, isAuthFailureResponse, getUser } from "../services/apiClient";
 import EventMediaModal from "../components/EventMediaModal";
 
 export default function EventsPage() {
@@ -384,16 +384,82 @@ export default function EventsPage() {
     router.push(`/event-details?id=${rawEvent._id || evt.id}`);
   };
 
+  const checkEventAccess = (evt) => {
+    if (!evt || !evt.rawEvent) return { hasAccess: false, reason: "Event details not found." };
+    
+    // Check if user is logged in
+    const user = getUser();
+    const currentUserId = user?._id || user?.id || "";
+
+    // 1. Is the current user the Event Creator?
+    const eventCreatorId = evt.rawEvent.userId?._id || evt.rawEvent.userId || evt.rawEvent.eventcreator?._id || "";
+    if (currentUserId && eventCreatorId && String(eventCreatorId) === String(currentUserId)) {
+      return { hasAccess: true, isCreator: true };
+    }
+
+    // 2. Check if the user is an accepted invitee via myInvitationStatus
+    const invStatus = (evt.rawEvent.myInvitationStatus || "").toLowerCase();
+    if (invStatus === "accepted") {
+      return { hasAccess: true, isCreator: false };
+    }
+
+    // 3. Check inside invitedUsers array
+    if (Array.isArray(evt.rawEvent.invitedUsers)) {
+      const match = evt.rawEvent.invitedUsers.find(
+        (u) => String(u.userId?._id || u.userId || u._id) === String(currentUserId)
+      );
+      if (match) {
+        const status = (match.status || "").toLowerCase();
+        if (status === "accepted") {
+          return { hasAccess: true, isCreator: false };
+        }
+        if (status === "pending") {
+          return { hasAccess: false, reason: "Your invitation is still pending. You can participate once you accept the invitation." };
+        }
+        if (status === "declined" || status === "rejected") {
+          return { hasAccess: false, reason: "You have declined the invitation to this event." };
+        }
+      }
+    }
+
+    // 4. Check contactList (if contact has matching email or mobile)
+    if (Array.isArray(evt.rawEvent.contactList)) {
+      const match = evt.rawEvent.contactList.find(
+        (c) => (currentUserId && String(c._id || c.userId) === String(currentUserId)) ||
+               (user?.email && c.email && c.email.toLowerCase() === user.email.toLowerCase()) ||
+               (user?.mobile && c.mobile && c.mobile === user.mobile)
+      );
+      if (match) {
+        const status = (match.status || "").toLowerCase();
+        if (status === "accepted" || status === "approved") {
+          return { hasAccess: true, isCreator: false };
+        }
+        if (status === "pending" || status === "waiting") {
+          return { hasAccess: false, reason: "Your invitation is pending. Please accept the invitation to access the group discussion." };
+        }
+      }
+    }
+
+    // 5. If event is Ongoing, Completed, Upcoming, or Accepted and no pending flag:
+    const evStatus = (evt.status || "").toLowerCase();
+    const rawEvtStatus = (evt.rawEvent?.status || "").toLowerCase();
+    if (["accepted", "ongoing", "approved", "ongoingevent", "completed", "upcoming"].includes(evStatus) ||
+        ["ongoingevent", "completed", "ongoing"].includes(rawEvtStatus)) {
+      return { hasAccess: true, isCreator: false };
+    }
+
+    return { hasAccess: false, reason: "You can only view chat discussions once your invitation has been accepted." };
+  };
+
   // Group Chat Fetch & Simulation Flow
   const handleOpenChat = async (evt, e) => {
     e.stopPropagation();
-    const userStatus = evt.status?.toLowerCase();
-    const isAccepted = ["accepted", "ongoing", "approved", "ongoingevent"].includes(userStatus);
+    const access = checkEventAccess(evt);
     
-    if (!isAccepted) {
+    if (!access.hasAccess) {
       setActiveChatEvent({
         ...evt,
-        notAcceptedMessage: "You can only view chat discussions once your invitation has been accepted."
+        notAcceptedMessage: access.reason || "You can only view chat discussions once your invitation has been accepted."
       });
       setChatLoading(false);
       return;
@@ -408,9 +474,24 @@ export default function EventsPage() {
       const res = await getEventGroupChatApi(evt.id);
       if (res && res.status && res.data) {
         setChatGroupData(res.data);
+      } else if (res && res.message && (res.message.includes("Access denied") || res.message.includes("invited"))) {
+        setActiveChatEvent({
+          ...evt,
+          notAcceptedMessage: res.message
+        });
+        setChatLoading(false);
+        return;
       }
     } catch (err) {
       console.error("Failed to retrieve live group chat:", err);
+      if (err.message && (err.message.includes("Access denied") || err.message.includes("403"))) {
+        setActiveChatEvent({
+          ...evt,
+          notAcceptedMessage: "Access denied. You must be the event creator or an accepted invitee."
+        });
+        setChatLoading(false);
+        return;
+      }
     } finally {
       setChatLoading(false);
     }
@@ -479,14 +560,13 @@ export default function EventsPage() {
   // Gallery Integration
   const handleOpenGallery = (evt, e) => {
     e.stopPropagation();
-    const userStatus = evt.status?.toLowerCase();
-    const isAccepted = ["accepted", "ongoing", "approved", "ongoingevent"].includes(userStatus);
+    const access = checkEventAccess(evt);
     
-    if (!isAccepted) {
+    if (!access.hasAccess) {
       setActiveGalleryEvent({
         ...evt,
         photos: [],
-        notAcceptedMessage: "You can only view event media files once your invitation has been accepted."
+        notAcceptedMessage: access.reason || "You can only view event media files once your invitation has been accepted."
       });
       return;
     }
