@@ -613,6 +613,7 @@ export default function CreateEventPage() {
       }
       if (selectedRestaurant) {
         formData.append("merchantId", selectedRestaurant);
+        formData.append("reservationType", "1");
       }
       if (selectedLocation && selectedLocation._id) {
         formData.append("addressId", selectedLocation._id);
