@@ -26,6 +26,7 @@ function MerchantDetailsContent() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingResult, setBookingResult] = useState(null); // API response.booking on success
+  const [pageLoading, setPageLoading] = useState(true);
 
   const handleBack = () => {
     if (bookingStep > 0) { setBookingStep(bookingStep - 1); return; }
@@ -77,48 +78,12 @@ function MerchantDetailsContent() {
           }
         }
 
-        if (foundMerchant) {
-          setMerchant(foundMerchant);
-        } else {
-          // Fallback mock merchant if offline or empty
-          setMerchant({
-            _id: "68c259b5a6251e9e18484fdd",
-            serviceName: "MyMarkwt",
-            serviceSlogan: "Its@aazaing",
-            serviceDescription: "Serving premium experiences and catering setup for all high-end corporate events, weddings, and parties.",
-            email: "myrestaurent@gmail.com",
-            phone: "4884949493",
-            mobile: "810300651",
-            isVerified: true,
-            countryCode: "+966",
-            onlineReservation: true,
-            cuisineName: "Chinese, Italian",
-            bannerImage: "https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=600",
-            serviceLocationIds: [{
-              _id: "loc1",
-              addressName: "HomeTown",
-              address: "Ghatiya, Ujjain, Madhya Pradesh, India",
-              capacity: 300,
-              weeklySchedule: [
-                { day: "Sunday", morning: { from: "10:57", to: "20:00" }, evening: { from: "20:00", to: "23:30" } },
-                { day: "Monday", morning: { from: "09:00", to: "17:00" }, evening: { from: "00:00", to: "00:00" } },
-              ]
-            }],
-            couponIds: [{
-              _id: "c1", couponName: "50%OFF", discount: "50",
-              validFrom: "11-09-2025", validTo: "11-09-2026",
-              description: "Applicable on all catering orders above $500."
-            }],
-            products: [{
-              _id: "p1", name: "Gourmet Banquet",
-              description: "Complete buffet setup with starters, mains, and desserts.",
-              price: 450,
-              photo: [{ fileName: "https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=600&q=80" }]
-            }]
-          });
-        }
+        setMerchant(foundMerchant || null);
       } catch (e) {
         console.error("Failed to parse merchant details:", e);
+        setMerchant(null);
+      } finally {
+        setPageLoading(false);
       }
     };
 
@@ -221,12 +186,39 @@ function MerchantDetailsContent() {
     router.back();
   };
 
-  if (!merchant) {
+  if (pageLoading) {
     return (
       <>
         <Header />
         <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
           <div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (!merchant) {
+    return (
+      <>
+        <Header />
+        <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light p-4">
+          <div className="text-center p-5 bg-white rounded-4 border shadow-sm" style={{ maxWidth: "460px" }}>
+            <div className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center text-muted mb-3" style={{ width: "64px", height: "64px", fontSize: "28px" }}>
+              <i className="fa-solid fa-shop-slash"></i>
+            </div>
+            <h4 className="fw-bold text-dark mb-2">Merchant Not Found</h4>
+            <p className="text-muted small mb-4">
+              We couldn&apos;t find the requested merchant or venue. It may have been deactivated or removed.
+            </p>
+            <button
+              onClick={() => router.back()}
+              className="btn btn-primary rounded-pill px-4 fw-semibold"
+              style={{ background: "#3e56f0", border: "none" }}
+            >
+              <i className="fa-solid fa-arrow-left me-2"></i> Go Back
+            </button>
+          </div>
         </div>
         <Footer />
       </>
