@@ -3,7 +3,11 @@
 html,
 body {
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+body {
+  overflow-y: visible !important;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -12,4 +16,42 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ── Sticky Sidebar Configuration for Dashboard Pages ── */
+.wrapper,
+.event-dt-block,
+.user-profile-wrapper,
+.hero-banner {
+  overflow: visible !important;
+}
+
+@media (min-width: 992px) {
+  .event-dt-block .container > .row,
+  .user-profile-wrapper .container > .row {
+    display: flex !important;
+    align-items: flex-start !important;
+  }
+
+  .event-dt-block .col-lg-3,
+  .user-profile-wrapper .col-lg-3 {
+    position: sticky !important;
+    top: 96px !important;
+    align-self: flex-start !important;
+    height: fit-content !important;
+    z-index: 10 !important;
+  }
+
+  .user-profile-sidebar {
+    position: sticky !important;
+    top: 96px !important;
+    align-self: flex-start !important;
+    max-height: calc(100vh - 115px) !important;
+    overflow-y: auto !important;
+    scrollbar-width: none !important;
+  }
+
+  .user-profile-sidebar::-webkit-scrollbar {
+    display: none !important;
+  }
 }
