@@ -109,6 +109,7 @@ export default function CreateEventPage() {
   const [createdEventId, setCreatedEventId] = useState("");
   const [createdMerchantName, setCreatedMerchantName] = useState("");
   const [resAdultCount, setResAdultCount] = useState("");
+  const [resChildCount, setResChildCount] = useState("");
   const [resInstruction, setResInstruction] = useState("");
   const [resSubmitting, setResSubmitting] = useState(false);
   const [resSuccess, setResSuccess] = useState(false);
@@ -840,7 +841,7 @@ export default function CreateEventPage() {
       const payload = {
         eventId: eventIdVal,
         couponId: "",
-        childCount: "",
+        childCount: String(resChildCount || "0"),
         instruction: resInstruction,
         adultCount: String(resAdultCount),
         guestType: "Normal"
@@ -848,10 +849,17 @@ export default function CreateEventPage() {
       const res = await makeReservationApi(payload);
       if (res && res.status === true) {
         setResSuccess(true);
+        await Swal.fire({
+          icon: "success",
+          title: "Booking Request Sent!",
+          text: `Your table reservation request for ${resAdultCount} guests has been sent to ${createdMerchantName || "the venue"}.`,
+          timer: 2200,
+          showConfirmButton: false,
+        });
         setTimeout(() => {
           setReservationModal(false);
           router.push("/my-reservations");
-        }, 1500);
+        }, 1200);
       } else {
         throw new Error(res?.message || "Failed to save reservation.");
       }
@@ -1188,6 +1196,35 @@ export default function CreateEventPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Restaurant Reservation Prompt */}
+                {selectedRestaurant && (
+                  <div 
+                    className="p-3.5 mb-3 rounded-4 d-flex flex-wrap align-items-center justify-content-between gap-3 text-start mt-3"
+                    style={{ background: "#f5f3ff", border: "1.5px solid #c4b5fd" }}
+                  >
+                    <div>
+                      <div className="d-flex align-items-center gap-2 mb-1">
+                        <span className="badge rounded-pill text-white" style={{ background: "#7c3aed", fontSize: "11px" }}>Recommended Step</span>
+                        <strong className="text-dark" style={{ fontSize: "15px" }}>Table Reservation</strong>
+                      </div>
+                      <p className="text-muted small mb-0" style={{ fontSize: "13px" }}>
+                        Reserve tables/seats at <strong>{createdMerchantName || "the selected restaurant"}</strong> for your guests now?
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResAdultCount(String(selectedGuests?.length || 1));
+                        setReservationModal(true);
+                      }}
+                      className="btn rounded-pill px-4 py-2 text-white fw-bold shadow-sm d-flex align-items-center gap-2"
+                      style={{ background: "#7c3aed", borderColor: "#7c3aed", fontSize: "13.5px" }}
+                    >
+                      <i className="fa-solid fa-utensils"></i> Reserve Table Now
+                    </button>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="d-flex flex-wrap align-items-center justify-content-center gap-2.5 mt-4">
@@ -1709,6 +1746,113 @@ export default function CreateEventPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {reservationModal && (
+        <div className={styles.dialogBackdrop} role="presentation" style={{ zIndex: 1060 }}>
+          <div 
+            className="bg-white rounded-4 shadow-lg p-4 position-relative mx-3" 
+            style={{ maxWidth: "480px", width: "100%" }}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2.5">
+              <div className="d-flex align-items-center gap-2">
+                <div 
+                  className="rounded-circle d-flex align-items-center justify-content-center text-white"
+                  style={{ width: "36px", height: "36px", background: "#7c3aed" }}
+                >
+                  <i className="fa-solid fa-utensils"></i>
+                </div>
+                <div>
+                  <h5 className="fw-bold text-dark mb-0" style={{ fontSize: "16px" }}>Reserve Table at Venue</h5>
+                  <small className="text-muted">{createdMerchantName || "Participating Restaurant"}</small>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                className="btn-close" 
+                onClick={() => setReservationModal(false)}
+                disabled={resSubmitting}
+              ></button>
+            </div>
+
+            <form onSubmit={handleMakeReservation}>
+              <div className="mb-3 text-start">
+                <label className="form-label fw-semibold text-dark small mb-1">
+                  <i className="fa-solid fa-users me-1 text-primary"></i> Number of Adult Guests <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  className="form-control"
+                  value={resAdultCount}
+                  onChange={(e) => setResAdultCount(e.target.value)}
+                  placeholder="e.g. 10"
+                />
+                <small className="text-muted" style={{ fontSize: "11.5px" }}>Pre-filled with your invited guests count.</small>
+              </div>
+
+              <div className="mb-3 text-start">
+                <label className="form-label fw-semibold text-dark small mb-1">
+                  <i className="fa-solid fa-child me-1 text-secondary"></i> Children Count (Optional)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  className="form-control"
+                  value={resChildCount}
+                  onChange={(e) => setResChildCount(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="mb-3 text-start">
+                <label className="form-label fw-semibold text-dark small mb-1">
+                  <i className="fa-regular fa-comment-dots me-1 text-secondary"></i> Special Instructions (Optional)
+                </label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={resInstruction}
+                  onChange={(e) => setResInstruction(e.target.value)}
+                  placeholder="e.g. Window-side seating preferred, birthday celebration setup, etc."
+                  style={{ fontSize: "13px" }}
+                ></textarea>
+              </div>
+
+              {resError && (
+                <div className="alert alert-danger py-2 px-3 small rounded-3 mb-3 text-start">
+                  <i className="fa-solid fa-circle-exclamation me-1"></i> {resError}
+                </div>
+              )}
+
+              <div className="d-flex align-items-center justify-content-end gap-2 pt-2 border-top">
+                <button
+                  type="button"
+                  className="btn btn-light rounded-pill px-3.5 py-2 fw-semibold text-secondary"
+                  onClick={() => setReservationModal(false)}
+                  disabled={resSubmitting}
+                >
+                  Skip for Now
+                </button>
+                <button
+                  type="submit"
+                  className="btn text-white rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2"
+                  style={{ background: "#7c3aed", borderColor: "#7c3aed" }}
+                  disabled={resSubmitting}
+                >
+                  {resSubmitting ? (
+                    <><i className="fa-solid fa-spinner fa-spin"></i> Sending Request...</>
+                  ) : (
+                    <><i className="fa-solid fa-paper-plane"></i> Send Booking Request</>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

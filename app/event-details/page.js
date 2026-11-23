@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi } from "../services/eventApi";
+import { makeReservationApi, getReservationDetailsByIdApi } from "../services/reservationApi";
 import { apiRequest } from "../services/apiClient";
 import Swal from "sweetalert2";
 
@@ -135,6 +136,63 @@ function EventDetailsContent() {
 
   // Publish Draft state
   const [publishing, setPublishing] = useState(false);
+
+  // Table Reservation state
+  const [reservation, setReservation] = useState(null);
+  const [loadingReservation, setLoadingReservation] = useState(false);
+  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [resAdults, setResAdults] = useState("1");
+  const [resChildren, setResChildren] = useState("0");
+  const [resInstructions, setResInstructions] = useState("");
+  const [resSubmitting, setResSubmitting] = useState(false);
+  const [resError, setResError] = useState("");
+
+  const handleOpenReservationModal = () => {
+    const defaultGuests = (event?.selectedGuests && event.selectedGuests.length > 0) ? String(event.selectedGuests.length) : "1";
+    setResAdults(defaultGuests);
+    setResChildren("0");
+    setResInstructions("");
+    setResError("");
+    setShowReservationModal(true);
+  };
+
+  const handleMakeReservation = async (e) => {
+    if (e) e.preventDefault();
+    if (!resAdults || isNaN(resAdults) || parseInt(resAdults) <= 0) {
+      setResError("Please enter a valid number of adults.");
+      return;
+    }
+    try {
+      setResSubmitting(true);
+      setResError("");
+      const payload = {
+        eventId: event.eventId,
+        adultCount: String(resAdults),
+        childCount: String(resChildren || "0"),
+        instruction: resInstructions,
+        guestType: "Normal",
+      };
+      const res = await makeReservationApi(payload);
+      if (res && res.status) {
+        setShowReservationModal(false);
+        const newRes = res.data?.makeReservation || res.data || { status: "pending", adultCount: resAdults, instruction: resInstructions };
+        setReservation(newRes);
+        await Swal.fire({
+          icon: "success",
+          title: "Booking Request Sent!",
+          text: `Your table reservation request for ${resAdults} guests has been sent to the restaurant.`,
+          timer: 2200,
+          showConfirmButton: false,
+        });
+      } else {
+        setResError(res?.message || "Failed to submit booking request.");
+      }
+    } catch (err) {
+      setResError(err.message || "Failed to submit reservation.");
+    } finally {
+      setResSubmitting(false);
+    }
+  };
 
   const handleOpenEditModal = () => {
     if (!event) return;
@@ -266,6 +324,21 @@ function EventDetailsContent() {
           const userObj = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user_info")) : null;
           const mapped = mapEventData(res.data, userObj);
           setEvent(mapped);
+
+          // Fetch existing reservation for this event
+          try {
+            setLoadingReservation(true);
+            const resData = await getReservationDetailsByIdApi(eventId);
+            if (resData && resData.status && resData.data) {
+              setReservation(resData.data.makeReservation || resData.data.reservation || resData.data);
+            } else {
+              setReservation(null);
+            }
+          } catch (rErr) {
+            setReservation(null);
+          } finally {
+            setLoadingReservation(false);
+          }
         } else {
           setApiMessage({ type: "danger", text: res?.message || "Failed to load event details." });
         }
@@ -1033,6 +1106,43 @@ function EventDetailsContent() {
                     View Venue Details
                   </button>
                 )}
+
+                {isRestaurantOption && isCreator && (
+                  <div className="mt-3 pt-3 border-top">
+                    {reservation ? (
+                      <div className="p-3 rounded-3 border text-start" style={{
+                        background: reservation.status === "active" ? "#f0fdf4" : reservation.status === "cancelled" ? "#fef2f2" : "#fffbeb",
+                        borderColor: reservation.status === "active" ? "#bbf7d0" : reservation.status === "cancelled" ? "#fecaca" : "#fcd34d"
+                      }}>
+                        <div className="d-flex align-items-center justify-content-between mb-1.5">
+                          <small className="fw-bold" style={{
+                            color: reservation.status === "active" ? "#166534" : reservation.status === "cancelled" ? "#991b1b" : "#92400e"
+                          }}>
+                            <i className={reservation.status === "active" ? "fa-solid fa-circle-check me-1 text-success" : reservation.status === "cancelled" ? "fa-solid fa-circle-xmark me-1 text-danger" : "fa-solid fa-clock me-1 text-warning"}></i>
+                            {reservation.status === "active" ? "Reservation Confirmed" : reservation.status === "cancelled" ? "Reservation Cancelled" : "Reservation Pending"}
+                          </small>
+                          <Link href="/my-reservations" className="text-decoration-none small fw-semibold" style={{ fontSize: "11px" }}>
+                            Manage
+                          </Link>
+                        </div>
+                        <p className="text-muted small mb-0" style={{ fontSize: "12px" }}>
+                          Table for <strong>{reservation.adultCount || event.selectedGuests?.length || 1} Guests</strong>
+                          {reservation.status === "pending" && " (Awaiting venue confirmation)"}
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn w-100 rounded-pill py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                        onClick={handleOpenReservationModal}
+                        style={{ border: "1.5px solid #7c3aed", color: "#7c3aed", background: "#f5f3ff" }}
+                      >
+                        <i className="fa-solid fa-utensils"></i>
+                        Reserve Table at Venue
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Event Setup & Settings Widget */}
@@ -1233,6 +1343,116 @@ function EventDetailsContent() {
         </div>
       </div>
       </div>
+
+      {/* Table Reservation Modal */}
+      {showReservationModal && (
+        <div 
+          className="modal fade show d-block" 
+          tabIndex="-1" 
+          role="dialog"
+          style={{ background: "rgba(0, 0, 0, 0.5)", zIndex: 1055 }}
+        >
+          <div className="modal-dialog modal-dialog-centered px-3" style={{ maxWidth: "460px" }}>
+            <div className="modal-content border-0 rounded-4 shadow-lg p-4 position-relative bg-white text-start">
+              <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2.5">
+                <div className="d-flex align-items-center gap-2">
+                  <div 
+                    className="rounded-circle d-flex align-items-center justify-content-center text-white"
+                    style={{ width: "36px", height: "36px", background: "#7c3aed" }}
+                  >
+                    <i className="fa-solid fa-utensils"></i>
+                  </div>
+                  <div>
+                    <h5 className="fw-bold text-dark mb-0" style={{ fontSize: "16px" }}>Reserve Table at Venue</h5>
+                    <small className="text-muted">{restaurant?.serviceName || restaurant?.name || "Participating Restaurant"}</small>
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowReservationModal(false)}
+                  disabled={resSubmitting}
+                ></button>
+              </div>
+
+              <form onSubmit={handleMakeReservation}>
+                <div className="mb-3">
+                  <label className="form-label fw-semibold text-dark small mb-1">
+                    <i className="fa-solid fa-users me-1 text-primary"></i> Number of Adult Guests <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    className="form-control"
+                    value={resAdults}
+                    onChange={(e) => setResAdults(e.target.value)}
+                    placeholder="e.g. 10"
+                  />
+                  <small className="text-muted" style={{ fontSize: "11.5px" }}>Pre-filled based on your invited guests list.</small>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-semibold text-dark small mb-1">
+                    <i className="fa-solid fa-child me-1 text-secondary"></i> Children Count (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="form-control"
+                    value={resChildren}
+                    onChange={(e) => setResChildren(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-semibold text-dark small mb-1">
+                    <i className="fa-regular fa-comment-dots me-1 text-secondary"></i> Special Instructions (Optional)
+                  </label>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    value={resInstructions}
+                    onChange={(e) => setResInstructions(e.target.value)}
+                    placeholder="e.g. Window-side table, birthday setup, high chair needed..."
+                    style={{ fontSize: "13px" }}
+                  ></textarea>
+                </div>
+
+                {resError && (
+                  <div className="alert alert-danger py-2 px-3 small rounded-3 mb-3">
+                    <i className="fa-solid fa-circle-exclamation me-1"></i> {resError}
+                  </div>
+                )}
+
+                <div className="d-flex align-items-center justify-content-end gap-2 pt-2 border-top">
+                  <button
+                    type="button"
+                    className="btn btn-light rounded-pill px-3.5 py-2 fw-semibold text-secondary"
+                    onClick={() => setShowReservationModal(false)}
+                    disabled={resSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn text-white rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2"
+                    style={{ background: "#7c3aed", borderColor: "#7c3aed" }}
+                    disabled={resSubmitting}
+                  >
+                    {resSubmitting ? (
+                      <><i className="fa-solid fa-spinner fa-spin"></i> Sending Request...</>
+                    ) : (
+                      <><i className="fa-solid fa-paper-plane"></i> Send Booking Request</>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Venue Details Modal dialog */}
       {showVenueModal && (event.serviceLocationId || restaurant) && (
