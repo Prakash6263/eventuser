@@ -11,6 +11,7 @@ import { syncContactsApi, getAllUsersApi, getAddressesApi, addAddressApi } from 
 import { makeReservationApi } from "../services/reservationApi";
 import CountryCodePicker from "../components/CountryCodePicker";
 import { isLoggedIn } from "../services/apiClient";
+import Swal from "sweetalert2";
 
 const steps = [
   { id: "date", label: "Date & time", icon: "fa-calendar-days" },
@@ -911,7 +912,44 @@ export default function CreateEventPage() {
     } else if (step === "restaurants") {
       setStep("guests");
     } else if (step === "guests") {
-      setStep("guestInfo");
+      const venueCap = Number(selectedLocation?.capacity || 0);
+      const totalInvited = selectedGuests.length;
+      if (venueCap > 0 && totalInvited > venueCap) {
+        const restObj = merchantRestaurants.find((m) => (m._id || m.id) === selectedRestaurant);
+        const restName = restObj?.serviceName || restObj?.name || "The selected venue";
+
+        Swal.fire({
+          title: "Venue Capacity Warning",
+          html: `<div style="text-align: left; font-size: 14px; color: #374151;">
+            <p class="mb-2"><strong>${restName}</strong> has a seating capacity of <strong>${venueCap} guests</strong>.</p>
+            <p class="mb-2">You have selected <strong>${totalInvited} guests</strong> (${totalInvited - venueCap} more than the venue capacity).</p>
+            <p class="text-muted mb-0">Some guests may not have guaranteed seating. Do you still want to proceed?</p>
+          </div>`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#5b5fc7",
+          cancelButtonColor: "#6b7280",
+          confirmButtonText: "Yes, Proceed",
+          cancelButtonText: "Review Guests",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            if (isEditingFromReview) {
+              setStep("review");
+              setIsEditingFromReview(false);
+            } else {
+              setStep("guestInfo");
+            }
+          }
+        });
+        return;
+      }
+
+      if (isEditingFromReview) {
+        setStep("review");
+        setIsEditingFromReview(false);
+      } else {
+        setStep("guestInfo");
+      }
     } else if (step === "guestInfo") setStep("registry");
     else if (step === "registry") setStep("notes");
     else if (step === "notes") setStep("content");
@@ -1460,6 +1498,8 @@ export default function CreateEventPage() {
                         markAll={markAllGuests}
                         openAddContact={() => { setContactError(""); setContactModalOpen(true); }}
                         loading={loadingContacts}
+                        venueCapacity={Number(selectedLocation?.capacity || 0)}
+                        venueName={merchantRestaurants.find((item) => (item._id || item.id) === selectedRestaurant)?.serviceName || merchantRestaurants.find((item) => (item._id || item.id) === selectedRestaurant)?.name}
                       />
                     )}
 
@@ -2106,6 +2146,17 @@ function LocationsList({ restaurant, onSelect, selectedLocation }) {
             <div>
               <strong>{location.addressName || `Location ${index + 1}`}</strong>
               <small>{location.address || location}</small>
+              {location.capacity ? (
+                <div className="mt-1">
+                  <span 
+                    className="badge rounded-pill text-bg-light border" 
+                    style={{ fontSize: "11px", fontWeight: "500", color: "#4b5563" }}
+                  >
+                    <i className="fa-solid fa-users me-1 text-primary"></i>
+                    Max Capacity: {location.capacity} Guests
+                  </span>
+                </div>
+              ) : null}
             </div>
             <i className="fa-solid fa-arrow-right"></i>
           </button>
@@ -2430,6 +2481,20 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
           ) : (
             <p>No guests selected.</p>
           )}
+          {selectedLocation?.capacity && invitedGuests.length > Number(selectedLocation.capacity) ? (
+            <div 
+              className="mt-2 p-2 rounded-2"
+              style={{
+                backgroundColor: "#fffbeb",
+                border: "1px solid #fcd34d",
+                fontSize: "12px",
+                color: "#92400e"
+              }}
+            >
+              <i className="fa-solid fa-triangle-exclamation me-1 text-warning"></i>
+              <strong>Capacity notice:</strong> Venue seating capacity is {selectedLocation.capacity} guests. You invited {invitedGuests.length} guests.
+            </div>
+          ) : null}
         </div>
         <div className={styles.summaryBlock}>
           <div className="d-flex justify-content-between align-items-center mb-1">
@@ -2476,9 +2541,48 @@ function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, 
   );
 }
 
-function GuestsStep({ guests: guestResults, search, setSearch, selectedGuests, toggleGuest, markAll, openAddContact, loading }) {
+function GuestsStep({ guests: guestResults, search, setSearch, selectedGuests, toggleGuest, markAll, openAddContact, loading, venueCapacity = 0, venueName = "" }) {
   return (
     <div>
+      {venueCapacity > 0 && (
+        <div 
+          className="mb-3 rounded-3 d-flex align-items-center justify-content-between"
+          style={{
+            backgroundColor: selectedGuests.length > venueCapacity ? "#fffbeb" : "#f0fdf4",
+            border: `1px solid ${selectedGuests.length > venueCapacity ? "#fcd34d" : "#bbf7d0"}`,
+            fontSize: "13px",
+            padding: "10px 14px"
+          }}
+        >
+          <div className="d-flex align-items-center gap-2">
+            <i 
+              className={selectedGuests.length > venueCapacity ? "fa-solid fa-triangle-exclamation text-warning" : "fa-solid fa-circle-check text-success"}
+              style={{ fontSize: "16px" }}
+            ></i>
+            <div>
+              <span className="fw-semibold text-dark">
+                {venueName ? `${venueName} Capacity: ` : "Venue Capacity: "}
+                <strong>{venueCapacity} Guests</strong>
+              </span>
+              {selectedGuests.length > venueCapacity && (
+                <span className="text-danger ms-2" style={{ fontSize: "12px" }}>
+                  ({selectedGuests.length - venueCapacity} over capacity)
+                </span>
+              )}
+            </div>
+          </div>
+          <span 
+            className="badge rounded-pill"
+            style={{
+              backgroundColor: selectedGuests.length > venueCapacity ? "#ef4444" : "#10b981",
+              fontSize: "12px",
+              padding: "5px 10px"
+            }}
+          >
+            {selectedGuests.length} / {venueCapacity} Selected
+          </span>
+        </div>
+      )}
       <div className={styles.contactsIntro}>
         <div>
           <strong>Saved contacts</strong>
