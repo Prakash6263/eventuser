@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SafeImage from "../components/SafeImage";
 import { authService } from "../services/authService";
+import { apiRequest } from "../services/apiClient";
 import { getReservationDetailsApi, cancelReservationApi, resendReservationApi, getCancelReasonsApi, makeReservationApi } from "../services/reservationApi";
 import Swal from "sweetalert2";
 
@@ -230,6 +231,7 @@ export default function MyReservationsPage() {
   const handleModifyReservation = async (e) => {
     e && e.preventDefault && e.preventDefault();
     setResSubmitting(true);
+    setResError("");
     try {
       const payload = {
         eventId: modifyModal.eventId,
@@ -239,13 +241,39 @@ export default function MyReservationsPage() {
         instruction: modifyModal.instruction,
         guestType: modifyModal.guestType || "All",
       };
-      if (modifyModal.couponId) {
-        payload.couponId = modifyModal.couponId;
+
+      const enteredCoupon = (modifyModal.couponId || "").trim();
+      if (enteredCoupon) {
+        if (/^[0-9a-fA-F]{24}$/.test(enteredCoupon)) {
+          payload.couponId = enteredCoupon;
+        } else {
+          try {
+            const couponRes = await apiRequest("/merchant/all-coupons");
+            let matched = null;
+            if (couponRes && couponRes.status && Array.isArray(couponRes.data)) {
+              matched = couponRes.data.find(
+                (c) => c.couponName && c.couponName.toLowerCase() === enteredCoupon.toLowerCase()
+              );
+            }
+            if (matched && matched._id) {
+              payload.couponId = matched._id;
+            } else {
+              setResError(`Coupon "${enteredCoupon}" is invalid or expired. Please enter a valid coupon code or leave it blank.`);
+              setResSubmitting(false);
+              return;
+            }
+          } catch (cErr) {
+            setResError(`Unable to validate coupon code "${enteredCoupon}". Please leave blank to continue.`);
+            setResSubmitting(false);
+            return;
+          }
+        }
       }
+
       const res = await makeReservationApi(payload);
       if (res && res.status === true) {
         setModifyModal({ show: false, id: null, eventId: null, reservationId: null, adultCount: "", childCount: "", instruction: "", couponId: "", guestType: "All" });
-        setModifySuccessPopup({ show: true, message: res.message || "Reservation update successfully" });
+        setModifySuccessPopup({ show: true, message: res.message || "Reservation updated successfully" });
         // Refresh reservations
         const freshRes = await getReservationDetailsApi();
         if (freshRes && freshRes.status && Array.isArray(freshRes.data)) {
