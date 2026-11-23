@@ -5,9 +5,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import SafeImage from "../components/SafeImage";
 import { getMerchantChatApi, sendMerchantChatMessageApi } from "../services/chatApi";
 import { getMerchantsByServiceApi } from "../services/eventApi";
 import { apiRequest } from "../services/apiClient";
+import { authService } from "../services/authService";
 
 function MerchantChatContent() {
   const router = useRouter();
@@ -20,7 +22,7 @@ function MerchantChatContent() {
   const [chatId, setChatId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [merchant, setMerchant] = useState(null);
-  const [eventData, setEventData] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newMsg, setNewMsg] = useState("");
@@ -33,21 +35,23 @@ function MerchantChatContent() {
 
   const getInitials = (name) => (name ? name.trim().charAt(0).toUpperCase() : "?");
 
-  // Load Event Context (optional, for title display)
+  // Load User Profile
   useEffect(() => {
-    async function loadEvent() {
-      if (!eventId) return;
+    async function loadProfile() {
       try {
-        const evRes = await apiRequest(`/event/eventbyId?id=${eventId}`);
-        if (evRes && evRes.status && evRes.data) {
-          setEventData(evRes.data);
+        const prof = await authService.getUserProfile();
+        if (prof && prof.status && prof.user) {
+          setProfile(prof.user);
+        } else {
+          const local = authService.getUser();
+          if (local) setProfile(local);
         }
-      } catch (e) {
-        // quiet ignore
+      } catch (err) {
+        console.error("Failed loading user profile:", err);
       }
     }
-    loadEvent();
-  }, [eventId]);
+    loadProfile();
+  }, []);
 
   // Fetch chat
   const fetchChat = async () => {
@@ -223,215 +227,307 @@ function MerchantChatContent() {
     <>
       <Header />
       <div className="wrapper flex-grow-1" style={{ background: "#f8f9fa", flex: "1 0 auto" }}>
-        <div style={{ paddingTop: "110px", paddingBottom: "60px" }}>
-          <div className="container" style={{ maxWidth: "860px" }}>
+        <div className="event-dt-block p-80" style={{ paddingTop: "90px", paddingBottom: "70px" }}>
+          <div className="container">
+            <div className="row">
 
-            {/* Top Bar with Back and Info */}
-            <div className="d-flex align-items-center justify-content-between mb-3 px-1">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="btn btn-light bg-white border rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-2 shadow-xs"
-                style={{ fontSize: "13px" }}
-              >
-                <i className="fa-solid fa-arrow-left text-primary"></i>
-                <span>Back</span>
-              </button>
-
-              {eventData?.eventTitle && (
-                <div className="text-muted small d-none d-sm-block text-truncate" style={{ maxWidth: "320px" }}>
-                  Event: <strong className="text-dark">{eventData.eventTitle}</strong>
-                </div>
-              )}
-
-              {eventId && (
-                <Link
-                  href={`/event-details?id=${eventId}`}
-                  className="btn btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold small d-flex align-items-center gap-1.5 bg-white"
-                  style={{ fontSize: "12.5px" }}
-                >
-                  <i className="fa-solid fa-calendar-days"></i>
-                  <span>View Event</span>
-                </Link>
-              )}
-            </div>
-
-            {/* Simple, Clean Chat Card */}
-            <div
-              className="card border-0 rounded-4 shadow-sm overflow-hidden bg-white mb-4"
-              style={{ border: "1px solid #edf2f7" }}
-            >
-              {/* Chat Header */}
-              <div className="p-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between">
-                <div className="d-flex align-items-center gap-3">
-                  <div className="position-relative flex-shrink-0">
-                    {merchantPic ? (
-                      <img
-                        src={merchantPic}
-                        alt={merchantName}
-                        className="rounded-circle object-fit-cover border"
-                        style={{ width: "46px", height: "46px" }}
-                        onError={(e) => { e.target.onerror = null; e.target.style.display = "none"; }}
-                      />
-                    ) : (
-                      <div
-                        className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
-                        style={{
-                          width: "46px",
-                          height: "46px",
-                          fontSize: "18px",
-                          background: "#3e56f0",
-                        }}
-                      >
-                        {getInitials(merchantName)}
-                      </div>
-                    )}
-                    <span
-                      className="position-absolute bottom-0 end-0 rounded-circle border border-2 border-white bg-success"
-                      style={{ width: "11px", height: "11px" }}
-                    ></span>
-                  </div>
-
-                  <div>
-                    <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "16px" }}>
-                      {merchantName}
-                    </h6>
-                    <small className="text-success fw-medium d-flex align-items-center gap-1" style={{ fontSize: "12px" }}>
-                      <span className="bg-success rounded-circle d-inline-block" style={{ width: "6px", height: "6px" }}></span>
-                      Online • Restaurant Partner
-                    </small>
-                  </div>
-                </div>
-
-                <div className="d-flex align-items-center gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center text-muted"
-                    style={{ width: "36px", height: "36px" }}
-                    onClick={fetchChat}
-                    title="Refresh Chat"
-                  >
-                    <i className="fa-solid fa-rotate-right" style={{ fontSize: "13px" }}></i>
-                  </button>
-                </div>
-              </div>
-
-              {/* Chat Body */}
-              <div
-                ref={chatBodyRef}
-                className="p-4 overflow-y-auto d-flex flex-column gap-3"
-                style={{
-                  background: "#f8fafc",
-                  height: "500px",
-                  overflowX: "hidden",
-                }}
-              >
-                {loading ? (
-                  <div className="text-center text-muted my-auto py-5">
-                    <div className="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
-                    <p className="small text-muted mb-0">Loading conversation...</p>
-                  </div>
-                ) : error ? (
-                  <div className="text-center my-auto py-4">
-                    <i className="fa-solid fa-circle-exclamation text-danger fs-3 mb-2 d-block"></i>
-                    <h6 className="fw-semibold text-dark mb-1">{error}</h6>
-                    <button
-                      type="button"
-                      onClick={fetchChat}
-                      className="btn btn-outline-primary btn-sm rounded-pill px-3 mt-2"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="text-center my-auto py-5">
+              {/* Left Profile Sidebar (identical to vendor side dashboard layout) */}
+              <div className="col-lg-3 col-md-4 mb-4 mb-lg-0">
+                <div className="user-profile-sidebar shadow-sm">
+                  <div className="user-profile-sidebar-top text-center">
                     <div
-                      className="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto mb-3 text-muted"
-                      style={{ width: "56px", height: "56px", fontSize: "22px" }}
+                      className="user-profile-img"
+                      style={{
+                        width: "90px",
+                        height: "90px",
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        margin: "0 auto 12px",
+                        border: "3px solid #3e56f0",
+                        boxShadow: "0 4px 12px rgba(62, 86, 240, 0.15)",
+                        position: "relative",
+                      }}
                     >
-                      <i className="fa-regular fa-comments"></i>
+                      <SafeImage
+                        alt="Profile avatar"
+                        src={profile?.profilePic || "/images/05.jpg"}
+                        variant="profile"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
                     </div>
-                    <h6 className="fw-bold text-dark mb-1">No Messages Yet</h6>
-                    <p className="text-muted small mb-0">Send a message to start the conversation with {merchantName}.</p>
+                    <h5 className="fw-bold mb-1">{profile?.fullName || "User Profile"}</h5>
+                    <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small fw-semibold">
+                      <i className="fa-solid fa-circle-check me-1"></i> Verified User
+                    </span>
                   </div>
-                ) : (
-                  messages.map((msg, idx) => {
-                    const isSelf = msg.senderType === "user";
-                    return (
-                      <div
-                        key={msg._id || idx}
-                        className={`d-flex flex-column ${isSelf ? "align-items-end" : "align-items-start"}`}
-                        style={{ maxWidth: "72%", alignSelf: isSelf ? "flex-end" : "flex-start" }}
-                      >
-                        <div
-                          className="p-3 shadow-xs"
-                          style={{
-                            borderRadius: "16px",
-                            borderBottomRightRadius: isSelf ? "4px" : "16px",
-                            borderBottomLeftRadius: isSelf ? "16px" : "4px",
-                            background: isSelf ? "#3e56f0" : "#ffffff",
-                            color: isSelf ? "#ffffff" : "#2d3748",
-                            border: isSelf ? "none" : "1px solid #edf2f7",
-                            fontSize: "14.5px",
-                            lineHeight: "1.5",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {msg.content}
-                        </div>
-                        <div
-                          className="text-muted px-1 mt-1 small"
-                          style={{ fontSize: "11px" }}
-                        >
-                          {msg.timeAgo ||
-                            (msg.createdAt
-                              ? new Date(msg.createdAt).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : "Just now")}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
+
+                  <ul className="user-profile-sidebar-list">
+                    <li>
+                      <Link href="/my-events">
+                        <i className="fa fa-layer-group"></i> My Events
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/user-profile">
+                        <i className="fa fa-user"></i> Profile
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/my-reservations">
+                        <i className="fa fa-calendar"></i> My Reservations
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/notifications">
+                        <i className="fa fa-bell"></i> Notifications
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/change-password">
+                        <i className="fa fa-key"></i> Change Password
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/login" onClick={() => authService.logout && authService.logout()}>
+                        <i className="fa fa-sign-out"></i> Logout
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
               </div>
 
-              {/* Chat Footer Input */}
-              <div className="p-3 bg-white border-top">
-                <form onSubmit={handleSendMessage} className="d-flex align-items-center gap-2">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    className="form-control rounded-pill px-3.5 py-2.5 border bg-light text-dark shadow-none"
-                    placeholder={`Type your message here...`}
-                    value={newMsg}
-                    onChange={(e) => setNewMsg(e.target.value)}
-                    style={{ fontSize: "14px" }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newMsg.trim() || sending}
-                    className="btn rounded-circle text-white d-flex align-items-center justify-content-center shadow-sm flex-shrink-0"
-                    style={{
-                      width: "42px",
-                      height: "42px",
-                      background: !newMsg.trim() || sending ? "#93a0f7" : "#3e56f0",
-                      border: "none",
-                    }}
-                    title="Send Message"
+              {/* Right Chat Window */}
+              <div className="col-lg-9 col-md-8">
+                <div className="user-profile-wrapper">
+                  <div
+                    className="chat-card shadow-sm border rounded-4 overflow-hidden bg-white mb-4"
+                    style={{ borderColor: "#edf2f7" }}
                   >
-                    {sending ? (
-                      <div className="spinner-border spinner-border-sm text-white" role="status"></div>
-                    ) : (
-                      <i className="fa-solid fa-paper-plane" style={{ fontSize: "14px", transform: "translateX(-1px)" }}></i>
-                    )}
-                  </button>
-                </form>
+                    <div
+                      className="chat-window d-flex flex-column"
+                      style={{ height: "600px", background: "#fcfcfd" }}
+                    >
+
+                      {/* Chat Header */}
+                      <div className="chat-header p-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => router.back()}
+                            className="btn btn-light bg-light border rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5 shadow-xs"
+                            style={{ fontSize: "13px" }}
+                          >
+                            <i className="fa-solid fa-arrow-left text-primary"></i>
+                            <span>Back</span>
+                          </button>
+
+                          <div
+                            className="avatar-wrapper position-relative flex-shrink-0"
+                            style={{ width: "44px", height: "44px" }}
+                          >
+                            {merchantPic ? (
+                              <img
+                                src={merchantPic}
+                                alt={merchantName}
+                                className="rounded-circle border shadow-xs"
+                                style={{ width: "44px", height: "44px", objectFit: "cover" }}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div
+                                className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
+                                style={{
+                                  width: "44px",
+                                  height: "44px",
+                                  fontSize: "16px",
+                                  background: "#3e56f0",
+                                }}
+                              >
+                                {getInitials(merchantName)}
+                              </div>
+                            )}
+                            <span
+                              style={{
+                                position: "absolute",
+                                bottom: "0",
+                                right: "0",
+                                width: "10px",
+                                height: "10px",
+                                background: "#10b981",
+                                border: "2px solid #ffffff",
+                                borderRadius: "50%",
+                              }}
+                            ></span>
+                          </div>
+
+                          <div>
+                            <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "15.5px" }}>
+                              {merchantName}
+                            </h6>
+                            <small
+                              className="text-success fw-semibold d-inline-flex align-items-center gap-1"
+                              style={{ fontSize: "12px" }}
+                            >
+                              <i className="bi bi-circle-fill" style={{ fontSize: "7px" }}></i>
+                              Online • Restaurant Partner
+                            </small>
+                          </div>
+                        </div>
+
+                        <div className="d-flex align-items-center gap-2">
+                          {eventId && (
+                            <Link
+                              href={`/event-details?id=${eventId}`}
+                              className="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-none d-sm-inline-flex align-items-center gap-1.5"
+                              style={{ fontSize: "12px" }}
+                            >
+                              <i className="fa-regular fa-calendar"></i> Event Details
+                            </Link>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center text-muted"
+                            style={{ width: "36px", height: "36px" }}
+                            onClick={fetchChat}
+                            title="Refresh Chat"
+                          >
+                            <i className="fa-solid fa-rotate-right" style={{ fontSize: "13px" }}></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Chat Messages Body */}
+                      <div
+                        ref={chatBodyRef}
+                        className="chat-body p-4 overflow-y-auto d-flex flex-column gap-3 flex-grow-1"
+                        style={{ background: "#f8fafc" }}
+                      >
+                        {loading ? (
+                          <div className="text-center text-muted my-auto py-5">
+                            <div
+                              className="spinner-border spinner-border-sm text-primary mb-2"
+                              role="status"
+                            ></div>
+                            <p className="small text-muted mb-0">Loading conversation...</p>
+                          </div>
+                        ) : error ? (
+                          <div className="text-center my-auto py-4">
+                            <i className="fa-solid fa-circle-exclamation text-danger fs-3 mb-2 d-block"></i>
+                            <h6 className="fw-semibold text-dark mb-1">{error}</h6>
+                            <button
+                              type="button"
+                              onClick={fetchChat}
+                              className="btn btn-outline-primary btn-sm rounded-pill px-3 mt-2"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        ) : messages.length === 0 ? (
+                          <div className="text-center my-auto py-5">
+                            <div
+                              className="rounded-circle bg-white shadow-xs d-flex align-items-center justify-content-center mx-auto mb-3 text-muted border"
+                              style={{ width: "54px", height: "54px", fontSize: "20px" }}
+                            >
+                              <i className="fa-regular fa-comments"></i>
+                            </div>
+                            <h6 className="fw-bold text-dark mb-1">No Messages Yet</h6>
+                            <p className="text-muted small mb-0">
+                              Send a message to start the conversation with {merchantName}.
+                            </p>
+                          </div>
+                        ) : (
+                          messages.map((msg, idx) => {
+                            const isSelf = msg.senderType === "user";
+                            return (
+                              <div
+                                key={msg._id || idx}
+                                className={`d-flex flex-column ${
+                                  isSelf ? "align-items-end" : "align-items-start"
+                                }`}
+                                style={{
+                                  maxWidth: "68%",
+                                  alignSelf: isSelf ? "flex-end" : "flex-start",
+                                }}
+                              >
+                                <div
+                                  className="p-3 shadow-xs"
+                                  style={{
+                                    borderRadius: "16px",
+                                    borderBottomRightRadius: isSelf ? "4px" : "16px",
+                                    borderBottomLeftRadius: isSelf ? "16px" : "4px",
+                                    background: isSelf ? "#3e56f0" : "#ffffff",
+                                    color: isSelf ? "#ffffff" : "#2d3748",
+                                    border: isSelf ? "none" : "1px solid #edf2f7",
+                                    fontSize: "14.5px",
+                                    lineHeight: "1.5",
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {msg.content}
+                                </div>
+                                <div
+                                  className="text-muted px-1 mt-1 small"
+                                  style={{ fontSize: "11px" }}
+                                >
+                                  {msg.timeAgo ||
+                                    (msg.createdAt
+                                      ? new Date(msg.createdAt).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })
+                                      : "Just now")}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Chat Input Footer */}
+                      <div className="chat-footer p-3 bg-white border-top">
+                        <form onSubmit={handleSendMessage} className="d-flex align-items-center gap-2">
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            className="form-control rounded-pill px-3.5 py-2.5 border bg-light text-dark shadow-none"
+                            placeholder="Type your message here..."
+                            value={newMsg}
+                            onChange={(e) => setNewMsg(e.target.value)}
+                            style={{ fontSize: "14px" }}
+                          />
+                          <button
+                            type="submit"
+                            disabled={!newMsg.trim() || sending}
+                            className="btn btn-send shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0"
+                            style={{
+                              width: "42px",
+                              height: "42px",
+                              background: !newMsg.trim() || sending ? "#93a0f7" : "#3e56f0",
+                              border: "none",
+                            }}
+                            title="Send Message"
+                          >
+                            {sending ? (
+                              <div
+                                className="spinner-border spinner-border-sm text-white"
+                                role="status"
+                              ></div>
+                            ) : (
+                              <i className="bi bi-send-fill" style={{ fontSize: "15px" }}></i>
+                            )}
+                          </button>
+                        </form>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
               </div>
 
             </div>
-
           </div>
         </div>
       </div>
