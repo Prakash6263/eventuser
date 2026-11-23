@@ -5,27 +5,36 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import SafeImage from "../components/SafeImage";
 import { authService } from "../services/authService";
 import { getEventGroupChatApi, getChatMessagesApi, sendChatMessageApi } from "../services/chatApi";
-import { handleAuthFailure, isAuthFailureResponse, apiRequest } from "../services/apiClient";
+import { apiRequest } from "../services/apiClient";
 
 function ChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  const chatId = searchParams.get("chatId") || "6a4cca33db2ad40b3d32e882";
-  const eventName = searchParams.get("eventName") || "Group Chat";
+
+  const chatIdParam = searchParams.get("chatId") || "";
+  const eventNameParam = searchParams.get("eventName") || "Group Chat";
   const eventId = searchParams.get("eventId") || "";
 
+  const [chatId, setChatId] = useState(chatIdParam);
+  const [eventName, setEventName] = useState(eventNameParam);
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newMsg, setNewMsg] = useState("");
+  const [sending, setSending] = useState(false);
   const [profile, setProfile] = useState(null);
   const [eventDetails, setEventDetails] = useState(null);
-  
+  const [showMembersModal, setShowMembersModal] = useState(false);
+
   const chatBodyRef = useRef(null);
+  const inputRef = useRef(null);
+  const chatIdRef = useRef(chatIdParam);
+
+  const getInitials = (name) => (name ? name.trim().charAt(0).toUpperCase() : "?");
 
   // Load User Profile
   useEffect(() => {
@@ -45,14 +54,20 @@ function ChatContent() {
     loadProfile();
   }, []);
 
-  // Fetch group details / members list
+  // Fetch Group Details & Resolve Chat ID if missing
   useEffect(() => {
     async function fetchGroupDetails() {
       if (!eventId) return;
       try {
         const res = await getEventGroupChatApi(eventId);
-        if (res && res.status && res.data && Array.isArray(res.data.members)) {
-          setMembers(res.data.members);
+        if (res && res.status && res.data) {
+          if (Array.isArray(res.data.members)) {
+            setMembers(res.data.members);
+          }
+          if (res.data._id && (!chatIdRef.current || chatIdRef.current !== res.data._id)) {
+            chatIdRef.current = res.data._id;
+            setChatId(res.data._id);
+          }
         }
       } catch (err) {
         console.error("Failed to load group details:", err);
@@ -61,16 +76,19 @@ function ChatContent() {
     fetchGroupDetails();
   }, [eventId]);
 
-  // Fetch event details to get invitation status of members
+  // Fetch Event Details to get member RSVP statuses & title
   useEffect(() => {
     async function loadEventDetails() {
       if (!eventId) return;
       try {
         const json = await apiRequest("/event/events");
         if (json && json.status && Array.isArray(json.data)) {
-          const match = json.data.find(e => e._id === eventId);
+          const match = json.data.find((e) => e._id === eventId || e.id === eventId);
           if (match) {
             setEventDetails(match);
+            if (match.title && (!eventNameParam || eventNameParam === "Group Chat")) {
+              setEventName(match.title);
+            }
           }
         }
       } catch (err) {
@@ -78,14 +96,24 @@ function ChatContent() {
       }
     }
     loadEventDetails();
-  }, [eventId]);
+  }, [eventId, eventNameParam]);
 
-  // Fetch group messages from backend
+  // Fetch Group Messages from backend
   const fetchMessages = async () => {
+    const activeChatId = chatIdRef.current || chatId;
+    if (!activeChatId) {
+      if (!eventId) {
+        setError("Missing chat or event reference.");
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
-      const res = await getChatMessagesApi(chatId);
+      const res = await getChatMessagesApi(activeChatId);
       if (res && res.status && Array.isArray(res.data)) {
         setMessages(res.data);
+        setError(null);
       } else {
         setError(res?.message || "Failed to load messages.");
       }
@@ -96,10 +124,13 @@ function ChatContent() {
     }
   };
 
-  // Smart Polling Configuration (Visibility and Focus Aware)
+  // Smart Polling (Visibility & Focus Aware)
   useEffect(() => {
-    fetchMessages();
-    
+    const activeId = chatIdRef.current || chatId;
+    if (activeId) {
+      fetchMessages();
+    }
+
     let intervalId = null;
 
     const startPolling = () => {
@@ -108,7 +139,7 @@ function ChatContent() {
           if (typeof document !== "undefined" && !document.hidden) {
             fetchMessages();
           }
-        }, 4000); // Poll every 4s only when tab is active
+        }, 4000);
       }
     };
 
@@ -150,14 +181,15 @@ function ChatContent() {
         window.removeEventListener("blur", handleBlur);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
-  // Scroll inner container to bottom smoothly, without moving the main browser viewport window
+  // Scroll to bottom smoothly
   const scrollToBottom = () => {
     if (chatBodyRef.current) {
       chatBodyRef.current.scrollTo({
         top: chatBodyRef.current.scrollHeight,
-        behavior: "smooth"
+        behavior: "smooth",
       });
     }
   };
@@ -168,54 +200,61 @@ function ChatContent() {
     }
   }, [messages]);
 
+  // Send Message Handler
   const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMsg.trim()) return;
+    if (e && e.preventDefault) e.preventDefault();
+    const content = newMsg.trim();
+    if (!content) return;
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("user_token") : null;
-    const msgContent = newMsg.trim();
+    const activeChatId = chatIdRef.current || chatId;
+    if (!activeChatId) {
+      return;
+    }
+
     setNewMsg("");
+    setSending(true);
 
-    // Optimistic UI Update
     const optimisticMessage = {
       _id: `temp-${Date.now()}`,
-      chatId: chatId,
+      chatId: activeChatId,
       sender: {
-        _id: profile?._id || "user-self",
+        _id: profile?._id || profile?.id || "user-self",
         fullName: profile?.fullName || "You",
         profilePic: profile?.profilePic || null,
-        email: profile?.email || ""
+        email: profile?.email || "",
       },
-      content: msgContent,
+      content,
       createdAt: new Date().toISOString(),
-      timeAgo: "Just now"
+      timeAgo: "Just now",
     };
 
     setMessages((prev) => [...prev, optimisticMessage]);
 
     try {
-      const res = await sendChatMessageApi(chatId, msgContent);
-      if (res && res.status && res.data) {
+      const res = await sendChatMessageApi(activeChatId, content);
+      if (res && res.status) {
         fetchMessages();
       }
     } catch (err) {
       console.error("Failed to send message to group:", err);
+    } finally {
+      setSending(false);
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
-  };
-
-  const getInitials = (name) => {
-    if (!name) return "?";
-    return name.trim().charAt(0).toUpperCase();
   };
 
   const getMemberStatus = (memberId) => {
     if (!eventDetails) return null;
     if (Array.isArray(eventDetails.contactList)) {
-      const match = eventDetails.contactList.find(c => c._id === memberId || c.userId === memberId);
+      const match = eventDetails.contactList.find(
+        (c) => c._id === memberId || c.userId === memberId
+      );
       if (match && match.status) return match.status;
     }
     if (Array.isArray(eventDetails.invitedUsers)) {
-      const match = eventDetails.invitedUsers.find(u => u.userId?._id === memberId || u.userId === memberId || u._id === memberId);
+      const match = eventDetails.invitedUsers.find(
+        (u) => u.userId?._id === memberId || u.userId === memberId || u._id === memberId
+      );
       if (match && match.status) return match.status;
     }
     return null;
@@ -224,201 +263,556 @@ function ChatContent() {
   return (
     <>
       <Header />
-      <div className="wrapper">
-        <div className="event-dt-block p-80 bg-light" style={{ paddingTop: "120px", paddingBottom: "100px" }}>
+      <div className="wrapper flex-grow-1" style={{ background: "#f8f9fa", flex: "1 0 auto" }}>
+        <div className="event-dt-block p-80" style={{ paddingTop: "90px", paddingBottom: "70px" }}>
           <div className="container">
-            
-            {/* Header Action Row */}
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <Link href="/events" className="btn btn-outline-secondary rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm bg-white border-0">
-                <i className="fa-solid fa-arrow-left"></i>
-                Back to Events
-              </Link>
-              <span className="badge bg-success-subtle text-success px-3 py-2 rounded-pill shadow-sm fw-semibold d-flex align-items-center gap-2">
-                <span className="bg-success rounded-circle d-inline-block animate-pulse" style={{ width: "8px", height: "8px" }}></span>
-                Live Event Channel
-              </span>
-            </div>
+            <div className="row">
 
-            <div className="row justify-content-center">
-              <div className="col-12 col-xl-10">
-                
-                {/* Premium 2-Column Chat Widget */}
-                <div className="card border-0 rounded-4 shadow overflow-hidden bg-white d-flex flex-row" style={{ height: "650px" }}>
-                  
-                  {/* Left Sidebar: Event & Members (Hidden on Mobile) */}
-                  <div className="d-none d-md-flex flex-column border-end bg-white" style={{ width: "300px", flexShrink: 0 }}>
-                    <div className="p-4 border-bottom bg-light">
-                      <span className="badge bg-primary-subtle text-primary mb-2 px-2.5 py-1.5 rounded-pill fw-bold text-uppercase" style={{ fontSize: "10px" }}>
-                        Event Chat
-                      </span>
-                      <h5 className="fw-bold text-dark mb-1 line-clamp-2" style={{ fontSize: "16px", lineHeight: "1.4" }}>
-                        {eventName}
-                      </h5>
-                      <p className="text-muted small mb-0">Secure collaboration channel</p>
+              {/* Left Column: Standard User Profile Sidebar */}
+              <div className="col-lg-3 col-md-4 mb-4 mb-lg-0">
+                <div className="user-profile-sidebar shadow-sm">
+                  <div className="user-profile-sidebar-top text-center">
+                    <div
+                      className="user-profile-img"
+                      style={{
+                        width: "90px",
+                        height: "90px",
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        margin: "0 auto 12px",
+                        border: "3px solid #3e56f0",
+                        boxShadow: "0 4px 12px rgba(62, 86, 240, 0.15)",
+                        position: "relative",
+                      }}
+                    >
+                      <SafeImage
+                        alt="Profile avatar"
+                        src={profile?.profilePic || "/images/05.jpg"}
+                        variant="profile"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
                     </div>
-                    <div className="p-4 overflow-y-auto flex-grow-1">
-                      <h6 className="fw-bold text-dark mb-3" style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                        Group Members
-                      </h6>
-                      <div className="d-flex flex-column gap-3">
-                        {members.length > 0 ? (
-                          members.map((member) => (
-                            <div key={member._id} className="d-flex align-items-center justify-content-between gap-2">
-                              <div className="d-flex align-items-center gap-3 overflow-hidden">
-                                <div className="position-relative">
-                                  {member.profilePic ? (
-                                    <img src={member.profilePic} alt={member.fullName} className="rounded-circle object-fit-cover border" style={{ width: "36px", height: "36px" }} />
-                                  ) : (
-                                    <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold text-uppercase" style={{ width: "36px", height: "36px", fontSize: "13px" }}>
-                                      {getInitials(member.fullName)}
-                                    </div>
-                                  )}
-                                  <span className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle" style={{ width: "10px", height: "10px" }}></span>
-                                </div>
-                                <div className="overflow-hidden">
-                                  <h6 className="text-dark fw-bold m-0 small text-truncate" style={{ fontSize: "13px" }}>{member.fullName}</h6>
-                                  <span className="text-muted small text-truncate d-block" style={{ fontSize: "11px" }}>{member.email}</span>
-                                </div>
-                              </div>
-                              <div className="flex-shrink-0">
-                                {getMemberStatus(member._id) === "accepted" && (
-                                  <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-0.5 fw-bold text-uppercase" style={{ fontSize: "8px" }}>Accepted</span>
-                                )}
-                                {getMemberStatus(member._id) === "pending" && (
-                                  <span className="badge bg-warning-subtle text-warning rounded-pill px-2.5 py-0.5 fw-bold text-uppercase" style={{ fontSize: "8px" }}>Pending</span>
-                                )}
-                                {getMemberStatus(member._id) === "not_invited" && (
-                                  <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-0.5 fw-bold text-uppercase" style={{ fontSize: "8px" }}>Not Invited</span>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-4 bg-light rounded-3">
-                            <i className="bi bi-people fs-4 text-muted mb-2 d-block"></i>
-                            <p className="text-muted small mb-0">No active members found.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                    <h5 className="fw-bold mb-1">{profile?.fullName || "User Profile"}</h5>
+                    <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small fw-semibold">
+                      <i className="fa-solid fa-circle-check me-1"></i> Verified User
+                    </span>
                   </div>
 
-                  {/* Right Messaging Area */}
-                  <div className="d-flex flex-column flex-grow-1 bg-light">
-                    
-                    {/* Active Header */}
-                    <div className="bg-white border-bottom py-3 px-4 d-flex align-items-center justify-content-between">
-                      <div className="d-flex align-items-center gap-3">
-                        <div className="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style={{ width: "40px", height: "40px" }}>
-                          <i className="bi bi-chat-left-text-fill" style={{ fontSize: "18px" }}></i>
+                  <ul className="user-profile-sidebar-list">
+                    <li>
+                      <Link href="/my-events">
+                        <i className="fa fa-layer-group"></i> My Events
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/user-profile">
+                        <i className="fa fa-user"></i> Profile
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/my-reservations">
+                        <i className="fa fa-calendar"></i> My Reservations
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/notifications">
+                        <i className="fa fa-bell"></i> Notifications
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/change-password">
+                        <i className="fa fa-key"></i> Change Password
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/login" onClick={() => authService.logout && authService.logout()}>
+                        <i className="fa fa-sign-out"></i> Logout
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Right Column: Clean Group Chat Window */}
+              <div className="col-lg-9 col-md-8">
+                <div className="user-profile-wrapper">
+                  <div
+                    className="chat-card shadow-sm border rounded-4 overflow-hidden bg-white mb-4"
+                    style={{ borderColor: "#edf2f7" }}
+                  >
+                    <div
+                      className="chat-window d-flex flex-column"
+                      style={{ height: "650px", background: "#fcfcfd" }}
+                    >
+
+                      {/* Chat Header */}
+                      <div className="chat-header p-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => router.back()}
+                            className="btn btn-light bg-light border rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5 shadow-xs"
+                            style={{ fontSize: "13px" }}
+                          >
+                            <i className="fa-solid fa-arrow-left text-primary"></i>
+                            <span>Back</span>
+                          </button>
+
+                          <div
+                            className="avatar-wrapper position-relative flex-shrink-0"
+                            style={{ width: "44px", height: "44px" }}
+                          >
+                            <div
+                              className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
+                              style={{
+                                width: "44px",
+                                height: "44px",
+                                fontSize: "18px",
+                                background: "linear-gradient(135deg, #3e56f0 0%, #6366f1 100%)",
+                              }}
+                            >
+                              <i className="bi bi-people-fill"></i>
+                            </div>
+                            <span
+                              style={{
+                                position: "absolute",
+                                bottom: "0",
+                                right: "0",
+                                width: "10px",
+                                height: "10px",
+                                background: "#10b981",
+                                border: "2px solid #ffffff",
+                                borderRadius: "50%",
+                              }}
+                            ></span>
+                          </div>
+
+                          <div>
+                            <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "15.5px" }}>
+                              {eventName}
+                            </h6>
+                            <small
+                              className="text-muted fw-semibold d-inline-flex align-items-center gap-1"
+                              style={{ fontSize: "12px" }}
+                            >
+                              <span
+                                className="badge bg-primary-subtle text-primary rounded-pill px-2 py-0.5"
+                                style={{ fontSize: "10px" }}
+                              >
+                                Group Chat
+                              </span>
+                              • {members.length} {members.length === 1 ? "Member" : "Members"}
+                            </small>
+                          </div>
                         </div>
-                        <div>
-                          <h6 className="fw-bold m-0 text-dark" style={{ fontSize: "15px" }}>Conversation Feed</h6>
-                          <span className="text-muted small" style={{ fontSize: "11px" }}>{messages.length} messages</span>
+
+                        <div className="d-flex align-items-center gap-2">
+                          {/* View Members Button */}
+                          <button
+                            type="button"
+                            onClick={() => setShowMembersModal(true)}
+                            className="btn btn-outline-primary btn-sm rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5"
+                            style={{ fontSize: "12px" }}
+                          >
+                            <i className="bi bi-people"></i>
+                            <span>Members ({members.length})</span>
+                          </button>
+
+                          {/* Event Details Button */}
+                          {eventId && (
+                            <Link
+                              href={`/event-details?id=${eventId}`}
+                              className="btn btn-light border btn-sm rounded-pill px-3 py-1.5 fw-semibold d-none d-sm-inline-flex align-items-center gap-1.5 text-muted"
+                              style={{ fontSize: "12px" }}
+                            >
+                              <i className="fa-regular fa-calendar"></i>
+                              <span>Event Details</span>
+                            </Link>
+                          )}
+
+                          {/* Refresh Button */}
+                          <button
+                            type="button"
+                            className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center text-muted"
+                            style={{ width: "36px", height: "36px" }}
+                            onClick={() => fetchMessages()}
+                            title="Refresh Chat"
+                          >
+                            <i className="fa-solid fa-rotate-right" style={{ fontSize: "13px" }}></i>
+                          </button>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Message viewport */}
-                    <div 
-                      ref={chatBodyRef}
-                      className="flex-grow-1 p-4 overflow-y-auto d-flex flex-column gap-3.5"
-                    >
-                      {loading ? (
-                        <div className="d-flex flex-column align-items-center justify-content-center h-100">
-                          <div className="spinner-border text-primary" role="status">
-                            <span className="visually-hidden">Loading chat...</span>
+                      {/* Chat Messages Body */}
+                      <div
+                        ref={chatBodyRef}
+                        className="chat-body p-4 overflow-y-auto d-flex flex-column gap-3 flex-grow-1"
+                        style={{ background: "#f8fafc" }}
+                      >
+                        {loading ? (
+                          <div className="text-center text-muted my-auto py-5">
+                            <div
+                              className="spinner-border spinner-border-sm text-primary mb-2"
+                              role="status"
+                            ></div>
+                            <p className="small text-muted mb-0">Loading conversation history...</p>
                           </div>
-                          <p className="text-muted mt-2 small">Loading conversation history...</p>
-                        </div>
-                      ) : messages.length === 0 ? (
-                        <div className="text-center my-auto">
-                          <i className="bi bi-chat-left-dots fs-1 text-muted mb-2 d-block"></i>
-                          <h6 className="fw-semibold text-dark m-0">No Messages Yet</h6>
-                          <p className="text-muted small mb-0">Start the conversation by typing below.</p>
-                        </div>
-                      ) : (
-                        messages.map((msg) => {
-                          const isSelf = profile && msg.sender?._id === profile._id;
-                          return (
-                            <div key={msg._id} className={`d-flex gap-3 ${isSelf ? "justify-content-end" : "justify-content-start"}`}>
-                              {!isSelf && (
-                                <div className="flex-shrink-0">
-                                  {msg.sender?.profilePic ? (
-                                    <img 
-                                      src={msg.sender.profilePic} 
-                                      alt={msg.sender.fullName}
-                                      className="rounded-circle object-fit-cover shadow-sm border"
-                                      style={{ width: "36px", height: "36px" }}
-                                    />
-                                  ) : (
-                                    <div className="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style={{ width: "36px", height: "36px", fontSize: "13px" }}>
-                                      {getInitials(msg.sender?.fullName)}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              <div style={{ maxWidth: "70%" }} className={isSelf ? "text-end" : ""}>
+                        ) : error ? (
+                          <div className="text-center my-auto py-4">
+                            <i className="fa-solid fa-circle-exclamation text-danger fs-3 mb-2 d-block"></i>
+                            <h6 className="fw-semibold text-dark mb-1">{error}</h6>
+                            <button
+                              type="button"
+                              onClick={fetchMessages}
+                              className="btn btn-outline-primary btn-sm rounded-pill px-3 mt-2"
+                            >
+                              Retry
+                            </button>
+                          </div>
+                        ) : messages.length === 0 ? (
+                          <div className="text-center my-auto py-5">
+                            <div
+                              className="rounded-circle bg-white shadow-xs d-flex align-items-center justify-content-center mx-auto mb-3 text-muted border"
+                              style={{ width: "54px", height: "54px", fontSize: "20px" }}
+                            >
+                              <i className="fa-regular fa-comments"></i>
+                            </div>
+                            <h6 className="fw-bold text-dark mb-1">No Messages Yet</h6>
+                            <p className="text-muted small mb-0">
+                              Start the group conversation by typing below.
+                            </p>
+                          </div>
+                        ) : (
+                          messages.map((msg, idx) => {
+                            const senderId =
+                              msg.sender?._id || msg.sender?.id || msg.sender;
+                            const currentUserId = profile?._id || profile?.id;
+                            const isSelf =
+                              currentUserId && String(senderId) === String(currentUserId);
+                            const senderName =
+                              msg.sender?.fullName || (isSelf ? "You" : "Participant");
+                            const senderPic = msg.sender?.profilePic;
+                            const timeDisplay =
+                              msg.timeAgo ||
+                              (msg.createdAt
+                                ? new Date(msg.createdAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : "Just now");
+
+                            return (
+                              <div
+                                key={msg._id || idx}
+                                className={`d-flex gap-2.5 ${
+                                  isSelf ? "justify-content-end" : "justify-content-start"
+                                }`}
+                              >
                                 {!isSelf && (
-                                  <div className="text-muted fw-semibold mb-1 ps-1" style={{ fontSize: "11px" }}>
-                                    {msg.sender?.fullName || "Participant"}
+                                  <div className="flex-shrink-0">
+                                    {senderPic ? (
+                                      <img
+                                        src={senderPic}
+                                        alt={senderName}
+                                        className="rounded-circle border shadow-xs object-fit-cover"
+                                        style={{ width: "34px", height: "34px" }}
+                                        onError={(e) => {
+                                          e.target.onerror = null;
+                                          e.target.style.display = "none";
+                                        }}
+                                      />
+                                    ) : (
+                                      <div
+                                        className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
+                                        style={{ width: "34px", height: "34px", fontSize: "13px" }}
+                                      >
+                                        {getInitials(senderName)}
+                                      </div>
+                                    )}
                                   </div>
                                 )}
-                                <div 
-                                  className={`p-3 rounded-3 shadow-sm text-start ${
-                                    isSelf 
-                                      ? "bg-primary text-white" 
-                                      : "bg-white text-dark border border-light"
-                                  }`} 
-                                  style={{ 
-                                    fontSize: "14px", 
-                                    borderRadius: isSelf ? "12px 12px 0 12px" : "12px 12px 12px 0",
-                                    lineHeight: "1.5"
-                                  }}
+
+                                <div
+                                  className={`d-flex flex-column ${
+                                    isSelf ? "align-items-end" : "align-items-start"
+                                  }`}
+                                  style={{ maxWidth: "70%" }}
                                 >
-                                  {msg.content}
-                                </div>
-                                <div className="text-muted mt-1.5 px-1 small" style={{ fontSize: "10px" }}>
-                                  {msg.timeAgo || new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {!isSelf && (
+                                    <span
+                                      className="text-muted fw-semibold mb-1 px-1"
+                                      style={{ fontSize: "11px" }}
+                                    >
+                                      {senderName}
+                                    </span>
+                                  )}
+                                  <div
+                                    className="p-3 shadow-xs"
+                                    style={{
+                                      borderRadius: "16px",
+                                      borderBottomRightRadius: isSelf ? "4px" : "16px",
+                                      borderBottomLeftRadius: isSelf ? "16px" : "4px",
+                                      background: isSelf ? "#3e56f0" : "#ffffff",
+                                      color: isSelf ? "#ffffff" : "#2d3748",
+                                      border: isSelf ? "none" : "1px solid #edf2f7",
+                                      fontSize: "14px",
+                                      lineHeight: "1.5",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {msg.content}
+                                  </div>
+                                  <div
+                                    className="text-muted px-1 mt-1 small"
+                                    style={{ fontSize: "10.5px" }}
+                                  >
+                                    {timeDisplay}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })
-                      )}
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Chat Input Footer */}
+                      <div className="chat-footer p-3 bg-white border-top">
+                        <form
+                          onSubmit={handleSendMessage}
+                          className="d-flex align-items-center gap-2"
+                        >
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            className="form-control rounded-pill px-3.5 py-2.5 border bg-light text-dark shadow-none"
+                            placeholder="Type your message to the group..."
+                            value={newMsg}
+                            onChange={(e) => setNewMsg(e.target.value)}
+                            style={{ fontSize: "14px" }}
+                          />
+                          <button
+                            type="submit"
+                            disabled={!newMsg.trim() || sending}
+                            className="btn btn-send shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white flex-shrink-0"
+                            style={{
+                              width: "42px",
+                              height: "42px",
+                              background: !newMsg.trim() || sending ? "#93a0f7" : "#3e56f0",
+                              border: "none",
+                            }}
+                            title="Send Message"
+                          >
+                            {sending ? (
+                              <div
+                                className="spinner-border spinner-border-sm text-white"
+                                role="status"
+                              ></div>
+                            ) : (
+                              <i className="bi bi-send-fill" style={{ fontSize: "15px" }}></i>
+                            )}
+                          </button>
+                        </form>
+                      </div>
+
                     </div>
-
-                    {/* Input form */}
-                    <form className="p-3 bg-white border-top d-flex gap-2 align-items-center" onSubmit={handleSendMessage}>
-                      <input 
-                        type="text" 
-                        className="form-control rounded-pill px-4 py-2.5 border bg-light" 
-                        placeholder="Type your message here..."
-                        value={newMsg}
-                        onChange={(e) => setNewMsg(e.target.value)}
-                        style={{ fontSize: "14px" }}
-                      />
-                      <button 
-                        type="submit" 
-                        className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" 
-                        style={{ width: "42px", height: "42px", flexShrink: 0 }}
-                        disabled={!newMsg.trim()}
-                      >
-                        <i className="bi bi-send-fill text-white" style={{ fontSize: "15px" }}></i>
-                      </button>
-                    </form>
-
                   </div>
-
                 </div>
-
               </div>
-            </div>
 
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Group Members Popup Modal */}
+      {showMembersModal && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+          style={{
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1050,
+            padding: "20px",
+          }}
+          onClick={() => setShowMembersModal(false)}
+        >
+          <div
+            className="card border-0 rounded-4 shadow-lg overflow-hidden w-100"
+            style={{ maxWidth: "520px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              className="p-4 text-white position-relative"
+              style={{
+                background: "linear-gradient(135deg, #1d4ed8 0%, #3e56f0 100%)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowMembersModal(false)}
+                className="btn-close btn-close-white position-absolute top-0 end-0 m-3 shadow-none"
+                aria-label="Close"
+              ></button>
+              <div className="d-flex align-items-center gap-3">
+                <div
+                  className="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center shadow-sm"
+                  style={{ width: "48px", height: "48px", fontSize: "22px" }}
+                >
+                  <i className="bi bi-people-fill"></i>
+                </div>
+                <div className="overflow-hidden">
+                  <h5 className="fw-bold mb-0 text-truncate text-white">{eventName}</h5>
+                  <small className="text-white-50">
+                    Group Members • {members.length} {members.length === 1 ? "participant" : "participants"}
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div
+              className="p-4"
+              style={{ maxHeight: "420px", overflowY: "auto", background: "#f8fafc" }}
+            >
+              <h6
+                className="fw-bold text-dark mb-3"
+                style={{
+                  fontSize: "13px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                Members List ({members.length})
+              </h6>
+              <div className="d-flex flex-column gap-2.5">
+                {members.length > 0 ? (
+                  members.map((member) => {
+                    const status = getMemberStatus(member._id);
+                    const isCurrentUser =
+                      profile &&
+                      (member._id === profile._id ||
+                        member._id === profile.id ||
+                        member.email === profile.email);
+
+                    return (
+                      <div
+                        key={member._id}
+                        className="d-flex align-items-center justify-content-between p-3 bg-white rounded-3 border shadow-xs"
+                      >
+                        <div className="d-flex align-items-center gap-3 overflow-hidden">
+                          <div className="position-relative flex-shrink-0">
+                            {member.profilePic ? (
+                              <img
+                                src={member.profilePic}
+                                alt={member.fullName}
+                                className="rounded-circle object-fit-cover border"
+                                style={{ width: "40px", height: "40px" }}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div
+                                className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold"
+                                style={{
+                                  width: "40px",
+                                  height: "40px",
+                                  fontSize: "14px",
+                                  background: "#3e56f0",
+                                }}
+                              >
+                                {getInitials(member.fullName)}
+                              </div>
+                            )}
+                            <span
+                              className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
+                              style={{ width: "10px", height: "10px" }}
+                            ></span>
+                          </div>
+                          <div className="overflow-hidden">
+                            <h6 className="text-dark fw-bold m-0 small text-truncate">
+                              {member.fullName || "Member"}
+                              {isCurrentUser && (
+                                <span
+                                  className="badge bg-light text-primary border ms-1.5"
+                                  style={{ fontSize: "10px" }}
+                                >
+                                  You
+                                </span>
+                              )}
+                            </h6>
+                            <span
+                              className="text-muted small text-truncate d-block"
+                              style={{ fontSize: "12px" }}
+                            >
+                              {member.email || "No email"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex-shrink-0 ms-2">
+                          {status === "accepted" && (
+                            <span
+                              className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 fw-bold text-uppercase"
+                              style={{ fontSize: "9px" }}
+                            >
+                              Accepted
+                            </span>
+                          )}
+                          {status === "pending" && (
+                            <span
+                              className="badge bg-warning-subtle text-warning rounded-pill px-2.5 py-1 fw-bold text-uppercase"
+                              style={{ fontSize: "9px" }}
+                            >
+                              Pending
+                            </span>
+                          )}
+                          {status === "not_invited" && (
+                            <span
+                              className="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1 fw-bold text-uppercase"
+                              style={{ fontSize: "9px" }}
+                            >
+                              Not Invited
+                            </span>
+                          )}
+                          {!status && (
+                            <span
+                              className="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 fw-semibold text-capitalize"
+                              style={{ fontSize: "9px" }}
+                            >
+                              Member
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-5 bg-white rounded-3 border">
+                    <i className="bi bi-people fs-1 text-muted mb-2 d-block"></i>
+                    <p className="text-muted small mb-0">No active members found in this group.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-white border-top text-end">
+              <button
+                type="button"
+                onClick={() => setShowMembersModal(false)}
+                className="btn btn-light border rounded-pill px-4 py-1.5 fw-semibold"
+                style={{ fontSize: "13px" }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );
@@ -426,13 +820,15 @@ function ChatContent() {
 
 export default function ChatPage() {
   return (
-    <Suspense fallback={
-      <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading event chat room...</span>
+    <Suspense
+      fallback={
+        <div className="d-flex align-items-center justify-content-center min-vh-100 bg-light">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading event chat room...</span>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <ChatContent />
     </Suspense>
   );
