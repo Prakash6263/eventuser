@@ -1020,7 +1020,8 @@ export default function MyReservationsPage() {
                                     className="res-btn-secondary"
                                     onClick={() => {
                                       const rawRes = res.rawItem || {};
-                                      const mId = rawRes.merchantId?._id || rawRes.merchantId || rawRes.makeReservation?.merchantId?._id || rawRes.makeReservation?.merchantId || "68c286d5a6251e9e18485481";
+                                      const mObj = rawRes.merchantId || rawRes.makeReservation?.merchantId;
+                                      const mId = (typeof mObj === "object" ? mObj?._id : mObj) || "68c286d5a6251e9e18485481";
                                       const mName = encodeURIComponent(res.eventTitle || "Restaurant");
                                       router.push(`/merchant-chat?eventId=${res.eventId || res.id}&merchantId=${mId}&merchantName=${mName}`);
                                     }}

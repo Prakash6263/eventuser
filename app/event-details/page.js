@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi } from "../services/eventApi";
@@ -99,6 +99,7 @@ const mapEventData = (data, loggedInUser) => {
 };
 
 function EventDetailsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const eventId = searchParams.get("id") || searchParams.get("eventId") || "";
 
@@ -1121,9 +1122,10 @@ function EventDetailsContent() {
                       type="button"
                       className="btn btn-outline-primary w-100 rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
                       onClick={() => {
-                        const mId = event.merchantId?._id || event.merchantId || restaurant.merchantId?._id || restaurant.merchantId || "68c286d5a6251e9e18485481";
-                        const mName = encodeURIComponent(restaurant.serviceName || "Restaurant");
-                        router.push(`/merchant-chat?eventId=${event.eventId}&merchantId=${mId}&merchantName=${mName}`);
+                        const mId = event?.merchantId?._id || event?.merchantId || restaurant?.merchantId?._id || restaurant?.merchantId || event?.serviceLocationId?.merchantId?._id || event?.serviceLocationId?.merchantId || "68c286d5a6251e9e18485481";
+                        const mName = encodeURIComponent(chosenRestaurantName || restaurant?.serviceName || "Restaurant");
+                        const eId = event?.eventId || event?.id || eventId;
+                        router.push(`/merchant-chat?eventId=${eId}&merchantId=${mId}&merchantName=${mName}`);
                       }}
                     >
                       <i className="fa-solid fa-comments"></i> Chat with Restaurant
