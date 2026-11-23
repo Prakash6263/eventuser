@@ -795,8 +795,7 @@ export default function ReservationDetailsPage() {
                               const eventId = reservation.id || reservation.eventId || "";
                               const rawRes = reservation.rawItem || {};
                               const merchantId = typeof rawRes.merchantId === "object" ? rawRes.merchantId?._id : (rawRes.merchantId || reservation.merchantId || "");
-                              const serviceId = typeof rawRes.serviceLocationId === "object" ? rawRes.serviceLocationId?._id : (rawRes.serviceLocationId || reservation.serviceLocationId || "686fb6edd46e9740ee8277f0");
-                              router.push(`/merchant-details?eventId=${eventId}${merchantId ? `&merchantId=${merchantId}` : ""}${serviceId ? `&additionalServiceId=${serviceId}` : ""}`);
+                              router.push(`/merchant-details?eventId=${eventId}${merchantId ? `&merchantId=${merchantId}` : ""}`);
                             }}
                           >
                             Venue

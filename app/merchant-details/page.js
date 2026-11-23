@@ -51,16 +51,29 @@ function MerchantDetailsContent() {
         }
 
         // 2. If not found in localStorage or if URL parameters exist, fetch real data from API
-        if (!foundMerchant && (additionalServiceId || merchantId)) {
-          const serviceIdToFetch = additionalServiceId || "686fb6edd46e9740ee8277f0";
-          const res = await getMerchantsByServiceApi(serviceIdToFetch);
-          if (res && res.status && Array.isArray(res.data)) {
-            if (merchantId) {
-              foundMerchant = res.data.find(m => m._id === merchantId || m.id === merchantId);
-            }
-            if (!foundMerchant) {
-              foundMerchant = res.data.find(m => !m.isDeleted) || res.data[0];
-            }
+        if (!foundMerchant && (merchantId || additionalServiceId)) {
+          // If merchantId is provided, fetch using merchantId directly to load the exact merchant
+          if (merchantId) {
+            try {
+              const res = await getMerchantsByServiceApi(merchantId);
+              if (res && res.status && Array.isArray(res.data)) {
+                foundMerchant = res.data.find(m => m._id === merchantId || m.id === merchantId);
+              }
+            } catch (e) {}
+          }
+          // If still not found, try with additionalServiceId
+          if (!foundMerchant && additionalServiceId) {
+            try {
+              const res = await getMerchantsByServiceApi(additionalServiceId);
+              if (res && res.status && Array.isArray(res.data)) {
+                if (merchantId) {
+                  foundMerchant = res.data.find(m => m._id === merchantId || m.id === merchantId);
+                }
+                if (!foundMerchant) {
+                  foundMerchant = res.data.find(m => !m.isDeleted) || res.data[0];
+                }
+              }
+            } catch (e) {}
           }
         }
 
@@ -305,6 +318,27 @@ function MerchantDetailsContent() {
 
             {/* Products list */}
             <div className="d-flex flex-column gap-3 mb-4">
+              {(!merchant.products || merchant.products.length === 0) && (
+                <div className="p-4 text-center bg-white rounded-4 border shadow-sm my-3">
+                  <div className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center text-primary mb-3" style={{ width: "64px", height: "64px", fontSize: "28px" }}>
+                    <i className="fa-solid fa-utensils"></i>
+                  </div>
+                  <h5 className="fw-bold text-dark mb-2">No Service Packages Listed</h5>
+                  <p className="text-muted small mb-4" style={{ maxWidth: "420px", margin: "0 auto" }}>
+                    This merchant does not offer individual catering or decor products for online ordering. For table reservations, please use the Table Reservation flow.
+                  </p>
+                  {eventId && (
+                    <button
+                      type="button"
+                      onClick={() => router.push('/event-details?id=' + eventId)}
+                      className="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm"
+                      style={{ background: "linear-gradient(135deg,#3e56f0,#2563eb)", border: "none" }}
+                    >
+                      <i className="fa-regular fa-calendar-check me-2"></i> Go to Table Reservation
+                    </button>
+                  )}
+                </div>
+              )}
               {(merchant.products || []).map(prod => {
                 const qty = quantities[prod._id] || 0;
                 const isSelected = qty > 0;
