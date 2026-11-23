@@ -788,18 +788,32 @@ export default function ReservationDetailsPage() {
                               {reservation.venue?.split(" - ")?.[1] || reservation.venue || "TBD"}
                             </div>
                           </div>
-                          <button
-                            className="web-row-action-btn"
-                            style={{ background: "#3e56f0", padding: "8px 22px" }}
-                            onClick={() => {
-                              const eventId = reservation.id || reservation.eventId || "";
-                              const rawRes = reservation.rawItem || {};
-                              const merchantId = typeof rawRes.merchantId === "object" ? rawRes.merchantId?._id : (rawRes.merchantId || reservation.merchantId || "");
-                              router.push(`/merchant-details?eventId=${eventId}${merchantId ? `&merchantId=${merchantId}` : ""}`);
-                            }}
-                          >
-                            Venue
-                          </button>
+                          <div className="d-flex align-items-center gap-2">
+                            <button
+                              className="web-row-action-btn"
+                              style={{ background: "#3e56f0", padding: "8px 18px" }}
+                              onClick={() => {
+                                const eventId = reservation.id || reservation.eventId || "";
+                                const rawRes = reservation.rawItem || {};
+                                const merchantId = typeof rawRes.merchantId === "object" ? rawRes.merchantId?._id : (rawRes.merchantId || reservation.merchantId || "");
+                                router.push(`/merchant-details?eventId=${eventId}${merchantId ? `&merchantId=${merchantId}` : ""}`);
+                              }}
+                            >
+                              Venue
+                            </button>
+                            <button
+                              className="web-row-action-btn"
+                              style={{ background: "#059669", padding: "8px 18px" }}
+                              onClick={() => {
+                                const eventId = reservation.id || reservation.eventId || "";
+                                const rawRes = reservation.rawItem || {};
+                                const merchantId = typeof rawRes.merchantId === "object" ? rawRes.merchantId?._id : (rawRes.merchantId || reservation.merchantId || "68c286d5a6251e9e18485481");
+                                router.push(`/merchant-chat?eventId=${eventId}&merchantId=${merchantId}&merchantName=${encodeURIComponent(reservation.venue?.split(" - ")?.[0] || "Venue")}`);
+                              }}
+                            >
+                              <i className="fa-solid fa-comments me-1"></i> Chat
+                            </button>
+                          </div>
                         </div>
 
                         {/* Organizer Row with Dynamic Avatar */}

@@ -1016,6 +1016,17 @@ export default function MyReservationsPage() {
                                   >
                                     <i className="bi bi-eye"></i> View
                                   </button>
+                                  <button
+                                    className="res-btn-secondary"
+                                    onClick={() => {
+                                      const rawRes = res.rawItem || {};
+                                      const mId = rawRes.merchantId?._id || rawRes.merchantId || rawRes.makeReservation?.merchantId?._id || rawRes.makeReservation?.merchantId || "68c286d5a6251e9e18485481";
+                                      const mName = encodeURIComponent(res.eventTitle || "Restaurant");
+                                      router.push(`/merchant-chat?eventId=${res.eventId || res.id}&merchantId=${mId}&merchantName=${mName}`);
+                                    }}
+                                  >
+                                    <i className="bi bi-chat-dots"></i> Chat
+                                  </button>
                                   {res.hasReservation && (
                                     <>
                                       <button

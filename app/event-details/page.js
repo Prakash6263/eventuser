@@ -1107,15 +1107,28 @@ function EventDetailsContent() {
                 </div>
 
                 {isRestaurantOption && restaurant && (
-                  <button
-                    type="button"
-                    className="btn btn-primary w-100 rounded-pill py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                    onClick={() => setShowVenueModal(true)}
-                    style={{ background: "#4f46e5", border: "none" }}
-                  >
-                    <i className="fa-solid fa-circle-info"></i>
-                    View Venue Details
-                  </button>
+                  <div className="d-flex flex-column gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-primary w-100 rounded-pill py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                      onClick={() => setShowVenueModal(true)}
+                      style={{ background: "#4f46e5", border: "none" }}
+                    >
+                      <i className="fa-solid fa-circle-info"></i>
+                      View Venue Details
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary w-100 rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                      onClick={() => {
+                        const mId = event.merchantId?._id || event.merchantId || restaurant.merchantId?._id || restaurant.merchantId || "68c286d5a6251e9e18485481";
+                        const mName = encodeURIComponent(restaurant.serviceName || "Restaurant");
+                        router.push(`/merchant-chat?eventId=${event.eventId}&merchantId=${mId}&merchantName=${mName}`);
+                      }}
+                    >
+                      <i className="fa-solid fa-comments"></i> Chat with Restaurant
+                    </button>
+                  </div>
                 )}
 
                 {isRestaurantOption && event.isMyEvent && (
