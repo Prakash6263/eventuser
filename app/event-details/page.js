@@ -547,8 +547,11 @@ function EventDetailsContent() {
     );
   }
 
-  // Find selected restaurant info
-  const restaurant = merchants.find((item) => (item._id || item.id) === event.selectedRestaurant) || merchants[0];
+  // Find selected restaurant info (MerchantService e.g. "tasty khana")
+  const targetRestaurantId = String(event.selectedRestaurant || event.merchantId || "");
+  const restaurant = merchants.find((item) => String(item._id || item.id) === targetRestaurantId) ||
+    merchants.find((item) => (item.serviceLocationIds || []).some(loc => String(loc._id || loc) === String(event.serviceLocationId?._id || event.serviceLocationId))) ||
+    null;
 
   const isRestaurantOption = event.place === "At a participating restaurant" ||
     event.place === "restaurant" ||
@@ -556,24 +559,32 @@ function EventDetailsContent() {
     event.place === "6877a86668d1e0b9fcdf5006" ||
     !!event.serviceLocationId;
 
+  // Selected Restaurant / Outlet Name (e.g. "tasty khana")
+  const chosenRestaurantName = restaurant?.serviceName || 
+    restaurant?.name || 
+    restaurant?.fullName || 
+    event.serviceLocationId?.serviceId?.serviceName || 
+    event.serviceLocationId?.merchantId?.serviceName || 
+    event.serviceLocationId?.merchantId?.fullName || 
+    "Event Venue";
+
   // Dynamic Venue Display String
   let venueDisplay = "Location provided by organizer";
   if (event.serviceLocationId) {
-    const merchantName = event.serviceLocationId.merchantId?.serviceName || event.serviceLocationId.merchantId?.fullName || "Event Venue";
-    venueDisplay = `${merchantName} - ${event.serviceLocationId.addressName || event.serviceLocationId.address}`;
+    const locAddress = event.serviceLocationId.addressName || event.serviceLocationId.address || "";
+    venueDisplay = locAddress ? `${chosenRestaurantName} - ${locAddress}` : chosenRestaurantName;
   } else if (isRestaurantOption) {
     if (restaurant) {
-      const restName = restaurant.serviceName || restaurant.fullName || restaurant.name || "Participating restaurant";
       if (event.selectedLocation) {
-        venueDisplay = `${restName} - ${event.selectedLocation.addressName || event.selectedLocation.address}`;
+        venueDisplay = `${chosenRestaurantName} - ${event.selectedLocation.addressName || event.selectedLocation.address}`;
       } else {
         const defaultLoc = (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.addressName) ||
           (restaurant.serviceLocationIds && restaurant.serviceLocationIds[0]?.address) ||
           restaurant.location;
-        venueDisplay = defaultLoc ? `${restName} (${defaultLoc})` : restName;
+        venueDisplay = defaultLoc ? `${chosenRestaurantName} (${defaultLoc})` : chosenRestaurantName;
       }
     } else {
-      venueDisplay = "Participating restaurant";
+      venueDisplay = chosenRestaurantName !== "Event Venue" ? chosenRestaurantName : "Participating restaurant";
     }
   } else if (event.place) {
     venueDisplay = event.place;
@@ -581,11 +592,11 @@ function EventDetailsContent() {
 
   const monthName = new Date(2026, event.month || 6, 1).toLocaleString("en-US", { month: "long" });
 
-  const displayRestaurantName = event.serviceLocationId?.merchantId?.serviceName || event.serviceLocationId?.merchantId?.fullName || restaurant?.serviceName || restaurant?.fullName || restaurant?.name || "Event Venue";
-  const displayRestaurantImage = event.serviceLocationId?.merchantId?.profileImage || restaurant?.bannerImage || restaurant?.profileImage || "/images/banner.jpg";
-  const displayRestaurantDescription = event.serviceLocationId?.merchantId?.serviceDescription || restaurant?.serviceDescription || restaurant?.serviceSlogan || "Participating event venue.";
+  const displayRestaurantName = chosenRestaurantName;
+  const displayRestaurantImage = restaurant?.bannerImage || restaurant?.profileImage || event.serviceLocationId?.merchantId?.profileImage || "/images/banner.jpg";
+  const displayRestaurantDescription = restaurant?.serviceDescription || restaurant?.serviceSlogan || event.serviceLocationId?.merchantId?.serviceDescription || "Participating event venue.";
   const displayAddress = event.serviceLocationId?.address || event.selectedLocation?.address || restaurant?.location || "Indore location";
-  const displayPhone = event.serviceLocationId?.locationPhone || restaurant?.phone || restaurant?.mobile || "";
+  const displayPhone = restaurant?.phone || event.serviceLocationId?.locationPhone || restaurant?.mobile || "";
   const displayCapacity = event.serviceLocationId?.capacity || restaurant?.capacity || "";
 
   // Guest avatar initials helper
