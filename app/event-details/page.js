@@ -330,7 +330,18 @@ function EventDetailsContent() {
             setLoadingReservation(true);
             const resData = await getReservationDetailsByIdApi(eventId);
             if (resData && resData.status && resData.data) {
-              setReservation(resData.data.makeReservation || resData.data.reservation || resData.data);
+              let currentEventReservation = null;
+              if (Array.isArray(resData.data)) {
+                const matching = resData.data.find(d => String(d._id) === String(eventId) || String(d.id) === String(eventId));
+                if (matching && (matching.makeReservation || matching.reservation)) {
+                  currentEventReservation = matching.makeReservation || matching.reservation;
+                }
+              } else if (resData.data.makeReservation || resData.data.reservation) {
+                currentEventReservation = resData.data.makeReservation || resData.data.reservation;
+              } else if (resData.data._id && (String(resData.data.eventId) === String(eventId) || String(resData.data._id) === String(eventId))) {
+                currentEventReservation = resData.data;
+              }
+              setReservation(currentEventReservation);
             } else {
               setReservation(null);
             }
