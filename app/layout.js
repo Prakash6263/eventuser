@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="h-100" suppressHydrationWarning>
+    <html lang="en" className="min-vh-100" suppressHydrationWarning>
       <head>
         <link rel="icon" type="image/png" href="/images/fav.png" />
         <link
@@ -32,7 +32,7 @@ export default function RootLayout({ children }) {
         <link href="/css/datepicker.min.css" rel="stylesheet" />
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
       </head>
-      <body className="d-flex flex-column h-100" suppressHydrationWarning>
+      <body className="d-flex flex-column min-vh-100" suppressHydrationWarning>
         <Preloader />
         <AuthProvider>
           {children}

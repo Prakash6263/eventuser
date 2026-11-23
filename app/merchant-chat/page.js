@@ -222,8 +222,8 @@ function MerchantChatContent() {
   return (
     <>
       <Header />
-      <div className="wrapper" style={{ background: "#f8f9fa", minHeight: "100vh" }}>
-        <div style={{ paddingTop: "120px", paddingBottom: "70px" }}>
+      <div className="wrapper flex-grow-1" style={{ background: "#f8f9fa", flex: "1 0 auto" }}>
+        <div style={{ paddingTop: "110px", paddingBottom: "60px" }}>
           <div className="container" style={{ maxWidth: "860px" }}>
 
             {/* Top Bar with Back and Info */}
@@ -258,7 +258,7 @@ function MerchantChatContent() {
 
             {/* Simple, Clean Chat Card */}
             <div
-              className="card border-0 rounded-4 shadow-sm overflow-hidden bg-white"
+              className="card border-0 rounded-4 shadow-sm overflow-hidden bg-white mb-4"
               style={{ border: "1px solid #edf2f7" }}
             >
               {/* Chat Header */}
