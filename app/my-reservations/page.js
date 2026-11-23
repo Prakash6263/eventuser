@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SafeImage from "../components/SafeImage";
 import { authService } from "../services/authService";
+import { getMyCreatedEventsApi } from "../services/eventApi";
 import { getReservationDetailsApi, cancelReservationApi, resendReservationApi, getCancelReasonsApi, makeReservationApi } from "../services/reservationApi";
 import Swal from "sweetalert2";
 
@@ -14,6 +15,8 @@ export default function MyReservationsPage() {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [reservations, setReservations] = useState([]);
+  const [unreservedEvents, setUnreservedEvents] = useState([]);
+  const [createResModal, setCreateResModal] = useState({ show: false, event: null, adultCount: "2", childCount: "0", instruction: "", guestType: "All" });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [cancelModal, setCancelModal] = useState({ show: false, id: null, reservationId: null, comment: "", reason: "" });
@@ -134,14 +137,33 @@ export default function MyReservationsPage() {
     const fetchReservations = async () => {
       try {
         setLoading(true);
-        const res = await getReservationDetailsApi();
-        if (res && res.status && Array.isArray(res.data) && res.data.length > 0) {
-          const mapped = res.data.map(mapReservationItem);
+        const [res, eventsRes] = await Promise.allSettled([
+          getReservationDetailsApi(),
+          getMyCreatedEventsApi()
+        ]);
+
+        const reservedEventIds = new Set();
+        if (res.status === "fulfilled" && res.value && res.value.status && Array.isArray(res.value.data) && res.value.data.length > 0) {
+          const mapped = res.value.data.map(mapReservationItem);
           setReservations(mapped);
+          mapped.forEach((r) => {
+            if (r.eventId) reservedEventIds.add(String(r.eventId));
+            if (r.id) reservedEventIds.add(String(r.id));
+          });
           localStorage.setItem("eventuna-reservations", JSON.stringify(mapped));
         } else {
           setReservations([]);
           localStorage.removeItem("eventuna-reservations");
+        }
+
+        if (eventsRes.status === "fulfilled" && eventsRes.value && eventsRes.value.status && Array.isArray(eventsRes.value.data)) {
+          const pending = eventsRes.value.data.filter((evt) => {
+            const hasRestaurant = Boolean(evt.serviceLocationId || evt.selectedRestaurant || evt.merchantId || evt.reservationType === "1" || evt.reservationType === "2");
+            const alreadyReserved = reservedEventIds.has(String(evt._id));
+            const isLive = evt.status !== "cancelled" && evt.status !== "rejected";
+            return hasRestaurant && !alreadyReserved && isLive;
+          });
+          setUnreservedEvents(pending);
         }
       } catch (e) {
         console.error("Failed to load live reservations:", e);
@@ -225,6 +247,68 @@ export default function MyReservationsPage() {
     const current = parseInt(modifyModal.childCount, 10) || 0;
     const next = Math.max(0, current + delta);
     setModifyModal((prev) => ({ ...prev, childCount: String(next) }));
+  };
+
+  
+  const handleCreateReservation = async (e) => {
+    e && e.preventDefault && e.preventDefault();
+    if (!createResModal.event) return;
+    setResSubmitting(true);
+    try {
+      const payload = {
+        eventId: createResModal.event._id,
+        adultCount: String(createResModal.adultCount || "1"),
+        childCount: String(createResModal.childCount || "0"),
+        instruction: createResModal.instruction || "",
+        guestType: createResModal.guestType || "All"
+      };
+      const res = await makeReservationApi(payload);
+      if (res && (res.status === true || res.success === true)) {
+        setCreateResModal({ show: false, event: null, adultCount: "2", childCount: "0", instruction: "", guestType: "All" });
+        Swal.fire({
+          title: "Reservation Requested!",
+          text: "Your table reservation request has been submitted to the restaurant. It is now listed under your reservations and visible to the vendor!",
+          icon: "success",
+          confirmButtonColor: "#3e56f0"
+        });
+        // Reload
+        try {
+          const freshRes = await getReservationDetailsApi();
+          let freshReservedIds = new Set();
+          if (freshRes && freshRes.status && Array.isArray(freshRes.data)) {
+            const mapped = freshRes.data.map(mapReservationItem);
+            setReservations(mapped);
+            freshRes.data.forEach(r => {
+              if (r.eventId) freshReservedIds.add(String(r.eventId));
+              if (r._id) freshReservedIds.add(String(r._id));
+            });
+          }
+          const freshEvents = await getMyCreatedEventsApi();
+          if (freshEvents && freshEvents.status && Array.isArray(freshEvents.data)) {
+            const pending = freshEvents.data.filter((evt) => {
+              const hasRestaurant = Boolean(evt.serviceLocationId || evt.selectedRestaurant || evt.merchantId || evt.reservationType === "1" || evt.reservationType === "2");
+              const alreadyReserved = freshReservedIds.has(String(evt._id));
+              const isLive = evt.status !== "cancelled" && evt.status !== "rejected";
+              return hasRestaurant && !alreadyReserved && isLive;
+            });
+            setUnreservedEvents(pending);
+          }
+        } catch (reErr) {
+          console.error(reErr);
+        }
+      } else {
+        throw new Error(res?.message || "Failed to submit reservation.");
+      }
+    } catch (err) {
+      Swal.fire({
+        title: "Reservation Error",
+        text: err.message || "Something went wrong while submitting reservation.",
+        icon: "error",
+        confirmButtonColor: "#3e56f0"
+      });
+    } finally {
+      setResSubmitting(false);
+    }
   };
 
   const handleModifyReservation = async (e) => {
@@ -917,6 +1001,79 @@ export default function MyReservationsPage() {
                     </div>
                   </div>
 
+                  
+                  {/* Events Awaiting Table Reservation Section */}
+                  {unreservedEvents.length > 0 && (
+                    <div className="mb-4 p-4 rounded-4 bg-white border shadow-sm" style={{ borderLeft: "5px solid #f59e0b" }}>
+                      <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="badge bg-warning text-dark px-2.5 py-1.5 rounded-pill fw-bold" style={{ fontSize: "12px" }}>
+                            Action Required ({unreservedEvents.length})
+                          </span>
+                          <h5 className="fw-bold mb-0 text-dark" style={{ fontSize: "17px" }}>
+                            Events Awaiting Table Reservation
+                          </h5>
+                        </div>
+                        <Link href="/my-events" className="text-primary text-decoration-none small fw-semibold">
+                          View All Events <i className="bi bi-arrow-right"></i>
+                        </Link>
+                      </div>
+                      <p className="text-muted small mb-3">
+                        You have created events with restaurant venues, but a table reservation has not been submitted yet. Reserve tables below to notify the vendor:
+                      </p>
+                      <div className="row g-3">
+                        {unreservedEvents.map((evt) => {
+                          const venueName = evt.serviceLocationId?.addressName || evt.selectedRestaurant?.serviceName || "Restaurant / Venue";
+                          return (
+                            <div key={evt._id} className="col-12">
+                              <div className="p-3 rounded-3 border bg-light d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                <div className="d-flex align-items-center gap-3">
+                                  <div className="rounded-3 bg-white border d-flex align-items-center justify-content-center text-warning shadow-sm" style={{ width: "44px", height: "44px", fontSize: "20px" }}>
+                                    <i className="bi bi-shop"></i>
+                                  </div>
+                                  <div>
+                                    <h6 className="fw-bold mb-1 text-dark">{evt.eventTitle || "Untitled Event"}</h6>
+                                    <div className="text-muted small d-flex flex-wrap align-items-center gap-2">
+                                      <span><i className="bi bi-geo-alt text-danger me-1"></i>{venueName}</span>
+                                      <span>•</span>
+                                      <span><i className="bi bi-calendar-event me-1"></i>{evt.eventDate || "Date TBD"}</span>
+                                      {evt.eventStartTime && (
+                                        <>
+                                          <span>•</span>
+                                          <span><i className="bi bi-clock me-1"></i>{evt.eventStartTime}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="d-flex align-items-center gap-2">
+                                  <Link href={'/event-details?id=' + evt._id} className="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                                    Event Details
+                                  </Link>
+                                  <button
+                                    type="button"
+                                    onClick={() => setCreateResModal({
+                                      show: true,
+                                      event: evt,
+                                      adultCount: "2",
+                                      childCount: "0",
+                                      instruction: "",
+                                      guestType: "All"
+                                    })}
+                                    className="btn btn-sm text-white rounded-pill px-3 fw-semibold shadow-sm"
+                                    style={{ background: "linear-gradient(135deg, #3e56f0 0%, #2b3fc2 100%)", border: "none" }}
+                                  >
+                                    <i className="bi bi-calendar2-check me-1"></i> Reserve Table Now
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Search Section */}
                   <div className="mb-4">
                     <div className="res-search-input-wrap">
@@ -1050,6 +1207,140 @@ export default function MyReservationsPage() {
           </div>
         </div>
       </div>
+
+      
+      {/* Create Table Reservation Modal */}
+      {createResModal.show && createResModal.event && (
+        <div className="modal fade show d-block modal-custom-backdrop" style={{ zIndex: 1050 }}>
+          <div className="modal-dialog modal-dialog-centered px-3" style={{ maxWidth: "460px" }}>
+            <div className="modal-content modern-modal-card overflow-hidden">
+              {/* Header */}
+              <div className="modal-header border-0 pb-0 pt-4 px-4 d-flex align-items-start justify-content-between">
+                <div className="d-flex align-items-center gap-3">
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center text-white"
+                    style={{
+                      width: "42px",
+                      height: "42px",
+                      background: "linear-gradient(135deg, #3e56f0 0%, #2b3fc2 100%)",
+                      boxShadow: "0 4px 10px rgba(62, 86, 240, 0.3)",
+                      fontSize: "18px",
+                      flexShrink: 0
+                    }}
+                  >
+                    <i className="bi bi-shop"></i>
+                  </div>
+                  <div>
+                    <h5 className="modal-title fw-bold text-dark mb-0" style={{ fontSize: "18px" }}>
+                      Reserve Table at Venue
+                    </h5>
+                    <p className="text-muted mb-0" style={{ fontSize: "13px" }}>
+                      {createResModal.event.eventTitle}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close shadow-none"
+                  onClick={() => setCreateResModal({ show: false, event: null, adultCount: "2", childCount: "0", instruction: "", guestType: "All" })}
+                ></button>
+              </div>
+
+              {/* Body */}
+              <div className="modal-body px-4 pt-3 pb-4">
+                <form onSubmit={handleCreateReservation}>
+                  {/* Adult Counter */}
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold text-muted mb-1">Number of Adults</label>
+                    <div className="d-flex align-items-center justify-content-between guest-counter-box">
+                      <span className="fw-medium text-dark small"><i className="bi bi-person me-1"></i>Adults</span>
+                      <div className="d-flex align-items-center gap-2">
+                        <button
+                          type="button"
+                          className="stepper-btn"
+                          disabled={parseInt(createResModal.adultCount || "1", 10) <= 1}
+                          onClick={() => setCreateResModal(prev => ({ ...prev, adultCount: String(Math.max(1, (parseInt(prev.adultCount, 10) || 1) - 1)) }))}
+                        >-</button>
+                        <input
+                          type="number"
+                          className="stepper-input"
+                          value={createResModal.adultCount}
+                          readOnly
+                        />
+                        <button
+                          type="button"
+                          className="stepper-btn"
+                          onClick={() => setCreateResModal(prev => ({ ...prev, adultCount: String((parseInt(prev.adultCount, 10) || 1) + 1) }))}
+                        >+</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Child Counter */}
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold text-muted mb-1">Number of Children</label>
+                    <div className="d-flex align-items-center justify-content-between guest-counter-box">
+                      <span className="fw-medium text-dark small"><i className="bi bi-people me-1"></i>Children</span>
+                      <div className="d-flex align-items-center gap-2">
+                        <button
+                          type="button"
+                          className="stepper-btn"
+                          disabled={parseInt(createResModal.childCount || "0", 10) <= 0}
+                          onClick={() => setCreateResModal(prev => ({ ...prev, childCount: String(Math.max(0, (parseInt(prev.childCount, 10) || 0) - 1)) }))}
+                        >-</button>
+                        <input
+                          type="number"
+                          className="stepper-input"
+                          value={createResModal.childCount}
+                          readOnly
+                        />
+                        <button
+                          type="button"
+                          className="stepper-btn"
+                          onClick={() => setCreateResModal(prev => ({ ...prev, childCount: String((parseInt(prev.childCount, 10) || 0) + 1) }))}
+                        >+</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Special Instructions */}
+                  <div className="mb-4">
+                    <label className="form-label small fw-semibold text-muted mb-1">Special Instructions / Seating Notes</label>
+                    <textarea
+                      className="form-control modern-form-input w-100"
+                      rows="2"
+                      placeholder="e.g. Window table, birthday celebration setup, quiet area..."
+                      value={createResModal.instruction}
+                      onChange={(e) => setCreateResModal(prev => ({ ...prev, instruction: e.target.value }))}
+                    ></textarea>
+                  </div>
+
+                  <div className="d-flex gap-2">
+                    <button
+                      type="button"
+                      className="btn modern-secondary-btn flex-fill"
+                      onClick={() => setCreateResModal({ show: false, event: null, adultCount: "2", childCount: "0", instruction: "", guestType: "All" })}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn modern-primary-btn flex-fill"
+                      disabled={resSubmitting}
+                    >
+                      {resSubmitting ? (
+                        <span><i className="spinner-border spinner-border-sm me-1"></i> Submitting...</span>
+                      ) : (
+                        <span><i className="bi bi-check2-circle me-1"></i> Confirm Reservation</span>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Reservation Modal */}
       {cancelModal.show && (
