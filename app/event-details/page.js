@@ -1107,7 +1107,7 @@ function EventDetailsContent() {
                   </button>
                 )}
 
-                {isRestaurantOption && isCreator && (
+                {isRestaurantOption && event.isMyEvent && (
                   <div className="mt-3 pt-3 border-top">
                     {reservation ? (
                       <div className="p-3 rounded-3 border text-start" style={{
