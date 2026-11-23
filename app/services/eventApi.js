@@ -97,6 +97,15 @@ export const markEventAsDraftApi = async (eventId) => {
   });
 };
 
+// 12. Publish Draft Event (Make Live) API
+export const publishDraftEventApi = async (eventId) => {
+  return await apiRequest("/event/publish-draft", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId }),
+  });
+};
+
 export const eventApi = {
   getEventTypes: getEventTypesApi,
   getEventCategoriesByTypeId: getEventCategoriesByTypeIdApi,
@@ -110,6 +119,7 @@ export const eventApi = {
   getEventMedia: getEventMediaApi,
   rateEvent: rateEventApi,
   markEventAsDraft: markEventAsDraftApi,
+  publishDraftEvent: publishDraftEventApi,
 };
 
 export default eventApi;

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { getMerchantsByServiceApi } from "../services/eventApi";
+import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi } from "../services/eventApi";
 import { apiRequest } from "../services/apiClient";
 import Swal from "sweetalert2";
 
@@ -43,11 +43,14 @@ const mapEventData = (data, loggedInUser) => {
     };
   });
 
-  const isMyEvent = loggedInUser && data.eventcreator && (
-    (data.eventcreator._id && (data.eventcreator._id === loggedInUser.userId || data.eventcreator._id === loggedInUser._id || data.eventcreator._id === loggedInUser.id)) ||
-    (data.eventcreator.id && (data.eventcreator.id === loggedInUser.userId || data.eventcreator.id === loggedInUser._id || data.eventcreator.id === loggedInUser.id)) ||
-    (typeof data.eventcreator === "string" && (data.eventcreator === loggedInUser.userId || data.eventcreator === loggedInUser._id || data.eventcreator === loggedInUser.id))
-  );
+  const creatorId = data.eventcreator?._id || data.eventcreator?.id || data.userId?._id || data.userId || (typeof data.eventcreator === "string" ? data.eventcreator : "");
+  const currentUserId = loggedInUser?.userId || loggedInUser?._id || loggedInUser?.id || "";
+  const isMyEvent = (currentUserId && creatorId && String(creatorId) === String(currentUserId)) ||
+    (loggedInUser && data.eventcreator && (
+      (data.eventcreator._id && (data.eventcreator._id === loggedInUser.userId || data.eventcreator._id === loggedInUser._id || data.eventcreator._id === loggedInUser.id)) ||
+      (data.eventcreator.id && (data.eventcreator.id === loggedInUser.userId || data.eventcreator.id === loggedInUser._id || data.eventcreator.id === loggedInUser.id)) ||
+      (typeof data.eventcreator === "string" && (data.eventcreator === loggedInUser.userId || data.eventcreator === loggedInUser._id || data.eventcreator === loggedInUser.id))
+    ));
 
   let rawStatus = data.myInvitationStatus || data.status || data.eventCurrentStatus || "pending";
   const statusLower = rawStatus.toLowerCase();
@@ -62,6 +65,7 @@ const mapEventData = (data, loggedInUser) => {
     eventImage: data.image || null,
     selectedDate: selectedDate,
     month: month,
+    rawEventDate: data.eventDate || "",
     startTime: data.eventStartTime || "",
     endTime: data.eventEndTime || "",
     selectedRestaurant: data.merchantId?._id || data.merchantId || (data.serviceLocationId?.merchantId?._id || data.serviceLocationId?.merchantId || ""),
@@ -119,6 +123,123 @@ function EventDetailsContent() {
 
   const [submitting, setSubmitting] = useState(false);
   const [apiMessage, setApiMessage] = useState({ type: "", text: "" });
+
+  // Edit Event Modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+
+  // Publish Draft state
+  const [publishing, setPublishing] = useState(false);
+
+  const handleOpenEditModal = () => {
+    if (!event) return;
+    setEditTitle(event.eventTitle || "");
+    setEditDescription(event.invitationMessage || "");
+
+    let dStr = event.rawEventDate || "";
+    if (dStr && /^\d{2}-\d{2}-\d{4}$/.test(dStr)) {
+      const [dd, mm, yyyy] = dStr.split("-");
+      dStr = `${yyyy}-${mm}-${dd}`;
+    }
+    setEditDate(dStr);
+    setEditStartTime(event.startTime || "");
+    setEditEndTime(event.endTime || "");
+    setShowEditModal(true);
+  };
+
+  const handleSaveEditEvent = async (e) => {
+    e.preventDefault();
+    if (!editTitle.trim()) {
+      Swal.fire({ icon: "warning", title: "Event title is required", timer: 2000, showConfirmButton: false });
+      return;
+    }
+
+    try {
+      setEditSaving(true);
+      const payload = {
+        eventId: event.eventId,
+        eventTitle: editTitle.trim(),
+        description: editDescription.trim(),
+        eventDate: editDate,
+        eventStartTime: editStartTime,
+        eventEndTime: editEndTime,
+      };
+
+      const res = await updateEventApi(payload);
+      if (res && res.status) {
+        await Swal.fire({
+          icon: "success",
+          title: "Saved!",
+          text: "Event details updated successfully.",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        setShowEditModal(false);
+        window.location.reload();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Update Failed",
+          text: res?.message || "Could not update event details.",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update event:", err);
+      Swal.fire({ icon: "error", title: "Error", text: err.message || "Failed to update event." });
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handlePublishDraft = async () => {
+    const result = await Swal.fire({
+      title: "Publish this Event?",
+      text: "This will make your event LIVE and send invitations to all your invited guests.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "🚀 Yes, Publish Now!",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setPublishing(true);
+      const res = await publishDraftEventApi(event.eventId);
+      if (res && res.status) {
+        await Swal.fire({
+          icon: "success",
+          title: "Event is Live!",
+          text: "Your event has been successfully published to Upcoming.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        window.location.reload();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Publish Failed",
+          text: res?.message || "Could not publish event draft.",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to publish draft:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to publish event.",
+      });
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   // Load event details that were selected from an event list or created event flow.
   useEffect(() => {
@@ -491,6 +612,47 @@ function EventDetailsContent() {
               Event Details
             </span>
           </div>
+
+          {/* Draft Status Banner */}
+          {event && event.status?.toLowerCase() === "draft" && (
+            <div className="alert alert-warning border-0 rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3 animate__animated animate__fadeIn">
+              <div className="d-flex align-items-center gap-3">
+                <div className="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: "42px", height: "42px", fontSize: "18px" }}>
+                  <i className="fa-solid fa-file-pen"></i>
+                </div>
+                <div>
+                  <h6 className="fw-bold mb-0 text-dark">This Event is currently in Draft Mode</h6>
+                  <p className="text-muted small mb-0">It is not live yet. Edit your details anytime or publish it to invite your guests.</p>
+                </div>
+              </div>
+              {event.isMyEvent && (
+                <div className="d-flex gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-dark btn-sm rounded-pill px-3 fw-semibold"
+                    onClick={handleOpenEditModal}
+                  >
+                    <i className="fa-solid fa-pen me-1"></i> Edit Event
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-success btn-sm rounded-pill px-3.5 py-1.5 fw-bold text-white shadow-sm"
+                    style={{ background: "#10b981", border: "none" }}
+                    onClick={handlePublishDraft}
+                    disabled={publishing}
+                  >
+                    {publishing ? (
+                      <span className="spinner-border spinner-border-sm" role="status"></span>
+                    ) : (
+                      <>
+                        <i className="fa-solid fa-rocket me-1"></i> Make Live
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {apiMessage.text && !showAcceptModal && (
             <div className={`alert alert-${apiMessage.type} alert-dismissible fade show mb-4`} role="alert">
@@ -1020,6 +1182,39 @@ function EventDetailsContent() {
                     </div>
                   )}
 
+                  {/* Organizer Event Controls (Edit & Publish) */}
+                  {event.isMyEvent && (
+                    <div className="border-top pt-3 mt-2 d-flex flex-column gap-2 animate__animated animate__fadeIn">
+                      {event.status?.toLowerCase() === "draft" && (
+                        <button 
+                          type="button" 
+                          className="btn btn-success rounded-pill py-2.5 fw-bold text-white shadow-sm d-flex align-items-center justify-content-center gap-2"
+                          style={{ background: "#10b981", border: "none" }}
+                          onClick={handlePublishDraft}
+                          disabled={publishing}
+                        >
+                          {publishing ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm" role="status"></span>
+                              Publishing Event...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fa-solid fa-rocket"></i> Publish & Make Live
+                            </>
+                          )}
+                        </button>
+                      )}
+                      <button 
+                        type="button" 
+                        className="btn btn-outline-primary rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                        onClick={handleOpenEditModal}
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i> Edit Event Details
+                      </button>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>
@@ -1486,6 +1681,138 @@ function EventDetailsContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Event Details Modal */}
+      {showEditModal && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ background: "rgba(5, 2, 62, 0.6)", backdropFilter: "blur(4px)", zIndex: 1060 }}
+          onClick={() => !editSaving && setShowEditModal(false)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered modal-dialog-scrollable px-3"
+            style={{ maxWidth: "560px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+              <div className="modal-header border-bottom py-3 px-4 bg-primary text-white d-flex justify-content-between align-items-center">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center" style={{ width: "34px", height: "34px" }}>
+                    <i className="fa-solid fa-pen-to-square"></i>
+                  </div>
+                  <h6 className="fw-bold m-0 text-white" style={{ fontSize: "16px" }}>Edit Event Details</h6>
+                </div>
+                <button
+                  type="button"
+                  className="btn text-white border-0 p-0"
+                  style={{ background: "none", fontSize: "18px" }}
+                  onClick={() => !editSaving && setShowEditModal(false)}
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEditEvent}>
+                <div className="modal-body p-4 bg-light d-flex flex-column gap-3">
+                  {/* Event Title */}
+                  <div>
+                    <label className="form-label fw-semibold text-dark small mb-1">
+                      Event Title <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control rounded-3 py-2"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="e.g. Annual Celebration, Birthday Party"
+                      required
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="form-label fw-semibold text-dark small mb-1">
+                      Event Description / Invitation Note
+                    </label>
+                    <textarea
+                      className="form-control rounded-3 py-2"
+                      rows="3"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Share details or a welcoming note with your guests..."
+                    ></textarea>
+                  </div>
+
+                  {/* Date */}
+                  <div>
+                    <label className="form-label fw-semibold text-dark small mb-1">
+                      Event Date
+                    </label>
+                    <input
+                      type="date"
+                      className="form-control rounded-3 py-2"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Start Time & End Time */}
+                  <div className="row g-2">
+                    <div className="col-6">
+                      <label className="form-label fw-semibold text-dark small mb-1">
+                        Start Time
+                      </label>
+                      <input
+                        type="time"
+                        className="form-control rounded-3 py-2"
+                        value={editStartTime}
+                        onChange={(e) => setEditStartTime(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label fw-semibold text-dark small mb-1">
+                        End Time
+                      </label>
+                      <input
+                        type="time"
+                        className="form-control rounded-3 py-2"
+                        value={editEndTime}
+                        onChange={(e) => setEditEndTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-footer border-top py-3 px-4 bg-white d-flex justify-content-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary rounded-pill px-4 fw-semibold"
+                    onClick={() => setShowEditModal(false)}
+                    disabled={editSaving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary rounded-pill px-4 fw-bold shadow-sm"
+                    disabled={editSaving}
+                  >
+                    {editSaving ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
