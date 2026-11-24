@@ -138,9 +138,11 @@ export default function MyEventsPage() {
   }, []);
 
   const handleViewDetails = (rawEvent) => {
+    const targetId = rawEvent?._id || rawEvent?.id || rawEvent?.eventId || rawEvent?.rawEvent?._id || rawEvent?.rawEvent?.id;
+    if (!targetId) return;
     localStorage.setItem("event-details-back-url", "/my-events");
     localStorage.setItem("event-details-back-label", "Back to My Events");
-    router.push(`/event-details?id=${rawEvent._id}`);
+    router.push(`/event-details?id=${targetId}`);
   };
 
   const filteredEvents =
@@ -259,7 +261,11 @@ export default function MyEventsPage() {
                       <div className="row g-4">
                         {filteredEvents.map((evt) => (
                           <div key={evt.id} className="col-12 col-md-6 col-lg-4">
-                            <div className="event-card border rounded-3 overflow-hidden shadow-sm bg-white h-100 d-flex flex-column">
+                            <div
+                              className="event-card border rounded-3 overflow-hidden shadow-sm bg-white h-100 d-flex flex-column hover-shadow transition"
+                              style={{ cursor: "pointer" }}
+                              onClick={() => handleViewDetails(evt)}
+                            >
                               <SafeImage
                                 src={evt.img}
                                 className="event-img w-100 object-fit-cover"
@@ -288,8 +294,12 @@ export default function MyEventsPage() {
                                     {evt.status}
                                   </span>
                                   <button
+                                    type="button"
                                     className="btn btn-sm btn-primary rounded-pill px-3 fw-semibold"
-                                    onClick={() => handleViewDetails(evt.rawEvent)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewDetails(evt);
+                                    }}
                                     style={{ fontSize: "12px", background: "#4f46e5", border: "none" }}
                                   >
                                     Detail
