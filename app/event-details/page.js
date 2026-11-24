@@ -692,7 +692,7 @@ function EventDetailsContent() {
   const monthName = new Date(2026, event.month || 6, 1).toLocaleString("en-US", { month: "long" });
 
   const displayRestaurantName = chosenRestaurantName;
-  const displayRestaurantImage = restaurant?.bannerImage || restaurant?.profileImage || event.serviceLocationId?.merchantId?.profileImage || "/images/banner.jpg";
+  const displayRestaurantImage = restaurant?.bannerImages?.[0] || restaurant?.bannerImage || restaurant?.profileImage || event.serviceLocationId?.merchantId?.profileImage || "/images/banner.jpg";
   const displayRestaurantDescription = restaurant?.serviceDescription || restaurant?.serviceSlogan || event.serviceLocationId?.merchantId?.serviceDescription || "Participating event venue.";
   const displayAddress = event.serviceLocationId?.address || event.selectedLocation?.address || restaurant?.location || "Indore location";
   const displayPhone = restaurant?.phone || event.serviceLocationId?.locationPhone || restaurant?.mobile || "";

@@ -159,7 +159,7 @@ function MerchantsByServiceContent() {
                       {/* Banner Image */}
                       <div className="position-relative" style={{ height: "180px" }}>
                         <img
-                          src={m.bannerImage || m.profileImage || "https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=600"}
+                          src={m.bannerImages?.[0] || m.bannerImage || m.profileImage || "https://images.pexels.com/photos/2774556/pexels-photo-2774556.jpeg?auto=compress&cs=tinysrgb&w=600"}
                           alt={m.serviceName || m.fullName}
                           className="w-100 h-100 object-fit-cover"
                           onError={(e) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -98,12 +98,56 @@ function MerchantDetailsContent() {
   };
 
   const getProductImage = (photoObj) => {
-    if (!photoObj || !photoObj[0]) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
-    const name = photoObj[0].fileName || photoObj[0].name;
-    if (!name) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
-    if (name.startsWith("http")) return name;
-    return `https://event-una-image-bucket.s3.amazonaws.com/merchant/products/${name}`;
+    if (!photoObj) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
+    if (typeof photoObj === "string") {
+      if (photoObj.startsWith("http")) return photoObj;
+      return `https://event-una-image-bucket.s3.ap-south-1.amazonaws.com/${photoObj.replace(/^\/+/, "")}`;
+    }
+    const item = Array.isArray(photoObj) ? photoObj[0] : photoObj;
+    if (!item) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
+    if (typeof item === "string") {
+      if (item.startsWith("http")) return item;
+      return `https://event-una-image-bucket.s3.ap-south-1.amazonaws.com/${item.replace(/^\/+/, "")}`;
+    }
+    const candidate = item.url || item.fileUrl || item.imageUrl || item.file || item.fileName || item.name;
+    if (!candidate) return "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80";
+    if (candidate.startsWith("http")) return candidate;
+    const clean = candidate.replace(/^\/+/, "");
+    const finalPath = clean.startsWith("merchant/") ? clean : `merchant/products/${clean}`;
+    return `https://event-una-image-bucket.s3.ap-south-1.amazonaws.com/${finalPath}`;
   };
+
+  // ── Multi-Banner extraction & carousel ──
+  const allBanners = useMemo(() => {
+    const list = [];
+    if (Array.isArray(merchant?.bannerImages) && merchant.bannerImages.length > 0) {
+      merchant.bannerImages.forEach(img => {
+        if (typeof img === "string" && img.trim()) list.push(img.trim());
+        else if (img && typeof img === "object") {
+          const u = img.url || img.fileUrl || img.imageUrl || img.file || img.locationPhoto;
+          if (u) list.push(u);
+        }
+      });
+    }
+    if (merchant?.bannerImage && !list.includes(merchant.bannerImage)) {
+      list.push(merchant.bannerImage);
+    }
+    if (list.length === 0) {
+      list.push("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80");
+    }
+    return list;
+  }, [merchant]);
+
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+
+  // Auto-slide banner carousel every 6 seconds if multiple banners exist
+  useEffect(() => {
+    if (allBanners.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveBannerIndex((prev) => (prev + 1) % allBanners.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [allBanners.length]);
 
   // ── Quantity helpers ──
   const handleIncrease = (id) => setQuantities(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
@@ -761,41 +805,133 @@ function MerchantDetailsContent() {
     <>
       <Header />
       <div className="wrapper">
-        {/* Hero Banner */}
+        {/* Hero Banner with Multi-Image Carousel */}
         <div
           style={{
-            backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.72) 100%), url('${merchant.bannerImage || "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80"}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            minHeight: "340px",
+            position: "relative",
+            minHeight: "360px",
             color: "#fff",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
             padding: "24px 0 36px",
             borderRadius: 0,
-            marginBottom: 0
+            marginBottom: 0,
+            overflow: "hidden"
           }}
         >
-          {/* Top navigation inside banner */}
-          <div className="container">
-            <button
-              onClick={() => router.back()}
-              className="btn rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm text-white"
+          {/* Background slides */}
+          {allBanners.map((imgUrl, i) => (
+            <div
+              key={i}
               style={{
-                background: "rgba(0, 0, 0, 0.45)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255, 255, 255, 0.3)",
-                fontSize: "13px",
-                transition: "all 0.2s"
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.72) 100%), url('${imgUrl}')`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                opacity: i === activeBannerIndex ? 1 : 0,
+                transition: "opacity 0.8s ease-in-out",
+                zIndex: 0
               }}
-            >
-              <i className="fa-solid fa-arrow-left"></i> Back
-            </button>
+            />
+          ))}
+
+          {/* Top navigation inside banner */}
+          <div className="container" style={{ position: "relative", zIndex: 1 }}>
+            <div className="d-flex justify-content-between align-items-center">
+              <button
+                onClick={() => router.back()}
+                className="btn rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm text-white"
+                style={{
+                  background: "rgba(0, 0, 0, 0.45)",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  fontSize: "13px",
+                  transition: "all 0.2s"
+                }}
+              >
+                <i className="fa-solid fa-arrow-left"></i> Back
+              </button>
+
+              {allBanners.length > 1 && (
+                <div
+                  className="d-flex align-items-center gap-2 px-3 py-1.5 rounded-pill shadow-sm"
+                  style={{
+                    background: "rgba(0, 0, 0, 0.55)",
+                    backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255, 255, 255, 0.25)",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    letterSpacing: "0.5px"
+                  }}
+                >
+                  <i className="fa-solid fa-camera"></i>
+                  <span>{activeBannerIndex + 1} / {allBanners.length}</span>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* Carousel Prev / Next Controls */}
+          {allBanners.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveBannerIndex((prev) => (prev - 1 + allBanners.length) % allBanners.length);
+                }}
+                className="btn text-white position-absolute d-flex align-items-center justify-content-center"
+                style={{
+                  top: "50%",
+                  left: "20px",
+                  transform: "translateY(-50%)",
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "50%",
+                  background: "rgba(0, 0, 0, 0.45)",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  zIndex: 2,
+                  transition: "all 0.2s"
+                }}
+                aria-label="Previous banner"
+              >
+                <i className="fa-solid fa-chevron-left"></i>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveBannerIndex((prev) => (prev + 1) % allBanners.length);
+                }}
+                className="btn text-white position-absolute d-flex align-items-center justify-content-center"
+                style={{
+                  top: "50%",
+                  right: "20px",
+                  transform: "translateY(-50%)",
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "50%",
+                  background: "rgba(0, 0, 0, 0.45)",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  zIndex: 2,
+                  transition: "all 0.2s"
+                }}
+                aria-label="Next banner"
+              >
+                <i className="fa-solid fa-chevron-right"></i>
+              </button>
+            </>
+          )}
+
           {/* Banner Details at bottom */}
-          <div className="container">
+          <div className="container" style={{ position: "relative", zIndex: 1 }}>
             <div className="d-flex align-items-center gap-2 mb-2 flex-wrap">
               <span className="badge bg-primary px-3 py-2 rounded-pill fw-bold" style={{ fontSize: "12px" }}>
                 {merchant.serviceId?.servicesName || "Merchant Partner"}
@@ -813,6 +949,30 @@ function MerchantDetailsContent() {
               <p className="lead m-0 mt-1 opacity-90 fw-medium" style={{ fontSize: "16px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
                 {merchant.serviceSlogan}
               </p>
+            )}
+
+            {/* Dots navigation if multiple banners */}
+            {allBanners.length > 1 && (
+              <div className="d-flex gap-2 mt-3 align-items-center">
+                {allBanners.map((_, dotIdx) => (
+                  <button
+                    key={dotIdx}
+                    type="button"
+                    onClick={() => setActiveBannerIndex(dotIdx)}
+                    style={{
+                      width: dotIdx === activeBannerIndex ? "24px" : "8px",
+                      height: "8px",
+                      borderRadius: "4px",
+                      background: dotIdx === activeBannerIndex ? "#ffffff" : "rgba(255, 255, 255, 0.45)",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      transition: "all 0.3s ease"
+                    }}
+                    aria-label={`Go to banner ${dotIdx + 1}`}
+                  />
+                ))}
+              </div>
             )}
           </div>
         </div>
