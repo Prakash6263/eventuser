@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi } from "../services/eventApi";
 import { makeReservationApi, getReservationDetailsByIdApi } from "../services/reservationApi";
+import { getEventGroupChatApi } from "../services/chatApi";
 import { apiRequest } from "../services/apiClient";
 import Swal from "sweetalert2";
 
@@ -147,6 +148,9 @@ function EventDetailsContent() {
   const [resInstructions, setResInstructions] = useState("");
   const [resSubmitting, setResSubmitting] = useState(false);
   const [resError, setResError] = useState("");
+
+  // Event Group Chat state
+  const [groupChat, setGroupChat] = useState(null);
 
   const handleOpenReservationModal = () => {
     const defaultGuests = (event?.selectedGuests && event.selectedGuests.length > 0) ? String(event.selectedGuests.length) : "1";
@@ -350,6 +354,16 @@ function EventDetailsContent() {
             setReservation(null);
           } finally {
             setLoadingReservation(false);
+          }
+
+          // Fetch group chat details for live community card
+          try {
+            const chatRes = await getEventGroupChatApi(eventId);
+            if (chatRes && chatRes.status && chatRes.data) {
+              setGroupChat(chatRes.data);
+            }
+          } catch (cErr) {
+            console.log("No group chat or fetch error:", cErr);
           }
         } else {
           setApiMessage({ type: "danger", text: res?.message || "Failed to load event details." });
@@ -1030,6 +1044,255 @@ function EventDetailsContent() {
                   </div>
                 </div>
               )}
+
+              {/* Event Discussion & Group Chat Card */}
+              <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                  <div className="d-flex align-items-center gap-2.5">
+                    <div
+                      className="rounded-circle d-flex align-items-center justify-content-center text-white shadow-xs flex-shrink-0"
+                      style={{ width: "38px", height: "38px", background: "linear-gradient(135deg, #3e56f0 0%, #6366f1 100%)", fontSize: "16px" }}
+                    >
+                      <i className="bi bi-chat-left-dots-fill"></i>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px" }}>Event Discussion & Group Chat</h5>
+                      <span className="text-muted small" style={{ fontSize: "12px" }}>
+                        Live channel for all confirmed attendees & organizer
+                      </span>
+                    </div>
+                  </div>
+                  <span className="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 small fw-semibold d-inline-flex align-items-center gap-1.5" style={{ fontSize: "11px" }}>
+                    <span className="bg-success rounded-circle d-inline-block" style={{ width: "6px", height: "6px" }}></span>
+                    Live Channel
+                  </span>
+                </div>
+
+                <p className="text-secondary small mb-3" style={{ lineHeight: "1.5", fontSize: "13px" }}>
+                  Connect with the event host and fellow guests. Coordinate arrival plans, share updates, or ask event questions before the party starts.
+                </p>
+
+                {/* Attendees Avatar Stack & Action */}
+                <div className="p-3 rounded-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                  <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex align-items-center">
+                      {event.selectedGuests && event.selectedGuests.length > 0 ? (
+                        event.selectedGuests.slice(0, 4).map((g, idx) => (
+                          <div
+                            key={g.id || idx}
+                            className="rounded-circle border border-2 border-white d-flex align-items-center justify-content-center fw-bold text-white shadow-xs overflow-hidden"
+                            style={{
+                              width: "28px",
+                              height: "28px",
+                              marginLeft: idx === 0 ? "0" : "-8px",
+                              background: idx === 0 ? "#3e56f0" : idx === 1 ? "#10b981" : idx === 2 ? "#f59e0b" : "#8b5cf6",
+                              fontSize: "11px",
+                            }}
+                            title={g.name}
+                          >
+                            {g.profilePic ? (
+                              <img src={g.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              getInitials(g.name)
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div
+                          className="rounded-circle border border-2 border-white d-flex align-items-center justify-content-center fw-bold text-white shadow-xs"
+                          style={{ width: "28px", height: "28px", background: "#3e56f0", fontSize: "11px" }}
+                        >
+                          {getInitials(event.organizerName)}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-dark small fw-medium" style={{ fontSize: "12px" }}>
+                      {event.selectedGuests && event.selectedGuests.length > 0
+                        ? `${event.selectedGuests.length} ${event.selectedGuests.length === 1 ? "participant" : "participants"} in room`
+                        : "Host active in room"}
+                    </span>
+                  </div>
+
+                  <Link
+                    href={`/chat?chatId=${groupChat?._id || ""}&eventName=${encodeURIComponent(event.eventTitle)}&eventId=${event.eventId}`}
+                    className="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs transition"
+                    style={{ background: "#3e56f0", border: "none", fontSize: "12px" }}
+                  >
+                    <i className="bi bi-chat-text-fill"></i>
+                    <span>Open Event Group Chat</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Venue Highlights & Directions Showcase Card */}
+              <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                  <div className="d-flex align-items-center gap-2.5">
+                    <div
+                      className="rounded-circle d-flex align-items-center justify-content-center text-white shadow-xs flex-shrink-0"
+                      style={{ width: "38px", height: "38px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", fontSize: "16px" }}
+                    >
+                      <i className="bi bi-geo-alt-fill"></i>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px" }}>Venue Highlights & Directions</h5>
+                      <span className="text-muted small" style={{ fontSize: "12px" }}>
+                        Everything you need to know about reaching {displayRestaurantName}
+                      </span>
+                    </div>
+                  </div>
+                  {displayCapacity && (
+                    <span className="badge rounded-pill bg-light text-secondary border px-2.5 py-1 small fw-semibold" style={{ fontSize: "11px" }}>
+                      <i className="bi bi-people me-1"></i>Capacity: {displayCapacity}
+                    </span>
+                  )}
+                </div>
+
+                <div className="row g-3">
+                  <div className="col-md-7">
+                    <div className="p-3 rounded-3 h-100 d-flex flex-column justify-content-between" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                      <div>
+                        <span className="text-muted small text-uppercase fw-semibold" style={{ fontSize: "10.5px", letterSpacing: "0.5px" }}>Full Address</span>
+                        <p className="fw-bold text-dark mb-2 mt-1 small" style={{ lineHeight: "1.4" }}>
+                          {venueDisplay}
+                        </p>
+                        {displayPhone && (
+                          <p className="text-secondary small mb-0 d-flex align-items-center gap-1.5" style={{ fontSize: "12px" }}>
+                            <i className="bi bi-telephone text-primary"></i>
+                            <span>{displayPhone}</span>
+                          </p>
+                        )}
+                      </div>
+                      <div className="pt-3 mt-2 border-top d-flex align-items-center gap-2 flex-wrap">
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueDisplay)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs"
+                          style={{ fontSize: "12px" }}
+                        >
+                          <i className="bi bi-pin-map-fill"></i>
+                          <span>Get Directions</span>
+                        </a>
+                        {isRestaurantOption && restaurant && (
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-light border rounded-pill px-3 py-1.5 fw-medium text-secondary shadow-xs"
+                            onClick={() => setShowVenueModal(true)}
+                            style={{ fontSize: "12px" }}
+                          >
+                            <i className="bi bi-info-circle me-1"></i>
+                            View Venue Profile
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Venue Amenities Tags */}
+                  <div className="col-md-5">
+                    <div className="p-3 rounded-3 h-100" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                      <span className="text-muted small text-uppercase fw-semibold d-block mb-2.5" style={{ fontSize: "10.5px", letterSpacing: "0.5px" }}>Venue Amenities</span>
+                      <div className="d-flex flex-column gap-2">
+                        <div className="d-flex align-items-center gap-2 small text-secondary" style={{ fontSize: "12px" }}>
+                          <span className="badge rounded-circle bg-success-subtle text-success p-1 d-flex align-items-center justify-content-center" style={{ width: "18px", height: "18px" }}>
+                            <i className="bi bi-check" style={{ fontSize: "13px" }}></i>
+                          </span>
+                          <span>Parking Space Available</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-2 small text-secondary" style={{ fontSize: "12px" }}>
+                          <span className="badge rounded-circle bg-success-subtle text-success p-1 d-flex align-items-center justify-content-center" style={{ width: "18px", height: "18px" }}>
+                            <i className="bi bi-check" style={{ fontSize: "13px" }}></i>
+                          </span>
+                          <span>Dine-in Reserved Seating</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-2 small text-secondary" style={{ fontSize: "12px" }}>
+                          <span className="badge rounded-circle bg-success-subtle text-success p-1 d-flex align-items-center justify-content-center" style={{ width: "18px", height: "18px" }}>
+                            <i className="bi bi-check" style={{ fontSize: "13px" }}></i>
+                          </span>
+                          <span>Guest Wi-Fi & AC Seating</span>
+                        </div>
+                        <div className="d-flex align-items-center gap-2 small text-secondary" style={{ fontSize: "12px" }}>
+                          <span className="badge rounded-circle bg-success-subtle text-success p-1 d-flex align-items-center justify-content-center" style={{ width: "18px", height: "18px" }}>
+                            <i className="bi bi-check" style={{ fontSize: "13px" }}></i>
+                          </span>
+                          <span>Wheelchair Accessible</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Event Guidelines & Helpful Tips Card */}
+              <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                  <div className="d-flex align-items-center gap-2.5">
+                    <div
+                      className="rounded-circle d-flex align-items-center justify-content-center text-white shadow-xs flex-shrink-0"
+                      style={{ width: "38px", height: "38px", background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", fontSize: "16px" }}
+                    >
+                      <i className="bi bi-info-circle-fill"></i>
+                    </div>
+                    <div>
+                      <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px" }}>Event Guidelines & Tips</h5>
+                      <span className="text-muted small" style={{ fontSize: "12px" }}>
+                        Important notes for a smooth and pleasant event experience
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="row g-3">
+                  <div className="col-sm-6">
+                    <div className="p-3 rounded-3 h-100" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                      <div className="d-flex align-items-center gap-2 mb-1.5">
+                        <i className="bi bi-clock-history text-primary fw-bold" style={{ fontSize: "14px" }}></i>
+                        <h6 className="fw-bold text-dark m-0 small">Arrival & Punctuality</h6>
+                      </div>
+                      <p className="text-muted small mb-0" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
+                        Please arrive 10-15 minutes prior to {event.startTime || "start time"} for seamless reception and seating.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="col-sm-6">
+                    <div className="p-3 rounded-3 h-100" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                      <div className="d-flex align-items-center gap-2 mb-1.5">
+                        <i className="bi bi-qr-code text-success fw-bold" style={{ fontSize: "14px" }}></i>
+                        <h6 className="fw-bold text-dark m-0 small">Digital Verification</h6>
+                      </div>
+                      <p className="text-muted small mb-0" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
+                        Keep your digital attendance QR or invitation pass accessible on your mobile phone at entrance.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="col-sm-6">
+                    <div className="p-3 rounded-3 h-100" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                      <div className="d-flex align-items-center gap-2 mb-1.5">
+                        <i className="bi bi-person-check text-info fw-bold" style={{ fontSize: "14px" }}></i>
+                        <h6 className="fw-bold text-dark m-0 small">Guest Policy</h6>
+                      </div>
+                      <p className="text-muted small mb-0" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
+                        Additional guests: <strong className="text-dark">{event.bringGuests === "Yes" ? `Allowed (up to ${event.maxGuests})` : "Not Allowed"}</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="col-sm-6">
+                    <div className="p-3 rounded-3 h-100" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                      <div className="d-flex align-items-center gap-2 mb-1.5">
+                        <i className="bi bi-chat-heart text-danger fw-bold" style={{ fontSize: "14px" }}></i>
+                        <h6 className="fw-bold text-dark m-0 small">Need Special Help?</h6>
+                      </div>
+                      <p className="text-muted small mb-0" style={{ fontSize: "11.5px", lineHeight: "1.4" }}>
+                        Use the restaurant chat or contact organizer <strong>{event.organizerName}</strong> for dietary or special requests.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
             </div>
 
