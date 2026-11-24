@@ -349,18 +349,6 @@ function MerchantChatContent() {
                                 {getInitials(merchantName)}
                               </div>
                             )}
-                            <span
-                              style={{
-                                position: "absolute",
-                                bottom: "0",
-                                right: "0",
-                                width: "10px",
-                                height: "10px",
-                                background: "#10b981",
-                                border: "2px solid #ffffff",
-                                borderRadius: "50%",
-                              }}
-                            ></span>
                           </div>
 
                           <div>
@@ -368,11 +356,10 @@ function MerchantChatContent() {
                               {merchantName}
                             </h6>
                             <small
-                              className="text-success fw-semibold d-inline-flex align-items-center gap-1.5"
+                              className="text-muted fw-medium d-inline-flex align-items-center gap-1"
                               style={{ fontSize: "12px" }}
                             >
-                              <i className="bi bi-circle-fill" style={{ fontSize: "7px" }}></i>
-                              Online • Restaurant Partner
+                              <span className="text-success fw-semibold">Online</span> • Restaurant Partner
                             </small>
                           </div>
                         </div>

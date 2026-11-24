@@ -373,18 +373,6 @@ function ChatContent() {
                             >
                               <i className="bi bi-people-fill"></i>
                             </div>
-                            <span
-                              style={{
-                                position: "absolute",
-                                bottom: "0",
-                                right: "0",
-                                width: "10px",
-                                height: "10px",
-                                background: "#10b981",
-                                border: "2px solid #ffffff",
-                                borderRadius: "50%",
-                              }}
-                            ></span>
                           </div>
 
                           <div>
