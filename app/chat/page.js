@@ -756,10 +756,6 @@ function ChatContent() {
                                 {getInitials(member.fullName)}
                               </div>
                             )}
-                            <span
-                              className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
-                              style={{ width: "10px", height: "10px" }}
-                            ></span>
                           </div>
                           <div className="overflow-hidden">
                             <h6 className="text-dark fw-bold m-0 small text-truncate">
