@@ -403,7 +403,7 @@ function ChatContent() {
                           <button
                             type="button"
                             onClick={() => setShowMembersModal(true)}
-                            className="btn btn-sm rounded-pill px-3 py-1.5 border d-inline-flex align-items-center gap-2 shadow-xs transition"
+                            className="btn btn-sm btn-white border rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-2 shadow-xs transition btn-neutral-hover"
                             style={{
                               background: "#f8fafc",
                               borderColor: "#e2e8f0",
@@ -433,10 +433,10 @@ function ChatContent() {
                                 </div>
                               ))}
                             </div>
-                            <span className="fw-semibold">Members</span>
+                            <span className="fw-semibold text-dark">Members</span>
                             <span
                               className="badge bg-white text-dark border px-1.5 py-0.5 rounded-pill shadow-xs"
-                              style={{ fontSize: "10px", fontWeight: "600" }}
+                              style={{ fontSize: "10px", fontWeight: "600", color: "#334155" }}
                             >
                               {members.length}
                             </span>
@@ -446,16 +446,17 @@ function ChatContent() {
                           {eventId && (
                             <Link
                               href={`/event-details?id=${eventId}`}
-                              className="btn btn-sm rounded-pill px-3 py-1.5 border d-none d-sm-inline-flex align-items-center gap-2 text-secondary shadow-xs transition"
+                              className="btn btn-sm btn-white rounded-pill px-3 py-1.5 border d-none d-sm-inline-flex align-items-center gap-2 text-dark shadow-xs transition btn-neutral-hover"
                               style={{
                                 background: "#ffffff",
                                 borderColor: "#e2e8f0",
                                 fontSize: "12px",
                                 fontWeight: "500",
+                                color: "#334155",
                               }}
                             >
                               <i className="bi bi-calendar-event text-primary" style={{ fontSize: "13px" }}></i>
-                              <span>Event Details</span>
+                              <span className="text-dark">Event Details</span>
                             </Link>
                           )}
 

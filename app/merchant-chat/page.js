@@ -368,16 +368,17 @@ function MerchantChatContent() {
                           {eventId && (
                             <Link
                               href={`/event-details?id=${eventId}`}
-                              className="btn btn-sm rounded-pill px-3 py-1.5 border d-none d-sm-inline-flex align-items-center gap-2 text-secondary shadow-xs transition"
+                              className="btn btn-sm btn-white rounded-pill px-3 py-1.5 border d-none d-sm-inline-flex align-items-center gap-2 text-dark shadow-xs transition btn-neutral-hover"
                               style={{
                                 background: "#ffffff",
                                 borderColor: "#e2e8f0",
                                 fontSize: "12px",
                                 fontWeight: "500",
+                                color: "#334155",
                               }}
                             >
                               <i className="bi bi-calendar-event text-primary" style={{ fontSize: "13px" }}></i>
-                              <span>Event Details</span>
+                              <span className="text-dark">Event Details</span>
                             </Link>
                           )}
                           <button

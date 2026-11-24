@@ -79,20 +79,33 @@ a.create-btn:hover {
   color: #ffffff !important;
 }
 
-/* Ensure any button with text-white or solid background never hides text on hover */
+/* Ensure buttons with explicit white text class keep white text */
 .btn.text-white:hover,
 .btn.text-white:focus,
 a.btn.text-white:hover,
 a.btn.text-white:focus,
-.btn[style*="background"]:hover,
-a.btn[style*="background"]:hover,
-.btn[style*="background"]:hover *,
-a.btn[style*="background"]:hover *,
-.btn[style*="background: #3e56f0"]:hover,
-a[style*="background: #3e56f0"]:hover,
-.btn[style*="background: #4f46e5"]:hover,
-a[style*="background: #4f46e5"]:hover {
+.btn-primary:hover *,
+a.btn-primary:hover *,
+button.btn-primary:hover * {
   color: #ffffff !important;
+}
+
+/* Light / White / Neutral Buttons (e.g. Back, Refresh, Members, Details) must ALWAYS keep readable dark text on hover */
+.btn-light,
+.btn-light:hover,
+.btn-light:focus,
+a.btn-light:hover,
+button.btn-light:hover,
+.btn-white,
+.btn-white:hover,
+.btn-white:focus,
+a.btn-white:hover,
+button.btn-white:hover,
+.btn-neutral-hover,
+.btn-neutral-hover:hover,
+.btn-neutral-hover:hover * {
+  color: #0f172a !important;
+  background-color: #f1f5f9 !important;
 }
 
 /* Semantic button hover colors */
