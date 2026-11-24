@@ -1,0 +1,8 @@
+# Ignore large zip archives and scratch files
+eventUser.zip
+*.zip
+scratch/
+.next/
+node_modules/
+.git/
+

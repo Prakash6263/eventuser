@@ -351,22 +351,22 @@ function ChatContent() {
                           <button
                             type="button"
                             onClick={() => router.back()}
-                            className="btn btn-light bg-light border rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5 shadow-xs"
-                            style={{ fontSize: "13px" }}
+                            className="btn btn-sm btn-white border rounded-pill px-3 py-1.5 fw-medium d-inline-flex align-items-center gap-1.5 shadow-xs text-secondary hover-shadow transition"
+                            style={{ fontSize: "13px", background: "#ffffff", borderColor: "#e2e8f0" }}
                           >
-                            <i className="fa-solid fa-arrow-left text-primary"></i>
+                            <i className="bi bi-arrow-left text-primary fw-bold" style={{ fontSize: "14px" }}></i>
                             <span>Back</span>
                           </button>
 
                           <div
                             className="avatar-wrapper position-relative flex-shrink-0"
-                            style={{ width: "44px", height: "44px" }}
+                            style={{ width: "42px", height: "42px" }}
                           >
                             <div
                               className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
                               style={{
-                                width: "44px",
-                                height: "44px",
+                                width: "42px",
+                                height: "42px",
                                 fontSize: "18px",
                                 background: "linear-gradient(135deg, #3e56f0 0%, #6366f1 100%)",
                               }}
@@ -388,57 +388,98 @@ function ChatContent() {
                           </div>
 
                           <div>
-                            <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "15.5px" }}>
+                            <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "15px", letterSpacing: "-0.2px" }}>
                               {eventName}
                             </h6>
-                            <small
-                              className="text-muted fw-semibold d-inline-flex align-items-center gap-1"
-                              style={{ fontSize: "12px" }}
-                            >
-                              <span
-                                className="badge bg-primary-subtle text-primary rounded-pill px-2 py-0.5"
-                                style={{ fontSize: "10px" }}
-                              >
-                                Group Chat
+                            <div className="d-flex align-items-center gap-2 mt-0.5">
+                              <span className="d-inline-flex align-items-center gap-1 text-success fw-semibold" style={{ fontSize: "11.5px" }}>
+                                <span className="bg-success rounded-circle d-inline-block" style={{ width: "6px", height: "6px" }}></span>
+                                Live Channel
                               </span>
-                              • {members.length} {members.length === 1 ? "Member" : "Members"}
-                            </small>
+                              <span className="text-muted" style={{ fontSize: "11px" }}>•</span>
+                              <button
+                                type="button"
+                                onClick={() => setShowMembersModal(true)}
+                                className="btn btn-link p-0 border-0 text-muted text-decoration-none d-inline-flex align-items-center gap-1 fw-medium hover-text-primary"
+                                style={{ fontSize: "11.5px" }}
+                              >
+                                <span>{members.length} {members.length === 1 ? "participant" : "participants"}</span>
+                                <i className="bi bi-chevron-right" style={{ fontSize: "10px" }}></i>
+                              </button>
+                            </div>
                           </div>
                         </div>
 
                         <div className="d-flex align-items-center gap-2">
-                          {/* View Members Button */}
+                          {/* Modern Overlapping Members Stack Button */}
                           <button
                             type="button"
                             onClick={() => setShowMembersModal(true)}
-                            className="btn btn-outline-primary btn-sm rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5"
-                            style={{ fontSize: "12px" }}
+                            className="btn btn-sm rounded-pill px-3 py-1.5 border d-inline-flex align-items-center gap-2 shadow-xs transition"
+                            style={{
+                              background: "#f8fafc",
+                              borderColor: "#e2e8f0",
+                              color: "#334155",
+                              fontSize: "12px",
+                            }}
+                            title="View all members"
                           >
-                            <i className="bi bi-people"></i>
-                            <span>Members ({members.length})</span>
+                            <div className="d-flex align-items-center">
+                              {members.slice(0, 3).map((m, idx) => (
+                                <div
+                                  key={m._id || idx}
+                                  className="rounded-circle border border-2 border-white d-flex align-items-center justify-content-center fw-bold text-white shadow-xs overflow-hidden"
+                                  style={{
+                                    width: "22px",
+                                    height: "22px",
+                                    marginLeft: idx === 0 ? "0" : "-7px",
+                                    background: idx === 0 ? "#3e56f0" : idx === 1 ? "#10b981" : "#f59e0b",
+                                    fontSize: "10px",
+                                  }}
+                                >
+                                  {m.profilePic ? (
+                                    <img src={m.profilePic} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  ) : (
+                                    getInitials(m.fullName)
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <span className="fw-semibold">Members</span>
+                            <span
+                              className="badge bg-white text-dark border px-1.5 py-0.5 rounded-pill shadow-xs"
+                              style={{ fontSize: "10px", fontWeight: "600" }}
+                            >
+                              {members.length}
+                            </span>
                           </button>
 
-                          {/* Event Details Button */}
+                          {/* Event Details Button with Clean Spacing */}
                           {eventId && (
                             <Link
                               href={`/event-details?id=${eventId}`}
-                              className="btn btn-light border btn-sm rounded-pill px-3 py-1.5 fw-semibold d-none d-sm-inline-flex align-items-center gap-1.5 text-muted"
-                              style={{ fontSize: "12px" }}
+                              className="btn btn-sm rounded-pill px-3 py-1.5 border d-none d-sm-inline-flex align-items-center gap-2 text-secondary shadow-xs transition"
+                              style={{
+                                background: "#ffffff",
+                                borderColor: "#e2e8f0",
+                                fontSize: "12px",
+                                fontWeight: "500",
+                              }}
                             >
-                              <i className="fa-regular fa-calendar"></i>
+                              <i className="bi bi-calendar-event text-primary" style={{ fontSize: "13px" }}></i>
                               <span>Event Details</span>
                             </Link>
                           )}
 
-                          {/* Refresh Button */}
+                          {/* Sleek Refresh Button */}
                           <button
                             type="button"
-                            className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center text-muted"
-                            style={{ width: "36px", height: "36px" }}
+                            className="btn btn-sm btn-white border rounded-circle d-flex align-items-center justify-content-center text-muted shadow-xs transition"
+                            style={{ width: "34px", height: "34px", background: "#ffffff", borderColor: "#e2e8f0" }}
                             onClick={() => fetchMessages()}
-                            title="Refresh Chat"
+                            title="Refresh messages"
                           >
-                            <i className="fa-solid fa-rotate-right" style={{ fontSize: "13px" }}></i>
+                            <i className="bi bi-arrow-clockwise text-secondary" style={{ fontSize: "14px" }}></i>
                           </button>
                         </div>
                       </div>
