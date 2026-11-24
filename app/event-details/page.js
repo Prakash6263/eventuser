@@ -1127,11 +1127,11 @@ function EventDetailsContent() {
 
                   <Link
                     href={`/chat?chatId=${groupChat?._id || ""}&eventName=${encodeURIComponent(event.eventTitle)}&eventId=${event.eventId}`}
-                    className="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center shadow-xs transition"
-                    style={{ background: "#3e56f0", border: "none", fontSize: "12px", gap: "8px" }}
+                    className="btn btn-sm btn-primary text-white rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center shadow-xs transition"
+                    style={{ background: "#3e56f0", border: "none", fontSize: "12px", gap: "8px", color: "#ffffff" }}
                   >
-                    <i className="bi bi-chat-text-fill" style={{ fontSize: "13px", lineHeight: 1 }}></i>
-                    <span>Open Event Group Chat</span>
+                    <i className="bi bi-chat-text-fill text-white" style={{ fontSize: "13px", lineHeight: 1, color: "#ffffff" }}></i>
+                    <span className="text-white" style={{ color: "#ffffff" }}>Open Event Group Chat</span>
                   </Link>
                 </div>
               </div>

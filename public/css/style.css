@@ -90,7 +90,7 @@ ol, ul {
 	padding-left: 0 !important;
 }
 a:hover {
-	color: #3c52e9 !important;
+	color: #3c52e9;
 	text-decoration: none;
 }
 blockquote, q {

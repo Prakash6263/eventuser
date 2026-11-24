@@ -55,3 +55,110 @@ body {
     display: none !important;
   }
 }
+
+/* ── Global Interactive & Button Hover Protection ── */
+/* Ensure filled primary buttons always keep crisp white text on hover */
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+a.btn-primary,
+a.btn-primary:hover,
+a.btn-primary:focus,
+a.btn-primary:active,
+button.btn-primary,
+button.btn-primary:hover,
+button.btn-primary:focus,
+button.btn-primary:active,
+.btn-hover:hover,
+a.btn-hover:hover,
+.main-btn:hover,
+a.main-btn:hover,
+.create-btn:hover,
+a.create-btn:hover {
+  color: #ffffff !important;
+}
+
+/* Ensure any button with text-white or solid background never hides text on hover */
+.btn.text-white:hover,
+.btn.text-white:focus,
+a.btn.text-white:hover,
+a.btn.text-white:focus,
+.btn[style*="background"]:hover,
+a.btn[style*="background"]:hover,
+.btn[style*="background"]:hover *,
+a.btn[style*="background"]:hover *,
+.btn[style*="background: #3e56f0"]:hover,
+a[style*="background: #3e56f0"]:hover,
+.btn[style*="background: #4f46e5"]:hover,
+a[style*="background: #4f46e5"]:hover {
+  color: #ffffff !important;
+}
+
+/* Semantic button hover colors */
+.btn-secondary:hover,
+a.btn-secondary:hover,
+.btn-success:hover,
+a.btn-success:hover,
+.btn-danger:hover,
+a.btn-danger:hover,
+.btn-dark:hover,
+a.btn-dark:hover,
+.btn-info:hover,
+a.btn-info:hover {
+  color: #ffffff !important;
+}
+
+/* Outline Buttons: high contrast white text and solid background on hover */
+.btn-outline-primary:hover,
+.btn-outline-primary:focus,
+.btn-outline-primary:active,
+a.btn-outline-primary:hover,
+a.btn-outline-primary:focus,
+a.btn-outline-primary:active,
+button.btn-outline-primary:hover,
+button.btn-outline-primary:focus {
+  color: #ffffff !important;
+  background-color: #3e56f0 !important;
+  border-color: #3e56f0 !important;
+}
+
+.btn-outline-primary:hover *,
+a.btn-outline-primary:hover * {
+  color: #ffffff !important;
+}
+
+.btn-outline-secondary:hover,
+a.btn-outline-secondary:hover {
+  color: #ffffff !important;
+  background-color: #64748b !important;
+}
+
+.btn-outline-danger:hover,
+a.btn-outline-danger:hover {
+  color: #ffffff !important;
+  background-color: #ef4444 !important;
+}
+
+.btn-outline-success:hover,
+a.btn-outline-success:hover {
+  color: #ffffff !important;
+  background-color: #10b981 !important;
+}
+
+/* Light / White Buttons (e.g. Back, Refresh, Members) */
+.btn-white:hover,
+a.btn-white:hover,
+button.btn-white:hover,
+.btn-light:hover,
+a.btn-light:hover,
+button.btn-light:hover {
+  color: #1e293b !important;
+  background-color: #f1f5f9 !important;
+}
+
+/* Generic button link protection */
+a.btn {
+  text-decoration: none !important;
+}
+
