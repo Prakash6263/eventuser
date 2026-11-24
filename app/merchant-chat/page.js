@@ -257,39 +257,39 @@ function MerchantChatContent() {
                     </div>
                     <h5 className="fw-bold mb-1">{profile?.fullName || "User Profile"}</h5>
                     <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small fw-semibold">
-                      <i className="fa-solid fa-circle-check me-1"></i> Verified User
+                      <i className="bi bi-check-circle-fill me-1"></i> Verified User
                     </span>
                   </div>
 
                   <ul className="user-profile-sidebar-list">
                     <li>
                       <Link href="/my-events">
-                        <i className="fa fa-layer-group"></i> My Events
+                        <i className="bi bi-grid-fill me-2 text-primary"></i> My Events
                       </Link>
                     </li>
                     <li>
                       <Link href="/user-profile">
-                        <i className="fa fa-user"></i> Profile
+                        <i className="bi bi-person-fill me-2 text-primary"></i> Profile
                       </Link>
                     </li>
                     <li>
                       <Link href="/my-reservations">
-                        <i className="fa fa-calendar"></i> My Reservations
+                        <i className="bi bi-calendar-event-fill me-2 text-primary"></i> My Reservations
                       </Link>
                     </li>
                     <li>
                       <Link href="/notifications">
-                        <i className="fa fa-bell"></i> Notifications
+                        <i className="bi bi-bell-fill me-2 text-primary"></i> Notifications
                       </Link>
                     </li>
                     <li>
                       <Link href="/change-password">
-                        <i className="fa fa-key"></i> Change Password
+                        <i className="bi bi-key-fill me-2 text-primary"></i> Change Password
                       </Link>
                     </li>
                     <li>
                       <Link href="/login" onClick={() => authService.logout && authService.logout()}>
-                        <i className="fa fa-sign-out"></i> Logout
+                        <i className="bi bi-box-arrow-right me-2 text-danger"></i> Logout
                       </Link>
                     </li>
                   </ul>
@@ -314,23 +314,23 @@ function MerchantChatContent() {
                           <button
                             type="button"
                             onClick={() => router.back()}
-                            className="btn btn-light bg-light border rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5 shadow-xs"
-                            style={{ fontSize: "13px" }}
+                            className="btn btn-sm btn-white border rounded-pill px-3 py-1.5 fw-medium d-inline-flex align-items-center gap-2 shadow-xs text-secondary hover-shadow transition"
+                            style={{ fontSize: "13px", background: "#ffffff", borderColor: "#e2e8f0" }}
                           >
-                            <i className="fa-solid fa-arrow-left text-primary"></i>
+                            <i className="bi bi-arrow-left text-primary fw-bold" style={{ fontSize: "14px" }}></i>
                             <span>Back</span>
                           </button>
 
                           <div
                             className="avatar-wrapper position-relative flex-shrink-0"
-                            style={{ width: "44px", height: "44px" }}
+                            style={{ width: "42px", height: "42px" }}
                           >
                             {merchantPic ? (
                               <img
                                 src={merchantPic}
                                 alt={merchantName}
                                 className="rounded-circle border shadow-xs"
-                                style={{ width: "44px", height: "44px", objectFit: "cover" }}
+                                style={{ width: "42px", height: "42px", objectFit: "cover" }}
                                 onError={(e) => {
                                   e.target.onerror = null;
                                   e.target.style.display = "none";
@@ -340,8 +340,8 @@ function MerchantChatContent() {
                               <div
                                 className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
                                 style={{
-                                  width: "44px",
-                                  height: "44px",
+                                  width: "42px",
+                                  height: "42px",
                                   fontSize: "16px",
                                   background: "#3e56f0",
                                 }}
@@ -364,11 +364,11 @@ function MerchantChatContent() {
                           </div>
 
                           <div>
-                            <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "15.5px" }}>
+                            <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "15px", letterSpacing: "-0.2px" }}>
                               {merchantName}
                             </h6>
                             <small
-                              className="text-success fw-semibold d-inline-flex align-items-center gap-1"
+                              className="text-success fw-semibold d-inline-flex align-items-center gap-1.5"
                               style={{ fontSize: "12px" }}
                             >
                               <i className="bi bi-circle-fill" style={{ fontSize: "7px" }}></i>
@@ -381,20 +381,26 @@ function MerchantChatContent() {
                           {eventId && (
                             <Link
                               href={`/event-details?id=${eventId}`}
-                              className="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-none d-sm-inline-flex align-items-center gap-1.5"
-                              style={{ fontSize: "12px" }}
+                              className="btn btn-sm rounded-pill px-3 py-1.5 border d-none d-sm-inline-flex align-items-center gap-2 text-secondary shadow-xs transition"
+                              style={{
+                                background: "#ffffff",
+                                borderColor: "#e2e8f0",
+                                fontSize: "12px",
+                                fontWeight: "500",
+                              }}
                             >
-                              <i className="fa-regular fa-calendar"></i> Event Details
+                              <i className="bi bi-calendar-event text-primary" style={{ fontSize: "13px" }}></i>
+                              <span>Event Details</span>
                             </Link>
                           )}
                           <button
                             type="button"
-                            className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center text-muted"
-                            style={{ width: "36px", height: "36px" }}
+                            className="btn btn-sm btn-white border rounded-circle d-flex align-items-center justify-content-center text-muted shadow-xs transition"
+                            style={{ width: "34px", height: "34px", background: "#ffffff", borderColor: "#e2e8f0" }}
                             onClick={fetchChat}
                             title="Refresh Chat"
                           >
-                            <i className="fa-solid fa-rotate-right" style={{ fontSize: "13px" }}></i>
+                            <i className="bi bi-arrow-clockwise text-secondary" style={{ fontSize: "14px" }}></i>
                           </button>
                         </div>
                       </div>
@@ -415,12 +421,12 @@ function MerchantChatContent() {
                           </div>
                         ) : error ? (
                           <div className="text-center my-auto py-4">
-                            <i className="fa-solid fa-circle-exclamation text-danger fs-3 mb-2 d-block"></i>
+                            <i className="bi bi-exclamation-circle text-danger fs-2 mb-2 d-block"></i>
                             <h6 className="fw-semibold text-dark mb-1">{error}</h6>
                             <button
                               type="button"
                               onClick={fetchChat}
-                              className="btn btn-outline-primary btn-sm rounded-pill px-3 mt-2"
+                              className="btn btn-sm btn-outline-primary rounded-pill px-3 mt-2"
                             >
                               Retry
                             </button>
@@ -429,9 +435,9 @@ function MerchantChatContent() {
                           <div className="text-center my-auto py-5">
                             <div
                               className="rounded-circle bg-white shadow-xs d-flex align-items-center justify-content-center mx-auto mb-3 text-muted border"
-                              style={{ width: "54px", height: "54px", fontSize: "20px" }}
+                              style={{ width: "52px", height: "52px", fontSize: "20px" }}
                             >
-                              <i className="fa-regular fa-comments"></i>
+                              <i className="bi bi-chat-dots text-primary"></i>
                             </div>
                             <h6 className="fw-bold text-dark mb-1">No Messages Yet</h6>
                             <p className="text-muted small mb-0">
