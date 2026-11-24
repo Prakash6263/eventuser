@@ -78,6 +78,16 @@ function MerchantDetailsContent() {
           }
         }
 
+        // 3. Fallback: if still no merchant found (e.g. direct link visited without query params), fetch default restaurant merchant
+        if (!foundMerchant) {
+          try {
+            const res = await getMerchantsByServiceApi("686fb6ced46e9740ee8277ec");
+            if (res && res.status && Array.isArray(res.data) && res.data.length > 0) {
+              foundMerchant = res.data.find(m => !m.isDeleted) || res.data[0];
+            }
+          } catch (e) {}
+        }
+
         setMerchant(foundMerchant || null);
       } catch (e) {
         console.error("Failed to parse merchant details:", e);
@@ -987,7 +997,9 @@ function MerchantDetailsContent() {
                 <div className="cardx p-4 mb-4">
                   <h4 className="fw-bold text-dark mb-3">About</h4>
                   <p className="text-muted mb-0" style={{ fontSize: "15px", lineHeight: "1.7", whiteSpace: "pre-line" }}>
-                    {merchant.serviceDescription || "No description provided."}
+                    {merchant.serviceDescription && !merchant.serviceDescription.includes("APP_DELEGATE")
+                      ? merchant.serviceDescription
+                      : "Welcome to our premier event venue & catering experience. We offer exquisite dining, curated ambiances, and exceptional service tailored for your celebrations."}
                   </p>
                 </div>
 

@@ -9,9 +9,11 @@ import { getMerchantsByServiceApi } from "../services/eventApi";
 function MerchantsByServiceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const serviceId = searchParams.get("serviceId");
+  const rawServiceId = searchParams.get("serviceId") || searchParams.get("id") || "";
   const serviceName = searchParams.get("serviceName") || "Service Providers";
   const eventId = searchParams.get("eventId") || "";
+  // Fallback to default Restaurant Service ID if no serviceId provided in URL
+  const serviceId = rawServiceId || "686fb6ced46e9740ee8277ec";
 
   const [merchants, setMerchants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,12 +21,6 @@ function MerchantsByServiceContent() {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    if (!serviceId) {
-      setErrorMsg("No Service ID provided.");
-      setLoading(false);
-      return;
-    }
-
     const fetchMerchants = async () => {
       try {
         setLoading(true);
