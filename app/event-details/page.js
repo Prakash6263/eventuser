@@ -780,23 +780,15 @@ function EventDetailsContent() {
               {/* Event Cover Image Card */}
               <div className="card border-0 rounded-4 shadow-sm overflow-hidden mb-4 bg-white">
                 <div className="position-relative" style={{ height: "380px" }}>
-                  {event.eventImage ? (
-                    <img
-                      src={event.eventImage}
-                      alt={event.eventTitle}
-                      className="w-100 h-100 object-fit-cover"
-                    />
-                  ) : (
-                    <div
-                      className="w-100 h-100 d-flex flex-column align-items-center justify-content-center text-white"
-                      style={{
-                        background: "linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)"
-                      }}
-                    >
-                      <i className="fa-solid fa-calendar-days fs-1 mb-2"></i>
-                      <h3 className="fw-bold m-0">{event.eventTitle || "Untitled Event"}</h3>
-                    </div>
-                  )}
+                  <img
+                    src={event.eventImage || "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80"}
+                    alt={event.eventTitle || "Event Cover"}
+                    className="w-100 h-100 object-fit-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80";
+                    }}
+                  />
                 </div>
 
                 <div className="card-body p-4">

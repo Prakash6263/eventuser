@@ -110,6 +110,11 @@ export default function MyEventsPage() {
               badgeClass = "bg-info text-dark";
             }
 
+            let resolvedImg = evt.image || "";
+            if (resolvedImg && !resolvedImg.startsWith("http") && !resolvedImg.startsWith("/")) {
+              resolvedImg = `https://eventuna.com/api/event/${resolvedImg}`;
+            }
+
             return {
               id: evt._id,
               title: evt.eventTitle || "Untitled Event",
@@ -118,7 +123,7 @@ export default function MyEventsPage() {
               organizer: evt.eventcreator?.fullName || "Unknown Organizer",
               status: uiStatus,
               badgeClass: badgeClass,
-              img: evt.image || "",
+              img: resolvedImg,
               rawEvent: evt,
             };
           });
