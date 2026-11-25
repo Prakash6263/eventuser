@@ -80,7 +80,7 @@ function MerchantsByServiceContent() {
                 onClick={() => router.back()} 
                 className="btn btn-outline-secondary rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2 border-0 bg-white shadow-sm mb-2"
               >
-                <i className="fa-solid fa-arrow-left"></i> Back to Event Details
+                <i className="fa-solid fa-arrow-left"></i> Back to Event
               </button>
               <h1 className="fw-extrabold text-dark m-0" style={{ fontSize: "clamp(22px, 4vw, 32px)", letterSpacing: "-0.5px" }}>
                 Browse {serviceName}

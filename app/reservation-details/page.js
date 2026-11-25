@@ -356,7 +356,7 @@ export default function ReservationDetailsPage() {
             </p>
             <Link href="/my-reservations" className="main-btn btn-hover d-inline-flex align-items-center gap-2 text-decoration-none">
               <i className="fa-solid fa-arrow-left"></i>
-              Go to My Reservations
+              Back to Reservations
             </Link>
           </div>
         </div>

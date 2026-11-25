@@ -810,7 +810,7 @@ function EventDetailsContent() {
                   }}
                   onClick={() => { setForceDetailsView(true); setHasJustDeclined(false); }}
                 >
-                  ACCESS EVENT
+                  View Event Details
                 </button>
                 <Link 
                   href="/" 
@@ -823,7 +823,7 @@ function EventDetailsContent() {
                     boxShadow: "0 4px 12px rgba(79, 70, 229, 0.15)"
                   }}
                 >
-                  HOME
+                  Back to Home
                 </Link>
               </div>
             </div>
@@ -1692,7 +1692,7 @@ function EventDetailsContent() {
                         style={{ background: "#3e56f0", border: "none", fontSize: "13.5px", height: "40px" }}
                       >
                         <i className="fa-solid fa-utensils"></i>
-                        Reserve Table at Venue
+                        Reserve Table
                       </button>
                     )}
 
@@ -1936,7 +1936,7 @@ function EventDetailsContent() {
                         className="btn btn-outline-primary rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
                         onClick={handleOpenEditModal}
                       >
-                        <i className="fa-solid fa-pen-to-square"></i> Edit Event Details
+                        <i className="fa-solid fa-pen-to-square"></i> Edit Event
                       </button>
                     </div>
                   )}
