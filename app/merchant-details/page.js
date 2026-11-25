@@ -868,6 +868,7 @@ function MerchantDetailsContent() {
       <div className="wrapper">
         {/* Hero Banner with Multi-Image Carousel */}
         <div
+          className="merchant-hero-banner"
           style={{
             position: "relative",
             minHeight: "360px",
@@ -1003,7 +1004,7 @@ function MerchantDetailsContent() {
                 </span>
               )}
             </div>
-            <h1 className="fw-bold m-0" style={{ fontSize: "36px", textShadow: "0 2px 8px rgba(0,0,0,0.5)", letterSpacing: "-0.4px" }}>
+            <h1 className="fw-bold m-0" style={{ fontSize: "clamp(22px, 5vw, 36px)", textShadow: "0 2px 8px rgba(0,0,0,0.5)", letterSpacing: "-0.4px" }}>
               {cleanText(merchant.serviceName, "Merchant Partner")}
             </h1>
             {merchant.serviceSlogan && cleanText(merchant.serviceSlogan) && (

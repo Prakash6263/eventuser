@@ -82,7 +82,7 @@ function MerchantsByServiceContent() {
               >
                 <i className="fa-solid fa-arrow-left"></i> Back to Event Details
               </button>
-              <h1 className="fw-extrabold text-dark m-0" style={{ fontSize: "32px", letterSpacing: "-0.5px" }}>
+              <h1 className="fw-extrabold text-dark m-0" style={{ fontSize: "clamp(22px, 4vw, 32px)", letterSpacing: "-0.5px" }}>
                 Browse {serviceName}
               </h1>
               <p className="text-muted m-0 small">Find the perfect partner for your upcoming event requirements</p>

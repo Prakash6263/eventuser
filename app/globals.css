@@ -175,3 +175,118 @@ a.btn {
   text-decoration: none !important;
 }
 
+/* ── Mobile Responsiveness Enhancements ── */
+@media (max-width: 576px) {
+  /* Navbar Compact Layout */
+  .header .navbar {
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  .right-header .create-btn span {
+    display: none !important;
+  }
+  .right-header .create-btn {
+    padding: 7px 12px !important;
+    min-width: unset !important;
+    border-radius: 50px !important;
+    font-size: 13px !important;
+  }
+  .right-header .create-btn i {
+    margin: 0 !important;
+    font-size: 14px !important;
+  }
+  .right-header button[title="Logout"] span {
+    display: none !important;
+  }
+  .right-header button[title="Logout"] {
+    padding: 7px 11px !important;
+    height: 36px !important;
+  }
+  .res-main-logo img,
+  .main-logo img {
+    max-height: 32px !important;
+    width: auto !important;
+  }
+
+  /* Spacing Adjustments */
+  .event-dt-block {
+    padding-top: 24px !important;
+    padding-bottom: 36px !important;
+  }
+  .hero-banner {
+    padding-top: 28px !important;
+    padding-bottom: 24px !important;
+  }
+  .hero-banner h2 {
+    font-size: 24px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Spacing */
+  .p-80 {
+    padding-top: 24px !important;
+    padding-bottom: 36px !important;
+  }
+
+  /* Event Details Cover Image Responsive Height */
+  .event-cover-container {
+    height: 220px !important;
+  }
+
+  /* Chat window adapts to mobile screen */
+  .chat-window {
+    height: calc(100vh - 160px) !important;
+    min-height: 480px !important;
+  }
+  .chat-header {
+    padding: 10px 14px !important;
+  }
+  .chat-body {
+    padding: 14px !important;
+  }
+
+  /* Merchant Details Hero Carousel */
+  .merchant-hero-banner {
+    height: 280px !important;
+  }
+  .merchant-hero-banner h1 {
+    font-size: 24px !important;
+  }
+
+  /* My Reservations Mobile Improvements */
+  .modern-event-thumb {
+    width: 100% !important;
+    height: 160px !important;
+  }
+  .modern-reservation-body {
+    padding: 16px !important;
+  }
+  .res-dashboard-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .res-search-input-wrap {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .modern-card-footer {
+    padding: 12px 16px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  /* Reservation Details Card Mobile Improvements */
+  .web-banner {
+    height: 200px !important;
+    padding: 16px !important;
+  }
+  .web-content-grid {
+    padding: 16px !important;
+  }
+  .web-event-title {
+    font-size: 22px !important;
+  }
+}
+

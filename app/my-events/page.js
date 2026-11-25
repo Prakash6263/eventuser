@@ -157,24 +157,24 @@ export default function MyEventsPage() {
     <>
       <Header />
       <div className="wrapper">
-        <div className="hero-banner pb-5 pt-5">
+        <div className="hero-banner py-4 py-md-5">
           <div className="container">
             <div className="row justify-content-center">
               <div className="col-xl-8 col-lg-8 col-md-10">
-                <div className="hero-banner-content">
-                  <h2>My Account</h2>
+                <div className="hero-banner-content text-center">
+                  <h2 className="fw-bold mb-0">My Account</h2>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="event-dt-block p-80">
+        <div className="event-dt-block py-4 py-md-5">
           <div className="container">
             <div className="row">
               {/* Sidebar Navigation */}
-              <div className="col-lg-3">
-                <div className="user-profile-sidebar border p-4 bg-white rounded-3 shadow-sm mb-4">
+              <div className="col-lg-3 mb-4 mb-lg-0">
+                <div className="user-profile-sidebar border p-3 p-md-4 bg-white rounded-3 shadow-sm mb-4">
                   <div className="user-profile-sidebar-top text-center mb-4">
                     <div className="user-profile-img position-relative d-inline-block mb-3">
                       <SafeImage
@@ -226,17 +226,28 @@ export default function MyEventsPage() {
 
               {/* My Events Cards Timeline */}
               <div className="col-lg-9">
-                <div className="user-profile-wrapper border p-4 bg-white rounded-3 shadow-sm">
-                  <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div className="user-profile-wrapper border p-3 p-md-4 bg-white rounded-3 shadow-sm">
+                  <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                     <h4 className="user-profile-card-title fw-bold m-0">My Events</h4>
-                    {/* Status Tabs Filter */}
-                    <div className="btn-group btn-group-sm flex-wrap" role="group">
+                    {/* Status Tabs Filter with Smooth Horizontal Scroll on Mobile */}
+                    <div
+                      className="d-flex align-items-center gap-1.5 overflow-x-auto pb-2 pb-md-0 no-scrollbar w-100 w-md-auto"
+                      style={{
+                        maxWidth: "100%",
+                        WebkitOverflowScrolling: "touch",
+                        scrollbarWidth: "none",
+                      }}
+                    >
                       {["All", "Pending", "Accepted", "Rejected", "Draft", "Upcoming", "Completed", "Expired", "Canceled"].map((tab) => (
                         <button
                           key={tab}
                           type="button"
-                          className={`btn ${activeTab === tab ? "btn-primary" : "btn-outline-secondary"
-                            }`}
+                          className={`btn btn-sm rounded-pill px-3 py-1.5 fw-semibold flex-shrink-0 transition shadow-xs ${
+                            activeTab === tab
+                              ? "btn-primary text-white"
+                              : "btn-outline-secondary text-secondary bg-light-subtle"
+                          }`}
+                          style={{ fontSize: "12px", whiteSpace: "nowrap" }}
                           onClick={() => setActiveTab(tab)}
                         >
                           {tab}

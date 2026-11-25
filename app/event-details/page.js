@@ -863,12 +863,12 @@ function EventDetailsContent() {
   return (
     <>
       <Header />
-      <div className="wrapper bg-light py-5">
+      <div className="wrapper bg-light py-3 py-md-5">
         <div className="container">
 
           {/* Top Breadcrumb & Actions Bar */}
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <Link href={backUrl} className="btn btn-outline-secondary rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm bg-white border-0">
+          <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <Link href={backUrl} className="btn btn-outline-secondary rounded-pill px-3.5 py-1.5 fw-semibold d-flex align-items-center gap-2 shadow-sm bg-white border-0" style={{ fontSize: "13px" }}>
               <i className="fa-solid fa-arrow-left"></i>
               {backLabel}
             </Link>
@@ -933,7 +933,7 @@ function EventDetailsContent() {
 
               {/* Event Cover Image Card */}
               <div className="card border-0 rounded-4 shadow-sm overflow-hidden mb-4 bg-white">
-                <div className="position-relative" style={{ height: "380px" }}>
+                <div className="position-relative event-cover-container" style={{ height: "380px" }}>
                   <img
                     src={event.eventImage || "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80"}
                     alt={event.eventTitle || "Event Cover"}
@@ -945,7 +945,7 @@ function EventDetailsContent() {
                   />
                 </div>
 
-                <div className="card-body p-4">
+                <div className="card-body p-3 p-md-4">
                   {/* Category and Type Badges */}
                   <div className="d-flex flex-wrap gap-2 mb-3">
                     {event.status && (
@@ -990,7 +990,7 @@ function EventDetailsContent() {
                     </div>
                   )}
 
-                  <h1 className="fw-extrabold text-dark mb-4" style={{ fontSize: "36px" }}>
+                  <h1 className="fw-extrabold text-dark mb-4" style={{ fontSize: "clamp(22px, 4vw, 36px)", letterSpacing: "-0.5px" }}>
                     {event.eventTitle || "Untitled Event"}
                   </h1>
 

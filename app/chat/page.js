@@ -269,7 +269,7 @@ function ChatContent() {
             <div className="row">
 
               {/* Left Column: Standard User Profile Sidebar */}
-              <div className="col-lg-3 col-md-4 mb-4 mb-lg-0">
+              <div className="col-lg-3 col-md-4 mb-4 mb-lg-0 d-none d-md-block">
                 <div className="user-profile-sidebar shadow-sm">
                   <div className="user-profile-sidebar-top text-center">
                     <div
@@ -334,7 +334,7 @@ function ChatContent() {
               </div>
 
               {/* Right Column: Clean Group Chat Window */}
-              <div className="col-lg-9 col-md-8">
+              <div className="col-lg-9 col-md-8 col-12">
                 <div className="user-profile-wrapper">
                   <div
                     className="chat-card shadow-sm border rounded-4 overflow-hidden bg-white mb-4"

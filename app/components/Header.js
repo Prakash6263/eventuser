@@ -93,7 +93,7 @@ export default function Header() {
                       href="/"
                       onClick={() => setOffcanvasOpen(false)}
                     >
-                      Home
+                      <i className="fa-solid fa-house me-2 d-lg-none text-primary"></i> Home
                     </Link>
                   </li>
                   <li className="nav-item">
@@ -102,19 +102,48 @@ export default function Header() {
                       href="https://eventuna.com/about"
                       onClick={() => setOffcanvasOpen(false)}
                     >
-                      About Us
+                      <i className="fa-solid fa-circle-info me-2 d-lg-none text-primary"></i> About Us
                     </Link>
                   </li>
                   {isLoggedIn && (
-                  <li className="nav-item">
-                    <Link
-                      className={`nav-link ${isActive("/events") ? "active" : ""}`}
-                      href="/events"
-                      onClick={() => setOffcanvasOpen(false)}
-                    >
-                      Upcoming
-                    </Link>
-                  </li>
+                    <>
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link ${isActive("/my-events") ? "active" : ""}`}
+                          href="/my-events"
+                          onClick={() => setOffcanvasOpen(false)}
+                        >
+                          <i className="fa-solid fa-calendar-check me-2 d-lg-none text-primary"></i> My Events
+                        </Link>
+                      </li>
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link ${isActive("/my-reservations") ? "active" : ""}`}
+                          href="/my-reservations"
+                          onClick={() => setOffcanvasOpen(false)}
+                        >
+                          <i className="fa-solid fa-utensils me-2 d-lg-none text-primary"></i> My Reservations
+                        </Link>
+                      </li>
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link ${isActive("/events") ? "active" : ""}`}
+                          href="/events"
+                          onClick={() => setOffcanvasOpen(false)}
+                        >
+                          <i className="fa-solid fa-calendar-days me-2 d-lg-none text-primary"></i> Upcoming
+                        </Link>
+                      </li>
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link ${isActive("/user-profile") ? "active" : ""}`}
+                          href="/user-profile"
+                          onClick={() => setOffcanvasOpen(false)}
+                        >
+                          <i className="fa-solid fa-user me-2 d-lg-none text-primary"></i> My Profile
+                        </Link>
+                      </li>
+                    </>
                   )}
 
                   <li className="nav-item">
@@ -123,7 +152,7 @@ export default function Header() {
                       href="#"
                       onClick={() => setOffcanvasOpen(false)}
                     >
-                      Contact Us
+                      <i className="fa-solid fa-envelope me-2 d-lg-none text-primary"></i> Contact Us
                     </Link>
                   </li>
                 </ul>
