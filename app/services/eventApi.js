@@ -81,6 +81,24 @@ export const rateEventApi = async (payload) => {
   });
 };
 
+// 9b. Rate Merchant API
+export const rateMerchantApi = async (payload) => {
+  return await apiRequest("/merchant/rate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+};
+
+// 9c. Scan Attendance QR Token API
+export const scanAttendanceApi = async (token) => {
+  return await apiRequest("/self-attendance/scan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+};
+
 // 10. Update Event API
 export const updateEventApi = async (payload) => {
   return await apiRequest("/event/update-event", {
@@ -118,6 +136,8 @@ export const eventApi = {
   getMyCreatedEvents: getMyCreatedEventsApi,
   getEventMedia: getEventMediaApi,
   rateEvent: rateEventApi,
+  rateMerchant: rateMerchantApi,
+  scanAttendance: scanAttendanceApi,
   markEventAsDraft: markEventAsDraftApi,
   publishDraftEvent: publishDraftEventApi,
 };

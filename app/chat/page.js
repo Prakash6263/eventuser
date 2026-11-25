@@ -531,33 +531,45 @@ function ChatContent() {
                                   })
                                 : "Just now");
 
+                            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                            const nextMsg = idx < messages.length - 1 ? messages[idx + 1] : null;
+                            const prevSenderId = prevMsg ? (prevMsg.sender?._id || prevMsg.sender?.id || prevMsg.sender) : null;
+                            const nextSenderId = nextMsg ? (nextMsg.sender?._id || nextMsg.sender?.id || nextMsg.sender) : null;
+                            const isFirstInGroup = !prevMsg || String(prevSenderId) !== String(senderId);
+                            const isLastInGroup = !nextMsg || String(nextSenderId) !== String(senderId);
+
                             return (
                               <div
                                 key={msg._id || idx}
                                 className={`d-flex gap-2.5 ${
                                   isSelf ? "justify-content-end" : "justify-content-start"
                                 }`}
+                                style={{ marginTop: isFirstInGroup ? (idx === 0 ? "0" : "12px") : "3px" }}
                               >
                                 {!isSelf && (
-                                  <div className="flex-shrink-0">
-                                    {senderPic ? (
-                                      <img
-                                        src={senderPic}
-                                        alt={senderName}
-                                        className="rounded-circle border shadow-xs object-fit-cover"
-                                        style={{ width: "34px", height: "34px" }}
-                                        onError={(e) => {
-                                          e.target.onerror = null;
-                                          e.target.style.display = "none";
-                                        }}
-                                      />
+                                  <div className="flex-shrink-0" style={{ width: "34px", alignSelf: "flex-end" }}>
+                                    {isLastInGroup ? (
+                                      senderPic ? (
+                                        <img
+                                          src={senderPic}
+                                          alt={senderName}
+                                          className="rounded-circle border shadow-xs object-fit-cover"
+                                          style={{ width: "34px", height: "34px" }}
+                                          onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.style.display = "none";
+                                          }}
+                                        />
+                                      ) : (
+                                        <div
+                                          className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
+                                          style={{ width: "34px", height: "34px", fontSize: "13px" }}
+                                        >
+                                          {getInitials(senderName)}
+                                        </div>
+                                      )
                                     ) : (
-                                      <div
-                                        className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
-                                        style={{ width: "34px", height: "34px", fontSize: "13px" }}
-                                      >
-                                        {getInitials(senderName)}
-                                      </div>
+                                      <div style={{ width: "34px", height: "34px" }} />
                                     )}
                                   </div>
                                 )}
@@ -568,7 +580,7 @@ function ChatContent() {
                                   }`}
                                   style={{ maxWidth: "70%" }}
                                 >
-                                  {!isSelf && (
+                                  {!isSelf && isFirstInGroup && (
                                     <span
                                       className="text-muted fw-semibold mb-1 px-1"
                                       style={{ fontSize: "11px" }}
@@ -580,8 +592,10 @@ function ChatContent() {
                                     className="p-3 shadow-xs"
                                     style={{
                                       borderRadius: "16px",
-                                      borderBottomRightRadius: isSelf ? "4px" : "16px",
-                                      borderBottomLeftRadius: isSelf ? "16px" : "4px",
+                                      borderTopRightRadius: isSelf ? (isFirstInGroup ? "16px" : "6px") : "16px",
+                                      borderBottomRightRadius: isSelf ? (isLastInGroup ? "4px" : "6px") : "16px",
+                                      borderTopLeftRadius: !isSelf ? (isFirstInGroup ? "16px" : "6px") : "16px",
+                                      borderBottomLeftRadius: !isSelf ? (isLastInGroup ? "4px" : "6px") : "16px",
                                       background: isSelf ? "#3e56f0" : "#ffffff",
                                       color: isSelf ? "#ffffff" : "#2d3748",
                                       border: isSelf ? "none" : "1px solid #edf2f7",
@@ -592,12 +606,14 @@ function ChatContent() {
                                   >
                                     {msg.content}
                                   </div>
-                                  <div
-                                    className="text-muted px-1 mt-1 small"
-                                    style={{ fontSize: "10.5px" }}
-                                  >
-                                    {timeDisplay}
-                                  </div>
+                                  {isLastInGroup && (
+                                    <div
+                                      className="text-muted px-1 mt-1 small"
+                                      style={{ fontSize: "10.5px" }}
+                                    >
+                                      {timeDisplay}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );

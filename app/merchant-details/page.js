@@ -7,7 +7,13 @@ import Footer from "../components/Footer";
 import { apiRequest } from "../services/apiClient";
 import Swal from "sweetalert2";
 
-import { getMerchantsByServiceApi } from "../services/eventApi";
+import { getMerchantsByServiceApi, rateMerchantApi } from "../services/eventApi";
+
+const cleanText = (text, fallback = "") => {
+  if (!text || typeof text !== "string") return fallback;
+  if (text.includes("APP_DELEGATE") || text.includes("strCatType")) return fallback;
+  return text.trim() || fallback;
+};
 
 function MerchantDetailsContent() {
   const router = useRouter();
@@ -27,6 +33,51 @@ function MerchantDetailsContent() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingResult, setBookingResult] = useState(null); // API response.booking on success
   const [pageLoading, setPageLoading] = useState(true);
+
+  // ── Merchant Rating state ──
+  const [showMerchantRatingModal, setShowMerchantRatingModal] = useState(false);
+  const [merchantRatingScore, setMerchantRatingScore] = useState(5);
+  const [merchantRatingComment, setMerchantRatingComment] = useState("");
+  const [merchantRatingSubmitting, setMerchantRatingSubmitting] = useState(false);
+
+  const handleSubmitMerchantRating = async (e) => {
+    if (e) e.preventDefault();
+    const mId = merchant?._id || merchant?.id;
+    if (!mId) return;
+    try {
+      setMerchantRatingSubmitting(true);
+      const res = await rateMerchantApi({
+        merchantId: mId,
+        rating: merchantRatingScore,
+        comment: merchantRatingComment.trim() || undefined,
+      });
+      if (res && res.status) {
+        setShowMerchantRatingModal(false);
+        setMerchantRatingComment("");
+        Swal.fire({
+          icon: "success",
+          title: "Review Submitted!",
+          text: "Thank you for rating this merchant partner.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Rating Failed",
+          text: res?.message || "Could not submit rating.",
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to submit rating.",
+      });
+    } finally {
+      setMerchantRatingSubmitting(false);
+    }
+  };
 
   const handleBack = () => {
     if (bookingStep > 0) { setBookingStep(bookingStep - 1); return; }
@@ -953,11 +1004,11 @@ function MerchantDetailsContent() {
               )}
             </div>
             <h1 className="fw-bold m-0" style={{ fontSize: "36px", textShadow: "0 2px 8px rgba(0,0,0,0.5)", letterSpacing: "-0.4px" }}>
-              {merchant.serviceName}
+              {cleanText(merchant.serviceName, "Merchant Partner")}
             </h1>
-            {merchant.serviceSlogan && (
+            {merchant.serviceSlogan && cleanText(merchant.serviceSlogan) && (
               <p className="lead m-0 mt-1 opacity-90 fw-medium" style={{ fontSize: "16px", textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
-                {merchant.serviceSlogan}
+                {cleanText(merchant.serviceSlogan)}
               </p>
             )}
 
@@ -997,9 +1048,10 @@ function MerchantDetailsContent() {
                 <div className="cardx p-4 mb-4">
                   <h4 className="fw-bold text-dark mb-3">About</h4>
                   <p className="text-muted mb-0" style={{ fontSize: "15px", lineHeight: "1.7", whiteSpace: "pre-line" }}>
-                    {merchant.serviceDescription && !merchant.serviceDescription.includes("APP_DELEGATE")
-                      ? merchant.serviceDescription
-                      : "Welcome to our premier event venue & catering experience. We offer exquisite dining, curated ambiances, and exceptional service tailored for your celebrations."}
+                    {cleanText(
+                      merchant.serviceDescription,
+                      "Welcome to our premier event venue & catering experience. We offer exquisite dining, curated ambiances, and exceptional service tailored for your celebrations."
+                    )}
                   </p>
                 </div>
 
@@ -1079,7 +1131,7 @@ function MerchantDetailsContent() {
                   <ul className="list-unstyled m-0 d-flex flex-column gap-3" style={{ fontSize: "14px" }}>
                     <li className="d-flex justify-content-between align-items-center pb-2 border-bottom">
                       <span className="text-muted">Cuisine / Category</span>
-                      <strong className="text-dark text-truncate" style={{ maxWidth: "160px" }}>{merchant.cuisineName || "Standard"}</strong>
+                      <strong className="text-dark text-truncate" style={{ maxWidth: "160px" }}>{cleanText(merchant.cuisineName, "Multi-Cuisine")}</strong>
                     </li>
                     <li className="d-flex justify-content-between align-items-center pb-2 border-bottom">
                       <span className="text-muted">Max Capacity</span>
@@ -1108,6 +1160,17 @@ function MerchantDetailsContent() {
                       </li>
                     )}
                   </ul>
+
+                  {/* Merchant Rating & Review Trigger */}
+                  <div className="mt-4 pt-3 border-top">
+                    <button
+                      type="button"
+                      onClick={() => setShowMerchantRatingModal(true)}
+                      className="btn btn-outline-warning w-100 rounded-pill py-2.5 fw-bold text-dark d-flex align-items-center justify-content-center gap-2 shadow-xs"
+                    >
+                      <i className="fa-solid fa-star text-warning"></i> Write a Review
+                    </button>
+                  </div>
 
                   {/* BOOK SERVICE – launches 3-step flow */}
                   {eventId && additionalServiceId && (
@@ -1169,6 +1232,107 @@ function MerchantDetailsContent() {
           </div>
         </div>
       </div>
+
+      {/* Merchant Rating Modal */}
+      {showMerchantRatingModal && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1055 }}
+        >
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "480px" }}>
+            <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+              <div
+                className="modal-header border-0 p-4 text-white"
+                style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" }}
+              >
+                <div>
+                  <h5 className="modal-title fw-bold mb-1">Rate Merchant Partner</h5>
+                  <p className="small mb-0 text-white-50">
+                    Share your experience with {merchant?.serviceName || "this merchant"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowMerchantRatingModal(false)}
+                  disabled={merchantRatingSubmitting}
+                ></button>
+              </div>
+
+              <form onSubmit={handleSubmitMerchantRating}>
+                <div className="modal-body p-4 bg-light">
+                  {/* Star Rating Selector */}
+                  <div className="text-center mb-4 bg-white p-3 rounded-3 border">
+                    <label className="form-label fw-bold text-dark d-block mb-2">
+                      Star Rating
+                    </label>
+                    <div className="d-flex justify-content-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          className="btn btn-link p-1 text-decoration-none border-0"
+                          onClick={() => setMerchantRatingScore(star)}
+                          style={{ fontSize: "28px", color: star <= merchantRatingScore ? "#f59e0b" : "#cbd5e1" }}
+                        >
+                          <i className="fa-solid fa-star"></i>
+                        </button>
+                      ))}
+                    </div>
+                    <span className="small text-muted fw-semibold">
+                      {merchantRatingScore === 5 ? "⭐⭐⭐⭐⭐ Outstanding" :
+                       merchantRatingScore === 4 ? "⭐⭐⭐⭐ Very Good" :
+                       merchantRatingScore === 3 ? "⭐⭐⭐ Good" :
+                       merchantRatingScore === 2 ? "⭐⭐ Needs Improvement" : "⭐ Poor"}
+                    </span>
+                  </div>
+
+                  {/* Comment Textarea */}
+                  <div className="mb-2">
+                    <label className="form-label fw-semibold text-dark small mb-1">
+                      Your Review / Experience (Optional)
+                    </label>
+                    <textarea
+                      className="form-control rounded-3 py-2 px-3 border shadow-none"
+                      rows="3"
+                      placeholder="Write your review about food quality, ambiance, or service..."
+                      value={merchantRatingComment}
+                      onChange={(e) => setMerchantRatingComment(e.target.value)}
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="modal-footer border-top py-3 px-4 bg-white d-flex justify-content-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary rounded-pill px-4 fw-semibold"
+                    onClick={() => setShowMerchantRatingModal(false)}
+                    disabled={merchantRatingSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-warning rounded-pill px-4 fw-bold text-dark shadow-sm"
+                    disabled={merchantRatingSubmitting}
+                  >
+                    {merchantRatingSubmitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Review"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );

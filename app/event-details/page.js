@@ -5,11 +5,23 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi } from "../services/eventApi";
+import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi, rateEventApi, scanAttendanceApi } from "../services/eventApi";
 import { makeReservationApi, getReservationDetailsByIdApi } from "../services/reservationApi";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { apiRequest } from "../services/apiClient";
 import Swal from "sweetalert2";
+
+const resolveEventCoverImage = (data) => {
+  const raw = data?.image || data?.eventImage || data?.coverPhoto || data?.banner || data?.photo;
+  if (!raw || typeof raw !== "string" || !raw.trim()) {
+    return "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80";
+  }
+  const clean = raw.trim();
+  if (clean.startsWith("http://") || clean.startsWith("https://") || clean.startsWith("data:") || clean.startsWith("blob:")) {
+    return clean;
+  }
+  return `https://event-una-image-bucket.s3.ap-south-1.amazonaws.com/${clean.replace(/^\/+/, "")}`;
+};
 
 const mapEventData = (data, loggedInUser) => {
   if (!data) return null;
@@ -64,7 +76,7 @@ const mapEventData = (data, loggedInUser) => {
     eventId: data._id,
     eventTitle: data.eventTitle || "Untitled Event",
     invitationMessage: data.description || "No description provided.",
-    eventImage: data.image || null,
+    eventImage: resolveEventCoverImage(data),
     selectedDate: selectedDate,
     month: month,
     rawEventDate: data.eventDate || "",
@@ -151,6 +163,96 @@ function EventDetailsContent() {
 
   // Event Group Chat state
   const [groupChat, setGroupChat] = useState(null);
+
+  // Event Rating state
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingScore, setRatingScore] = useState(5);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
+
+  // Host QR Check-in state
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [checkInToken, setCheckInToken] = useState("");
+  const [checkInSubmitting, setCheckInSubmitting] = useState(false);
+
+  const handleSubmitRating = async (e) => {
+    if (e) e.preventDefault();
+    if (!ratingScore || ratingScore < 1) {
+      Swal.fire({ icon: "warning", title: "Rating Required", text: "Please select at least 1 star.", timer: 2000, showConfirmButton: false });
+      return;
+    }
+    try {
+      setRatingSubmitting(true);
+      const res = await rateEventApi({
+        eventId: event.eventId,
+        rating: ratingScore,
+        comment: ratingComment.trim() || undefined,
+      });
+      if (res && res.status) {
+        setHasRated(true);
+        setShowRatingModal(false);
+        Swal.fire({
+          icon: "success",
+          title: "Thank You!",
+          text: "Your event rating and review have been submitted successfully.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Rating Failed",
+          text: res?.message || "Could not submit rating.",
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to submit rating.",
+      });
+    } finally {
+      setRatingSubmitting(false);
+    }
+  };
+
+  const handleCheckInGuest = async (e) => {
+    if (e) e.preventDefault();
+    if (!checkInToken.trim()) {
+      Swal.fire({ icon: "warning", title: "Token Required", text: "Please enter or paste the guest attendance token.", timer: 2000, showConfirmButton: false });
+      return;
+    }
+    try {
+      setCheckInSubmitting(true);
+      const res = await scanAttendanceApi(checkInToken.trim());
+      if (res && res.status) {
+        setShowCheckInModal(false);
+        setCheckInToken("");
+        Swal.fire({
+          icon: "success",
+          title: "Guest Checked In!",
+          text: res.message || "Attendance recorded successfully.",
+          timer: 2500,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Check-in Failed",
+          text: res?.message || "Invalid attendance token or guest not found.",
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Check-in Error",
+        text: err.message || "Could not verify attendance token.",
+      });
+    } finally {
+      setCheckInSubmitting(false);
+    }
+  };
 
   const handleOpenReservationModal = () => {
     const defaultGuests = (event?.selectedGuests && event.selectedGuests.length > 0) ? String(event.selectedGuests.length) : "1";
@@ -815,6 +917,27 @@ function EventDetailsContent() {
                     )}
                   </div>
 
+                  {/* Completed Event Rating Banner */}
+                  {event.status && event.status.toLowerCase() === "completed" && (
+                    <div className="p-3 mb-4 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-xs" style={{ background: "#fef3c7", border: "1px solid #fde68a" }}>
+                      <div className="d-flex align-items-center gap-2">
+                        <i className="fa-solid fa-award text-warning fs-3"></i>
+                        <div>
+                          <h6 className="fw-bold mb-0 text-dark">Event Completed</h6>
+                          <small className="text-muted">How was your event experience? Rate and share your review.</small>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowRatingModal(true)}
+                        disabled={hasRated}
+                        className="btn btn-sm btn-warning rounded-pill px-4 py-2 fw-bold text-dark shadow-xs"
+                      >
+                        <i className="fa-solid fa-star me-1 text-dark"></i> {hasRated ? "Rating Submitted" : "Rate Event"}
+                      </button>
+                    </div>
+                  )}
+
                   <h1 className="fw-extrabold text-dark mb-4" style={{ fontSize: "36px" }}>
                     {event.eventTitle || "Untitled Event"}
                   </h1>
@@ -1324,6 +1447,16 @@ function EventDetailsContent() {
                   <p className="text-muted small mb-0" style={{ lineHeight: "1.4" }}>
                     Scan this QR code to check in or verify attendance at the event.
                   </p>
+                  {event.isMyEvent && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCheckInModal(true)}
+                      className="btn btn-primary rounded-pill w-100 fw-semibold mt-3 shadow-xs"
+                      style={{ background: "#3e56f0", border: "none" }}
+                    >
+                      <i className="fa-solid fa-qrcode me-2"></i> Check-in Guest (Verify Token)
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -2343,6 +2476,189 @@ function EventDetailsContent() {
           </div>
         </div>
       )}
+
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1055 }}
+        >
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "480px" }}>
+            <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+              <div
+                className="modal-header border-0 p-4 text-white"
+                style={{ background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)" }}
+              >
+                <div>
+                  <h5 className="modal-title fw-bold mb-1">Rate Event Experience</h5>
+                  <p className="small mb-0 text-white-50">
+                    Share your star rating and review for {event?.eventTitle}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowRatingModal(false)}
+                  disabled={ratingSubmitting}
+                ></button>
+              </div>
+
+              <form onSubmit={handleSubmitRating}>
+                <div className="modal-body p-4 bg-light">
+                  {/* Star Rating Selector */}
+                  <div className="text-center mb-4 bg-white p-3 rounded-3 border">
+                    <label className="form-label fw-bold text-dark d-block mb-2">
+                      Overall Rating
+                    </label>
+                    <div className="d-flex justify-content-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          className="btn btn-link p-1 text-decoration-none border-0"
+                          onClick={() => setRatingScore(star)}
+                          style={{ fontSize: "28px", color: star <= ratingScore ? "#f59e0b" : "#cbd5e1" }}
+                        >
+                          <i className="fa-solid fa-star"></i>
+                        </button>
+                      ))}
+                    </div>
+                    <span className="small text-muted fw-semibold">
+                      {ratingScore === 5 ? "⭐⭐⭐⭐⭐ Excellent" :
+                       ratingScore === 4 ? "⭐⭐⭐⭐ Very Good" :
+                       ratingScore === 3 ? "⭐⭐⭐ Good" :
+                       ratingScore === 2 ? "⭐⭐ Fair" : "⭐ Poor"}
+                    </span>
+                  </div>
+
+                  {/* Comment Textarea */}
+                  <div className="mb-2">
+                    <label className="form-label fw-semibold text-dark small mb-1">
+                      Your Comments / Feedback (Optional)
+                    </label>
+                    <textarea
+                      className="form-control rounded-3 py-2 px-3 border shadow-none"
+                      rows="3"
+                      placeholder="Tell us what you liked or what could be improved..."
+                      value={ratingComment}
+                      onChange={(e) => setRatingComment(e.target.value)}
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="modal-footer border-top py-3 px-4 bg-white d-flex justify-content-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary rounded-pill px-4 fw-semibold"
+                    onClick={() => setShowRatingModal(false)}
+                    disabled={ratingSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-warning rounded-pill px-4 fw-bold text-dark shadow-sm"
+                    disabled={ratingSubmitting}
+                  >
+                    {ratingSubmitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Review"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Host QR Check-in Modal */}
+      {showCheckInModal && (
+        <div
+          className="modal show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1055 }}
+        >
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "460px" }}>
+            <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+              <div
+                className="modal-header border-0 p-4 text-white"
+                style={{ background: "linear-gradient(135deg, #3e56f0 0%, #1d4ed8 100%)" }}
+              >
+                <div>
+                  <h5 className="modal-title fw-bold mb-1">Verify Guest Attendance</h5>
+                  <p className="small mb-0 text-white-50">
+                    Verify and check in guests using their QR code attendance token
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowCheckInModal(false)}
+                  disabled={checkInSubmitting}
+                ></button>
+              </div>
+
+              <form onSubmit={handleCheckInGuest}>
+                <div className="modal-body p-4 bg-light">
+                  <div className="bg-white p-3 rounded-3 border mb-3 text-center">
+                    <i className="fa-solid fa-qrcode text-primary fs-1 mb-2"></i>
+                    <p className="small text-muted mb-0">
+                      Guests can present their event QR code or share their attendance token to confirm check-in.
+                    </p>
+                  </div>
+
+                  <div className="mb-2">
+                    <label className="form-label fw-semibold text-dark small mb-1">
+                      Guest Attendance Token / Code <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control rounded-3 py-2 px-3 border shadow-none"
+                      placeholder="Paste attendance token or JWT..."
+                      value={checkInToken}
+                      onChange={(e) => setCheckInToken(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-footer border-top py-3 px-4 bg-white d-flex justify-content-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary rounded-pill px-4 fw-semibold"
+                    onClick={() => setShowCheckInModal(false)}
+                    disabled={checkInSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary rounded-pill px-4 fw-bold shadow-sm"
+                    style={{ background: "#3e56f0", border: "none" }}
+                    disabled={checkInSubmitting || !checkInToken.trim()}
+                  >
+                    {checkInSubmitting ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                        Verifying...
+                      </>
+                    ) : (
+                      "Confirm Check-in"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );

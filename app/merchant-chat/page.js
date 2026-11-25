@@ -435,6 +435,11 @@ function MerchantChatContent() {
                         ) : (
                           messages.map((msg, idx) => {
                             const isSelf = msg.senderType === "user";
+                            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                            const nextMsg = idx < messages.length - 1 ? messages[idx + 1] : null;
+                            const isFirstInGroup = !prevMsg || prevMsg.senderType !== msg.senderType;
+                            const isLastInGroup = !nextMsg || nextMsg.senderType !== msg.senderType;
+
                             return (
                               <div
                                 key={msg._id || idx}
@@ -444,14 +449,17 @@ function MerchantChatContent() {
                                 style={{
                                   maxWidth: "68%",
                                   alignSelf: isSelf ? "flex-end" : "flex-start",
+                                  marginTop: isFirstInGroup ? (idx === 0 ? "0" : "12px") : "3px",
                                 }}
                               >
                                 <div
                                   className="p-3 shadow-xs"
                                   style={{
                                     borderRadius: "16px",
-                                    borderBottomRightRadius: isSelf ? "4px" : "16px",
-                                    borderBottomLeftRadius: isSelf ? "16px" : "4px",
+                                    borderTopRightRadius: isSelf ? (isFirstInGroup ? "16px" : "6px") : "16px",
+                                    borderBottomRightRadius: isSelf ? (isLastInGroup ? "4px" : "6px") : "16px",
+                                    borderTopLeftRadius: !isSelf ? (isFirstInGroup ? "16px" : "6px") : "16px",
+                                    borderBottomLeftRadius: !isSelf ? (isLastInGroup ? "4px" : "6px") : "16px",
                                     background: isSelf ? "#3e56f0" : "#ffffff",
                                     color: isSelf ? "#ffffff" : "#2d3748",
                                     border: isSelf ? "none" : "1px solid #edf2f7",
@@ -462,18 +470,20 @@ function MerchantChatContent() {
                                 >
                                   {msg.content}
                                 </div>
-                                <div
-                                  className="text-muted px-1 mt-1 small"
-                                  style={{ fontSize: "11px" }}
-                                >
-                                  {msg.timeAgo ||
-                                    (msg.createdAt
-                                      ? new Date(msg.createdAt).toLocaleTimeString([], {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })
-                                      : "Just now")}
-                                </div>
+                                {isLastInGroup && (
+                                  <div
+                                    className="text-muted px-1 mt-1 small"
+                                    style={{ fontSize: "11px" }}
+                                  >
+                                    {msg.timeAgo ||
+                                      (msg.createdAt
+                                        ? new Date(msg.createdAt).toLocaleTimeString([], {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })
+                                        : "Just now")}
+                                  </div>
+                                )}
                               </div>
                             );
                           })
