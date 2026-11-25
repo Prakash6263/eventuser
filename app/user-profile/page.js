@@ -201,8 +201,8 @@ export default function UserProfilePage() {
             )}
 
             <div className="row">
-              {/* Sidebar Navigation */}
-              <div className="col-lg-3">
+              {/* Sidebar Navigation (Desktop only) */}
+              <div className="col-lg-3 d-none d-lg-block">
                 <div style={{ position: "sticky", top: "24px", zIndex: 10 }}>
                 <div className="user-profile-sidebar border p-4 bg-white rounded-3 shadow-sm mb-4">
                   <div className="user-profile-sidebar-top text-center mb-4">
@@ -293,6 +293,67 @@ export default function UserProfilePage() {
 
               {/* Profile Details & Change Password Content */}
               <div className="col-lg-9">
+                {/* Mobile Compact Profile Card & Segmented Tabs Switcher (Visible on < 992px) */}
+                <div className="d-lg-none mb-3">
+                  <div className="bg-white border rounded-3 p-3 shadow-sm text-center mb-3">
+                    <div className="user-profile-img position-relative d-inline-block mb-2">
+                      <img
+                        alt="Profile"
+                        src={profilePic}
+                        className="rounded-circle border"
+                        width="80"
+                        height="80"
+                        style={{ objectFit: "cover" }}
+                      />
+                      <label
+                        className="profile-img-btn position-absolute bottom-0 end-0 bg-primary text-white rounded-circle cursor-pointer border-0 shadow-sm"
+                        htmlFor="mobile-profile-pic-upload"
+                        style={{ width: "28px", height: "28px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                        title="Upload Photo"
+                      >
+                        <i className="fa fa-camera" style={{ fontSize: "11px" }}></i>
+                      </label>
+                      <input
+                        className="profile-img-file"
+                        type="file"
+                        id="mobile-profile-pic-upload"
+                        accept="image/*"
+                        onChange={handleProfilePicChange}
+                        style={{ display: "none" }}
+                      />
+                    </div>
+                    <h6 className="fw-bold mb-0 text-dark">{fullName || "User Profile"}</h6>
+                    <p className="text-muted small mb-0">{email}</p>
+                  </div>
+
+                  {/* Modern Segmented Tab Switcher */}
+                  <div className="p-1 rounded-3 d-flex align-items-center mb-3 border" style={{ backgroundColor: "#f1f5f9" }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("profile")}
+                      className={`btn flex-fill py-2 px-3 rounded-2 fw-semibold border-0 text-center transition-all ${
+                        activeTab === "profile"
+                          ? "bg-white text-primary shadow-sm"
+                          : "text-muted bg-transparent"
+                      }`}
+                      style={{ fontSize: "13.5px" }}
+                    >
+                      <i className="fa-solid fa-user me-1.5"></i> My Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("password")}
+                      className={`btn flex-fill py-2 px-3 rounded-2 fw-semibold border-0 text-center transition-all ${
+                        activeTab === "password"
+                          ? "bg-white text-primary shadow-sm"
+                          : "text-muted bg-transparent"
+                      }`}
+                      style={{ fontSize: "13.5px" }}
+                    >
+                      <i className="fa-solid fa-lock me-1.5"></i> Change Password
+                    </button>
+                  </div>
+                </div>
                 <div className="user-profile-wrapper border p-4 bg-white rounded-3 shadow-sm">
                   {fetching ? (
                     <div className="text-center py-5">
@@ -463,6 +524,53 @@ export default function UserProfilePage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Mobile Quick Navigation & Account Management (< 992px) */}
+                  <div className="d-lg-none mt-4 pt-3 border-top">
+                    <h6 className="fw-bold mb-3 text-secondary" style={{ fontSize: "12px", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+                      Account Shortcuts
+                    </h6>
+                    <div className="row g-2 mb-3">
+                      <div className="col-4">
+                        <Link href="/my-events" className="d-flex flex-column align-items-center justify-content-center p-2.5 bg-light rounded-2 text-decoration-none text-dark h-100 text-center">
+                          <i className="fa-solid fa-layer-group text-primary mb-1" style={{ fontSize: "18px" }}></i>
+                          <span style={{ fontSize: "11.5px", fontWeight: "600" }}>My Events</span>
+                        </Link>
+                      </div>
+                      <div className="col-4">
+                        <Link href="/my-reservations" className="d-flex flex-column align-items-center justify-content-center p-2.5 bg-light rounded-2 text-decoration-none text-dark h-100 text-center">
+                          <i className="fa-solid fa-calendar text-primary mb-1" style={{ fontSize: "18px" }}></i>
+                          <span style={{ fontSize: "11.5px", fontWeight: "600" }}>Reservations</span>
+                        </Link>
+                      </div>
+                      <div className="col-4">
+                        <Link href="/notifications" className="d-flex flex-column align-items-center justify-content-center p-2.5 bg-light rounded-2 text-decoration-none text-dark h-100 text-center">
+                          <i className="fa-solid fa-bell text-primary mb-1" style={{ fontSize: "18px" }}></i>
+                          <span style={{ fontSize: "11.5px", fontWeight: "600" }}>Notifications</span>
+                        </Link>
+                      </div>
+                    </div>
+                    <div className="d-flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="btn btn-light border flex-fill py-2 fw-semibold text-muted d-flex align-items-center justify-content-center gap-1.5"
+                        style={{ fontSize: "13px", borderRadius: "8px" }}
+                      >
+                        <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span>Logout</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteModal(true)}
+                        className="btn btn-outline-danger flex-fill py-2 fw-semibold d-flex align-items-center justify-content-center gap-1.5"
+                        style={{ fontSize: "13px", borderRadius: "8px" }}
+                      >
+                        <i className="fa-solid fa-trash"></i>
+                        <span>Delete Account</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
