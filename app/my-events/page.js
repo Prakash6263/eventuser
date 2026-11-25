@@ -227,32 +227,35 @@ export default function MyEventsPage() {
               {/* My Events Cards Timeline */}
               <div className="col-lg-9">
                 <div className="user-profile-wrapper border p-3 p-md-4 bg-white rounded-3 shadow-sm">
-                  <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-                    <h4 className="user-profile-card-title fw-bold m-0">My Events</h4>
-                    {/* Status Tabs Filter with Smooth Horizontal Scroll on Mobile */}
-                    <div
-                      className="d-flex align-items-center gap-1.5 overflow-x-auto pb-2 pb-md-0 no-scrollbar w-100 w-md-auto"
-                      style={{
-                        maxWidth: "100%",
-                        WebkitOverflowScrolling: "touch",
-                        scrollbarWidth: "none",
-                      }}
-                    >
-                      {["All", "Pending", "Accepted", "Rejected", "Draft", "Upcoming", "Completed", "Expired", "Canceled"].map((tab) => (
-                        <button
-                          key={tab}
-                          type="button"
-                          className={`btn btn-sm rounded-pill px-3 py-1.5 fw-semibold flex-shrink-0 transition shadow-xs ${
-                            activeTab === tab
-                              ? "btn-primary text-white"
-                              : "btn-outline-secondary text-secondary bg-light-subtle"
-                          }`}
-                          style={{ fontSize: "12px", whiteSpace: "nowrap" }}
-                          onClick={() => setActiveTab(tab)}
-                        >
-                          {tab}
-                        </button>
-                      ))}
+                  {/* Sticky Filter Header on Scroll */}
+                  <div className="sticky-filter-header bg-white pb-3 mb-4 border-bottom">
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                      <h4 className="user-profile-card-title fw-bold m-0" style={{ fontSize: "18px" }}>My Events</h4>
+                      {/* Status Tabs Filter with Smooth Horizontal Scroll on Mobile */}
+                      <div
+                        className="d-flex align-items-center gap-1.5 overflow-x-auto py-1 no-scrollbar w-100 w-md-auto"
+                        style={{
+                          maxWidth: "100%",
+                          WebkitOverflowScrolling: "touch",
+                          scrollbarWidth: "none",
+                        }}
+                      >
+                        {["All", "Pending", "Accepted", "Rejected", "Draft", "Upcoming", "Completed", "Expired", "Canceled"].map((tab) => (
+                          <button
+                            key={tab}
+                            type="button"
+                            className={`btn btn-sm rounded-pill px-3 py-1.5 fw-semibold flex-shrink-0 transition shadow-xs ${
+                              activeTab === tab
+                                ? "btn-primary text-white"
+                                : "btn-outline-secondary text-secondary bg-light-subtle"
+                            }`}
+                            style={{ fontSize: "12px", whiteSpace: "nowrap" }}
+                            onClick={() => setActiveTab(tab)}
+                          >
+                            {tab}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
 

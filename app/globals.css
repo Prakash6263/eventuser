@@ -267,6 +267,22 @@ a.btn {
   }
 }
 
+/* ── Sticky Sub-Header on Scroll (Mobile & Desktop) ── */
+.sticky-filter-header {
+  position: sticky !important;
+  top: 48px !important;
+  z-index: 100 !important;
+  background-color: #ffffff !important;
+  margin-top: -8px !important;
+  padding-top: 8px !important;
+}
+
+@media (min-width: 992px) {
+  .sticky-filter-header {
+    top: 60px !important;
+  }
+}
+
 /* ── Mobile Responsiveness Enhancements ── */
 @media (max-width: 576px) {
   /* Navbar Compact Layout */
