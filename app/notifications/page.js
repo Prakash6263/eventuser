@@ -336,8 +336,8 @@ export default function NotificationsPage() {
           <div className="container">
             <div className="row">
 
-              {/* Left Profile Sidebar */}
-              <div className="col-lg-3 col-md-4 mb-4 mb-lg-0">
+              {/* Left Profile Sidebar (Desktop only) */}
+              <div className="col-lg-3 col-md-4 mb-4 mb-lg-0 d-none d-lg-block">
                 <div className="user-profile-sidebar shadow-sm">
                   <div className="user-profile-sidebar-top text-center">
                     <div

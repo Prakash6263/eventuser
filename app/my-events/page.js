@@ -172,8 +172,8 @@ export default function MyEventsPage() {
         <div className="event-dt-block py-4 py-md-5">
           <div className="container">
             <div className="row">
-              {/* Sidebar Navigation */}
-              <div className="col-lg-3 mb-4 mb-lg-0">
+              {/* Sidebar Navigation (Desktop only) */}
+              <div className="col-lg-3 mb-4 mb-lg-0 d-none d-lg-block">
                 <div className="user-profile-sidebar border p-3 p-md-4 bg-white rounded-3 shadow-sm mb-4">
                   <div className="user-profile-sidebar-top text-center mb-4">
                     <div className="user-profile-img position-relative d-inline-block mb-3">
