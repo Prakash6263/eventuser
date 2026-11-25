@@ -1349,8 +1349,8 @@ function EventDetailsContent() {
                 </div>
 
                 <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 pt-1">
-                  <div className="d-flex align-items-center" style={{ gap: "12px" }}>
-                    <div className="d-flex align-items-center">
+                  <div className="d-flex align-items-center flex-shrink-0" style={{ gap: "12px" }}>
+                    <div className="d-flex align-items-center flex-shrink-0">
                       {event.selectedGuests && event.selectedGuests.length > 0 ? (
                         event.selectedGuests.slice(0, 4).map((g, idx) => (
                           <div
@@ -1382,7 +1382,7 @@ function EventDetailsContent() {
                         </div>
                       )}
                     </div>
-                    <div>
+                    <div className="flex-shrink-0" style={{ whiteSpace: "nowrap" }}>
                       <span className="text-dark fw-bold d-block" style={{ fontSize: "13.5px", lineHeight: 1.2 }}>
                         {event.selectedGuests && event.selectedGuests.length > 0
                           ? `${event.selectedGuests.length} ${event.selectedGuests.length === 1 ? "participant" : "participants"}`
@@ -1394,8 +1394,8 @@ function EventDetailsContent() {
 
                   <Link
                     href={`/chat?chatId=${groupChat?._id || ""}&eventName=${encodeURIComponent(event.eventTitle)}&eventId=${event.eventId}`}
-                    className="btn btn-primary rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center justify-content-center shadow-xs text-white text-decoration-none w-100 w-sm-auto"
-                    style={{ background: "#3e56f0", border: "none", fontSize: "13px", gap: "8px", height: "40px" }}
+                    className="btn btn-primary rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center justify-content-center shadow-xs text-white text-decoration-none group-chat-btn"
+                    style={{ background: "#3e56f0", border: "none", fontSize: "13px", gap: "8px", height: "40px", whiteSpace: "nowrap" }}
                   >
                     <i className="bi bi-chat-text-fill text-white" style={{ fontSize: "13px" }}></i>
                     <span>Open Group Chat</span>
@@ -1460,7 +1460,7 @@ function EventDetailsContent() {
                           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueDisplay)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="btn btn-outline-primary rounded-pill px-3.5 py-2 fw-semibold d-inline-flex align-items-center justify-content-center shadow-xs flex-grow-1 flex-sm-grow-0"
+                          className="btn btn-outline-primary rounded-pill px-3.5 py-2 fw-semibold d-inline-flex align-items-center justify-content-center shadow-xs flex-grow-1 flex-sm-grow-0 text-nowrap"
                           style={{ fontSize: "12.5px", gap: "8px", height: "38px" }}
                         >
                           <i className="bi bi-compass-fill" style={{ fontSize: "13px" }}></i>
@@ -1469,7 +1469,7 @@ function EventDetailsContent() {
                         {isRestaurantOption && restaurant && (
                           <button
                             type="button"
-                            className="btn btn-outline-secondary rounded-pill px-3.5 py-2 fw-semibold text-secondary shadow-xs d-inline-flex align-items-center justify-content-center flex-grow-1 flex-sm-grow-0"
+                            className="btn btn-outline-secondary rounded-pill px-3.5 py-2 fw-semibold text-secondary shadow-xs d-inline-flex align-items-center justify-content-center flex-grow-1 flex-sm-grow-0 text-nowrap"
                             onClick={() => setShowVenueModal(true)}
                             style={{ fontSize: "12.5px", gap: "8px", height: "38px", background: "#fff" }}
                           >
