@@ -1060,10 +1060,10 @@ function EventDetailsContent() {
                 {event.selectedGuests && event.selectedGuests.length > 0 ? (
                   <div className="row g-3">
                     {event.selectedGuests.map((guest, idx) => (
-                      <div key={guest.id || idx} className="col-12 col-md-6 col-lg-4">
-                        <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-white shadow-xs h-100" style={{ borderColor: "#eef2f6" }}>
+                      <div key={guest.id || idx} className="col-12 col-sm-6 col-lg-6 col-xxl-4">
+                        <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-white shadow-xs h-100" style={{ borderColor: "#eef2f6", gap: "10px" }}>
                           {/* Left: Avatar + Guest Details */}
-                          <div className="d-flex align-items-center gap-3 overflow-hidden me-2">
+                          <div className="d-flex align-items-center gap-2.5 min-w-0 flex-grow-1 overflow-hidden">
                             <div
                               className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0 shadow-xs"
                               style={{
@@ -1075,18 +1075,19 @@ function EventDetailsContent() {
                             >
                               {getInitials(guest.name)}
                             </div>
-                            <div className="overflow-hidden">
+                            <div className="min-w-0">
                               <h6 className="fw-bold mb-1 text-dark text-truncate" style={{ fontSize: "13.5px" }}>{guest.name}</h6>
-                              <div className="d-flex align-items-center gap-1.5">
+                              <div className="d-flex align-items-center">
                                 <span
-                                  className="badge px-2 py-0.5 d-inline-flex align-items-center gap-1"
+                                  className="badge px-2 py-0.5 d-inline-flex align-items-center gap-1 text-nowrap"
                                   style={{
                                     fontSize: "10.5px",
                                     fontWeight: "600",
                                     borderRadius: "6px",
                                     background: guest.status === "accepted" ? "#ecfdf5" : "#fffbeb",
                                     color: guest.status === "accepted" ? "#047857" : "#b45309",
-                                    border: `1px solid ${guest.status === "accepted" ? "#a7f3d0" : "#fde68a"}`
+                                    border: `1px solid ${guest.status === "accepted" ? "#a7f3d0" : "#fde68a"}`,
+                                    whiteSpace: "nowrap"
                                   }}
                                 >
                                   <span
@@ -1094,7 +1095,8 @@ function EventDetailsContent() {
                                     style={{
                                       width: "5px",
                                       height: "5px",
-                                      background: guest.status === "accepted" ? "#10b981" : "#f59e0b"
+                                      background: guest.status === "accepted" ? "#10b981" : "#f59e0b",
+                                      flexShrink: 0
                                     }}
                                   ></span>
                                   <span style={{ textTransform: "capitalize" }}>{guest.status || "pending"}</span>
@@ -1104,17 +1106,18 @@ function EventDetailsContent() {
                           </div>
 
                           {/* Right: Check-In Action or Checked-In Status */}
-                          <div className="flex-shrink-0">
+                          <div className="flex-shrink-0 ms-1">
                             {attendedGuests[guest.id || guest.email || guest.name] ? (
                               <span
-                                className="badge px-2.5 py-1.5 d-inline-flex align-items-center gap-1.5"
+                                className="badge px-2.5 py-1.5 d-inline-flex align-items-center gap-1.5 text-nowrap"
                                 style={{
                                   fontSize: "11px",
                                   fontWeight: "600",
                                   borderRadius: "8px",
                                   background: "#ecfdf5",
                                   color: "#047857",
-                                  border: "1px solid #a7f3d0"
+                                  border: "1px solid #a7f3d0",
+                                  whiteSpace: "nowrap"
                                 }}
                               >
                                 <i className="fa-solid fa-circle-check text-success"></i>
@@ -1124,14 +1127,15 @@ function EventDetailsContent() {
                               <button
                                 type="button"
                                 onClick={() => handleMarkGuestAttended(guest)}
-                                className="btn btn-sm btn-outline-success px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs"
+                                className="btn btn-sm btn-outline-success px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs text-nowrap"
                                 style={{
                                   fontSize: "11.5px",
                                   height: "30px",
                                   borderRadius: "8px",
                                   borderColor: "#a7f3d0",
                                   color: "#047857",
-                                  background: "#f0fdf4"
+                                  background: "#f0fdf4",
+                                  whiteSpace: "nowrap"
                                 }}
                               >
                                 <i className="fa-solid fa-user-check"></i>
