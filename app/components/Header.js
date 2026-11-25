@@ -107,22 +107,22 @@ export default function Header() {
                   </li>
                   {isLoggedIn && (
                     <>
-                      <li className="nav-item">
+                      <li className="nav-item d-lg-none">
                         <Link
                           className={`nav-link ${isActive("/my-events") ? "active" : ""}`}
                           href="/my-events"
                           onClick={() => setOffcanvasOpen(false)}
                         >
-                          <i className="fa-solid fa-calendar-check me-2 d-lg-none text-primary"></i> My Events
+                          <i className="fa-solid fa-calendar-check me-2 text-primary"></i> My Events
                         </Link>
                       </li>
-                      <li className="nav-item">
+                      <li className="nav-item d-lg-none">
                         <Link
                           className={`nav-link ${isActive("/my-reservations") ? "active" : ""}`}
                           href="/my-reservations"
                           onClick={() => setOffcanvasOpen(false)}
                         >
-                          <i className="fa-solid fa-utensils me-2 d-lg-none text-primary"></i> My Reservations
+                          <i className="fa-solid fa-utensils me-2 text-primary"></i> My Reservations
                         </Link>
                       </li>
                       <li className="nav-item">
@@ -134,13 +134,13 @@ export default function Header() {
                           <i className="fa-solid fa-calendar-days me-2 d-lg-none text-primary"></i> Upcoming
                         </Link>
                       </li>
-                      <li className="nav-item">
+                      <li className="nav-item d-lg-none">
                         <Link
                           className={`nav-link ${isActive("/user-profile") ? "active" : ""}`}
                           href="/user-profile"
                           onClick={() => setOffcanvasOpen(false)}
                         >
-                          <i className="fa-solid fa-user me-2 d-lg-none text-primary"></i> My Profile
+                          <i className="fa-solid fa-user me-2 text-primary"></i> My Profile
                         </Link>
                       </li>
                     </>
