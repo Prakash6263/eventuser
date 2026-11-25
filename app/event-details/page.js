@@ -173,20 +173,18 @@ function EventDetailsContent() {
 
   // Host QR Check-in state
   const [showCheckInModal, setShowCheckInModal] = useState(false);
-  const [activeCheckInTab, setActiveCheckInTab] = useState("camera"); // "camera" or "code"
-  const [checkInToken, setCheckInToken] = useState("");
   const [checkInSubmitting, setCheckInSubmitting] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [attendedGuests, setAttendedGuests] = useState({});
 
   useEffect(() => {
     let html5QrCode = null;
-    if (showCheckInModal && activeCheckInTab === "camera") {
+    if (showCheckInModal) {
       setCameraError("");
       import("html5-qrcode").then(({ Html5Qrcode }) => {
         try {
           html5QrCode = new Html5Qrcode("interactive-qr-scanner");
-          const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+          const config = { fps: 10, qrbox: { width: 240, height: 240 } };
           html5QrCode
             .start(
               { facingMode: "environment" },
@@ -202,7 +200,7 @@ function EventDetailsContent() {
             )
             .catch((err) => {
               console.warn("Camera access failed:", err);
-              setCameraError("Camera access was not granted or not available on this device. You can use the Ticket Code tab to check in manually.");
+              setCameraError("Camera permission was not granted or no camera is connected. Please allow camera access to scan attendee QR codes.");
             });
         } catch (e) {
           console.warn("Scanner initialization error:", e);
@@ -219,20 +217,15 @@ function EventDetailsContent() {
         } catch (e) {}
       }
     };
-  }, [showCheckInModal, activeCheckInTab]);
+  }, [showCheckInModal]);
 
-  const handleProcessCheckIn = async (tokenOrCode) => {
-    const raw = (tokenOrCode || checkInToken || "").trim();
-    if (!raw) {
-      Swal.fire({ icon: "warning", title: "Input Required", text: "Please scan a QR code or enter the ticket code.", timer: 2000, showConfirmButton: false });
-      return;
-    }
+  const handleProcessCheckIn = async (scannedToken) => {
+    if (!scannedToken) return;
     try {
       setCheckInSubmitting(true);
-      const res = await scanAttendanceApi(raw);
+      const res = await scanAttendanceApi(scannedToken);
       if (res && res.status) {
         setShowCheckInModal(false);
-        setCheckInToken("");
         Swal.fire({
           icon: "success",
           title: "Guest Checked In! ✅",
@@ -242,24 +235,18 @@ function EventDetailsContent() {
         });
       } else {
         setShowCheckInModal(false);
-        setCheckInToken("");
         Swal.fire({
-          icon: "success",
-          title: "Checked In! ✅",
-          text: "Guest attendance has been confirmed.",
-          timer: 2000,
-          showConfirmButton: false,
+          icon: "error",
+          title: "Verification Failed",
+          text: res?.message || "Invalid or expired attendance QR code.",
         });
       }
     } catch (err) {
       setShowCheckInModal(false);
-      setCheckInToken("");
       Swal.fire({
-        icon: "success",
-        title: "Guest Checked In! ✅",
-        text: "Attendance recorded.",
-        timer: 2000,
-        showConfirmButton: false,
+        icon: "error",
+        title: "Verification Error",
+        text: err.message || "Failed to verify attendance token.",
       });
     } finally {
       setCheckInSubmitting(false);
@@ -2658,23 +2645,25 @@ function EventDetailsContent() {
         </div>
       )}
 
-      {/* Host QR Check-in Modal */}
+      {/* Host QR Scanner Modal */}
       {showCheckInModal && (
         <div
           className="modal show d-block"
           tabIndex="-1"
           style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1055 }}
         >
-          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "480px" }}>
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "460px" }}>
             <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
               <div
                 className="modal-header border-0 p-4 text-white"
                 style={{ background: "linear-gradient(135deg, #3e56f0 0%, #1d4ed8 100%)" }}
               >
                 <div>
-                  <h5 className="modal-title fw-bold mb-1">Guest Check-in Scanner</h5>
+                  <h5 className="modal-title fw-bold mb-1">
+                    <i className="fa-solid fa-qrcode me-2"></i> Attendance QR Scanner
+                  </h5>
                   <p className="small mb-0 text-white-50">
-                    Scan guest admission QR code or verify ticket
+                    Scan guest attendance QR code to verify admission
                   </p>
                 </div>
                 <button
@@ -2685,92 +2674,22 @@ function EventDetailsContent() {
                 ></button>
               </div>
 
-              {/* Friendly Mode Tabs */}
-              <div className="d-flex border-bottom bg-white">
-                <button
-                  type="button"
-                  onClick={() => setActiveCheckInTab("camera")}
-                  className={`btn flex-fill py-2.5 rounded-0 border-0 fw-semibold text-center d-flex align-items-center justify-content-center gap-2 ${
-                    activeCheckInTab === "camera"
-                      ? "text-primary border-bottom border-primary border-2 bg-light-subtle"
-                      : "text-muted"
-                  }`}
-                  style={{ fontSize: "14px" }}
-                >
-                  <i className="fa-solid fa-camera"></i> Camera QR Scanner
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveCheckInTab("code")}
-                  className={`btn flex-fill py-2.5 rounded-0 border-0 fw-semibold text-center d-flex align-items-center justify-content-center gap-2 ${
-                    activeCheckInTab === "code"
-                      ? "text-primary border-bottom border-primary border-2 bg-light-subtle"
-                      : "text-muted"
-                  }`}
-                  style={{ fontSize: "14px" }}
-                >
-                  <i className="fa-solid fa-ticket"></i> Enter Ticket Code
-                </button>
-              </div>
+              <div className="modal-body p-4 bg-light text-center">
+                <div
+                  id="interactive-qr-scanner"
+                  className="bg-white rounded-3 border overflow-hidden shadow-xs mb-3 text-center"
+                  style={{ minHeight: "260px" }}
+                ></div>
 
-              <div className="modal-body p-4 bg-light">
-                {activeCheckInTab === "camera" ? (
-                  <div>
-                    <div
-                      id="interactive-qr-scanner"
-                      className="bg-white rounded-3 border overflow-hidden shadow-xs mb-3 text-center"
-                      style={{ minHeight: "260px" }}
-                    ></div>
-                    {cameraError ? (
-                      <div className="alert alert-warning py-2 px-3 small rounded-3 mb-0">
-                        <i className="fa-solid fa-triangle-exclamation me-1"></i> {cameraError}
-                      </div>
-                    ) : (
-                      <p className="small text-muted text-center mb-0">
-                        <i className="fa-solid fa-qrcode text-primary me-1"></i> Point your device camera directly at the guest&apos;s event QR code to automatically check them in.
-                      </p>
-                    )}
+                {cameraError ? (
+                  <div className="alert alert-warning py-2.5 px-3 small rounded-3 mb-0 text-start">
+                    <i className="fa-solid fa-triangle-exclamation me-2 text-warning"></i>
+                    {cameraError}
                   </div>
                 ) : (
-                  <form onSubmit={(e) => { e.preventDefault(); handleProcessCheckIn(); }}>
-                    <div className="bg-white p-3 rounded-3 border mb-3 text-center">
-                      <i className="fa-solid fa-ticket text-primary fs-1 mb-2"></i>
-                      <p className="small text-muted mb-0">
-                        Enter the guest&apos;s admission ticket code or pass number to confirm their attendance.
-                      </p>
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold text-dark small mb-1">
-                        Admission Pass / Ticket Code <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control rounded-3 py-2 px-3 border shadow-none"
-                        placeholder="e.g. EVT-98412 or guest passcode..."
-                        value={checkInToken}
-                        onChange={(e) => setCheckInToken(e.target.value)}
-                        required
-                        autoFocus
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="btn btn-primary rounded-pill w-100 py-2.5 fw-bold shadow-sm"
-                      style={{ background: "#3e56f0", border: "none" }}
-                      disabled={checkInSubmitting || !checkInToken.trim()}
-                    >
-                      {checkInSubmitting ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                          Verifying...
-                        </>
-                      ) : (
-                        "Verify & Confirm Attendance"
-                      )}
-                    </button>
-                  </form>
+                  <p className="small text-muted mb-0">
+                    <i className="fa-solid fa-video text-primary me-1"></i> Point your camera at the attendee&apos;s QR code to record attendance automatically.
+                  </p>
                 )}
               </div>
 
