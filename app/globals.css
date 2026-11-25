@@ -175,6 +175,98 @@ a.btn {
   text-decoration: none !important;
 }
 
+/* ── Header Action Buttons (Universal & Desktop) ── */
+.right-header {
+  flex-shrink: 0 !important;
+}
+
+.create-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  height: 38px !important;
+  padding: 0 16px !important;
+  border-radius: 8px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  background-color: #3e56f0 !important;
+  color: #ffffff !important;
+  border: none !important;
+  flex-shrink: 0 !important;
+  line-height: normal !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.create-btn:hover {
+  background-color: #2b3fc2 !important;
+  color: #ffffff !important;
+}
+
+.create-btn i {
+  margin-right: 6px !important;
+  font-size: 13px !important;
+}
+
+.logout-btn {
+  height: 38px !important;
+  padding: 0 14px !important;
+  border-radius: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  background-color: #ffffff !important;
+  color: #475569 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+  line-height: normal !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.logout-btn:hover {
+  background-color: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #ef4444 !important;
+}
+
+.logout-btn i {
+  font-size: 13px !important;
+}
+
+/* Desktop Navbar Navigation Spacing & Layout */
+@media (min-width: 992px) {
+  .navbar-nav .nav-link {
+    font-size: 14.5px !important;
+    padding: 8px 10px !important;
+    white-space: nowrap !important;
+    font-weight: 500 !important;
+  }
+  .right-header {
+    margin-left: 12px !important;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1280px) {
+  .navbar-nav .nav-link {
+    font-size: 13.5px !important;
+    padding: 8px 7px !important;
+  }
+  .create-btn {
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+  .logout-btn {
+    padding: 0 10px !important;
+    font-size: 13px !important;
+  }
+}
+
 /* ── Mobile Responsiveness Enhancements ── */
 @media (max-width: 576px) {
   /* Navbar Compact Layout */
@@ -211,6 +303,7 @@ a.btn {
     margin: 0 !important;
     font-size: 14px !important;
   }
+  .right-header .logout-btn,
   .right-header button[title="Logout"] {
     width: 34px !important;
     height: 34px !important;
@@ -223,13 +316,16 @@ a.btn {
     align-items: center !important;
     justify-content: center !important;
   }
+  .right-header .logout-btn span,
   .right-header button[title="Logout"] span {
     display: none !important;
   }
+  .right-header .logout-btn i,
   .right-header button[title="Logout"] i {
     margin: 0 !important;
     font-size: 13px !important;
   }
+  .right-header .logout-btn:hover,
   .right-header button[title="Logout"]:hover {
     background: #fef2f2 !important;
     border-color: #fecaca !important;

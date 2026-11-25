@@ -199,8 +199,8 @@ export default function Header() {
               ></div>
             )}
 
-            <div className="right-header order-2">
-              <ul className="align-self-stretch d-flex align-items-center m-0">
+            <div className="right-header order-2 flex-shrink-0">
+              <ul className="align-self-stretch d-flex align-items-center m-0 p-0 list-unstyled">
                 {isLoggedIn && (
                 <li className="me-2">
                   <a href="/create-event" className="create-btn btn-hover" onClick={handleCreateEventClick}>
@@ -210,11 +210,10 @@ export default function Header() {
                 </li>
                 )}
                 {isLoggedIn ? (
-                  <li className="d-flex align-items-center gap-2">
+                  <li className="d-flex align-items-center">
                     <button
                       onClick={handleLogout}
-                      className="btn btn-light border btn-sm px-2.5 py-1.5 fw-semibold d-flex align-items-center justify-content-center text-muted"
-                      style={{ height: "36px", borderRadius: "8px", borderColor: "#e2e8f0" }}
+                      className="logout-btn"
                       title="Logout"
                     >
                       <i className="fa-solid fa-right-from-bracket me-1"></i>
@@ -224,7 +223,7 @@ export default function Header() {
                 ) : (
                   <li>
                     <Link href="/login" className="create-btn btn-hover">
-                      <i className="fa-solid fa-user"></i>
+                      <i className="fa-solid fa-user me-1"></i>
                       <span>Login</span>
                     </Link>
                   </li>
