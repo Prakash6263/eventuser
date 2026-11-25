@@ -18,6 +18,9 @@ function MerchantChatContent() {
   const eventId = searchParams.get("eventId") || "";
   const merchantId = searchParams.get("merchantId") || "";
   const merchantNameParam = searchParams.get("merchantName") || "Restaurant";
+  const displayMerchantName = (!merchantNameParam || merchantNameParam === "Location TBD" || merchantNameParam === "TBD")
+    ? (merchant?.serviceName || merchant?.name || "Restaurant Partner")
+    : merchantNameParam;
 
   const [chatId, setChatId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -309,28 +312,28 @@ function MerchantChatContent() {
                     >
 
                       {/* Chat Header */}
-                      <div className="chat-header p-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between">
-                        <div className="d-flex align-items-center gap-3">
+                      <div className="chat-header p-2.5 p-md-3 px-3 px-md-4 bg-white border-bottom d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-2.5 min-w-0">
                           <button
                             type="button"
                             onClick={() => router.back()}
-                            className="btn btn-sm btn-white border rounded-pill px-3 py-1.5 fw-medium d-inline-flex align-items-center gap-2 shadow-xs text-secondary hover-shadow transition"
-                            style={{ fontSize: "13px", background: "#ffffff", borderColor: "#e2e8f0" }}
+                            className="btn btn-light border rounded-circle p-0 d-flex align-items-center justify-content-center text-secondary shadow-xs hover-shadow flex-shrink-0"
+                            style={{ width: "36px", height: "36px", fontSize: "16px", background: "#ffffff", borderColor: "#e2e8f0" }}
+                            title="Go Back"
                           >
-                            <i className="bi bi-arrow-left text-primary fw-bold" style={{ fontSize: "14px" }}></i>
-                            <span>Back</span>
+                            <i className="bi bi-arrow-left text-dark fw-bold"></i>
                           </button>
 
                           <div
                             className="avatar-wrapper position-relative flex-shrink-0"
-                            style={{ width: "42px", height: "42px" }}
+                            style={{ width: "40px", height: "40px" }}
                           >
                             {merchantPic ? (
                               <img
                                 src={merchantPic}
-                                alt={merchantName}
+                                alt={displayMerchantName}
                                 className="rounded-circle border shadow-xs"
-                                style={{ width: "42px", height: "42px", objectFit: "cover" }}
+                                style={{ width: "40px", height: "40px", objectFit: "cover" }}
                                 onError={(e) => {
                                   e.target.onerror = null;
                                   e.target.style.display = "none";
@@ -340,24 +343,24 @@ function MerchantChatContent() {
                               <div
                                 className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-xs"
                                 style={{
-                                  width: "42px",
-                                  height: "42px",
-                                  fontSize: "16px",
+                                  width: "40px",
+                                  height: "40px",
+                                  fontSize: "15px",
                                   background: "#3e56f0",
                                 }}
                               >
-                                {getInitials(merchantName)}
+                                {getInitials(displayMerchantName)}
                               </div>
                             )}
                           </div>
 
-                          <div>
-                            <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "15px", letterSpacing: "-0.2px" }}>
-                              {merchantName}
+                          <div className="min-w-0">
+                            <h6 className="fw-bold mb-0 text-dark text-truncate" style={{ fontSize: "14.5px", letterSpacing: "-0.2px" }}>
+                              {displayMerchantName}
                             </h6>
                             <small
                               className="text-muted fw-medium d-inline-flex align-items-center gap-1"
-                              style={{ fontSize: "12px" }}
+                              style={{ fontSize: "11.5px" }}
                             >
                               <span className="text-success fw-semibold">Online</span> • Restaurant Partner
                             </small>

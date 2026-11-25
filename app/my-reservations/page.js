@@ -53,14 +53,16 @@ export default function MyReservationsPage() {
     const resObj = item.makeReservation || null;
     const hasReservation = Boolean(resObj && resObj._id);
 
-    const merchantObj = resObj?.merchantId || {};
-    const locationObj = resObj?.serviceLocationId || item.serviceLocationId || {};
+    const merchantObj = resObj?.merchantId || item.merchantId || {};
+    const locationObj = resObj?.serviceLocationId || item.serviceLocationId || item.addressId || {};
 
-    let venueAddress = "Location TBD";
-    if (locationObj?.addressName || locationObj?.address) {
-      venueAddress = locationObj.addressName && locationObj.address
-        ? `${locationObj.addressName} - ${locationObj.address}`
-        : (locationObj.address || locationObj.addressName);
+    let venueAddress = merchantObj.serviceName || merchantObj.name || "Location to be confirmed";
+    if (locationObj?.addressName && locationObj?.address) {
+      venueAddress = `${locationObj.addressName} - ${locationObj.address}`;
+    } else if (locationObj?.address || locationObj?.addressName) {
+      venueAddress = locationObj.address || locationObj.addressName;
+    } else if (item.placeId?.preferences) {
+      venueAddress = item.placeId.preferences;
     }
 
     let displayStatus = "Rejected";

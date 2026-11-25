@@ -137,14 +137,23 @@ export default function ReservationDetailsPage() {
     } catch (e) { }
 
     const resObj = item.makeReservation || {};
-    const merchantObj = resObj.merchantId || {};
-    const locationObj = resObj.serviceLocationId || item.serviceLocationId || {};
+    const merchantObj = resObj.merchantId || item.merchantId || {};
+    const locationObj = resObj.serviceLocationId || item.serviceLocationId || item.addressId || {};
 
-    let venueAddress = "Location TBD";
-    if (locationObj.addressName || locationObj.address) {
-      venueAddress = locationObj.addressName && locationObj.address
-        ? `${locationObj.addressName} - ${locationObj.address}`
-        : (locationObj.address || locationObj.addressName);
+    let venueTitle = merchantObj.serviceName || merchantObj.name || locationObj.addressName || "Venue Location";
+    let venueAddress = "Address to be confirmed";
+
+    if (locationObj.addressName && locationObj.address) {
+      venueTitle = locationObj.addressName;
+      venueAddress = locationObj.address;
+    } else if (locationObj.address) {
+      venueAddress = locationObj.address;
+    } else if (locationObj.addressName) {
+      venueAddress = locationObj.addressName;
+    } else if (item.placeId?.preferences) {
+      venueAddress = item.placeId.preferences;
+    } else if (item.venue) {
+      venueAddress = item.venue;
     }
 
     const rawStatus = (resObj.status || item.status || "Confirmed").toLowerCase();
@@ -173,7 +182,9 @@ export default function ReservationDetailsPage() {
       eventDate: formattedDate,
       eventStartTime: item.eventStartTime || "12:00 PM",
       eventEndTime: item.eventEndTime || "04:00 PM",
-      venue: venueAddress,
+      venueTitle: venueTitle,
+      venueAddress: venueAddress,
+      venue: venueTitle && venueAddress && venueAddress !== "Address to be confirmed" ? `${venueTitle} - ${venueAddress}` : (venueAddress || venueTitle),
       status: displayStatus,
       rawStatus: resObj.status || item.status,
       guestsCount: guests,
@@ -783,9 +794,9 @@ export default function ReservationDetailsPage() {
                             <i className="fa-solid fa-location-dot"></i>
                           </div>
                           <div className="web-row-content">
-                            <div className="web-row-title">{reservation.venue?.split(" - ")?.[0] || "Venue"}</div>
+                            <div className="web-row-title">{reservation.venueTitle || reservation.venue?.split(" - ")?.[0] || "Venue Location"}</div>
                             <div className="web-row-subtitle">
-                              {reservation.venue?.split(" - ")?.[1] || reservation.venue || "TBD"}
+                              {reservation.venueAddress || reservation.venue?.split(" - ")?.[1] || "Address to be confirmed"}
                             </div>
                           </div>
                           <div className="d-flex align-items-center gap-2">
@@ -808,7 +819,8 @@ export default function ReservationDetailsPage() {
                                 const eventId = reservation.id || reservation.eventId || "";
                                 const rawRes = reservation.rawItem || {};
                                 const merchantId = typeof rawRes.merchantId === "object" ? rawRes.merchantId?._id : (rawRes.merchantId || reservation.merchantId || "68c286d5a6251e9e18485481");
-                                router.push(`/merchant-chat?eventId=${eventId}&merchantId=${merchantId}&merchantName=${encodeURIComponent(reservation.venue?.split(" - ")?.[0] || "Venue")}`);
+                                const targetName = reservation.venueTitle && reservation.venueTitle !== "Venue Location" ? reservation.venueTitle : (reservation.eventTitle || "Restaurant Partner");
+                                router.push(`/merchant-chat?eventId=${eventId}&merchantId=${merchantId}&merchantName=${encodeURIComponent(targetName)}`);
                               }}
                             >
                               <i className="fa-solid fa-comments me-1"></i> Chat
