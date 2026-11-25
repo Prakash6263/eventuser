@@ -1005,11 +1005,21 @@ function EventDetailsContent() {
 
               {/* Guest List Card */}
               <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h5 className="fw-bold text-dark m-0">
-                    <i className="fa-solid fa-user-group text-primary me-2"></i>
-                    Guest List <span className="text-muted small">({invitedCount} invited)</span>
-                  </h5>
+                <div className="d-flex align-items-center mb-4 pb-3 border-bottom" style={{ gap: "12px" }}>
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center text-primary flex-shrink-0"
+                    style={{ width: "34px", height: "34px", background: "#eef2ff", fontSize: "15px" }}
+                  >
+                    <i className="fa-solid fa-user-group" style={{ lineHeight: 1 }}></i>
+                  </div>
+                  <div>
+                    <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px", lineHeight: 1.2 }}>
+                      Guest List <span className="text-muted small fw-normal">({invitedCount} invited)</span>
+                    </h5>
+                    <span className="text-muted small" style={{ fontSize: "12px" }}>
+                      Confirmed attendees and invitation statuses
+                    </span>
+                  </div>
                 </div>
 
                 {event.selectedGuests && event.selectedGuests.length > 0 ? (
@@ -1073,8 +1083,8 @@ function EventDetailsContent() {
                 <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
                   <div className="d-flex align-items-center mb-3 pb-3 border-bottom" style={{ gap: "12px" }}>
                     <div
-                      className="rounded-circle d-flex align-items-center justify-content-center text-white shadow-xs flex-shrink-0"
-                      style={{ width: "38px", height: "38px", background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)", fontSize: "16px" }}
+                      className="rounded-3 d-flex align-items-center justify-content-center text-warning flex-shrink-0"
+                      style={{ width: "34px", height: "34px", background: "#fffbeb", fontSize: "15px" }}
                     >
                       <i className="bi bi-sticky-fill" style={{ lineHeight: 1 }}></i>
                     </div>
@@ -1245,8 +1255,8 @@ function EventDetailsContent() {
                 <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
                   <div className="d-flex align-items-center" style={{ gap: "12px" }}>
                     <div
-                      className="rounded-circle d-flex align-items-center justify-content-center text-white shadow-xs flex-shrink-0"
-                      style={{ width: "38px", height: "38px", background: "linear-gradient(135deg, #3e56f0 0%, #6366f1 100%)", fontSize: "16px" }}
+                      className="rounded-3 d-flex align-items-center justify-content-center text-primary flex-shrink-0"
+                      style={{ width: "34px", height: "34px", background: "#eef2ff", fontSize: "15px" }}
                     >
                       <i className="bi bi-chat-left-dots-fill" style={{ lineHeight: 1 }}></i>
                     </div>
@@ -1324,8 +1334,8 @@ function EventDetailsContent() {
                 <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
                   <div className="d-flex align-items-center" style={{ gap: "12px" }}>
                     <div
-                      className="rounded-circle d-flex align-items-center justify-content-center text-white shadow-xs flex-shrink-0"
-                      style={{ width: "38px", height: "38px", background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", fontSize: "16px" }}
+                      className="rounded-3 d-flex align-items-center justify-content-center text-success flex-shrink-0"
+                      style={{ width: "34px", height: "34px", background: "#ecfdf5", fontSize: "15px" }}
                     >
                       <i className="bi bi-geo-alt-fill" style={{ lineHeight: 1 }}></i>
                     </div>
@@ -1566,78 +1576,90 @@ function EventDetailsContent() {
 
               {/* Location Widget */}
               <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
-                <h5 className="fw-bold text-dark mb-4">
-                  <i className="fa-solid fa-map-marker-alt text-danger me-2"></i>
-                  Venue Location
-                </h5>
-                <p className="fw-bold text-dark mb-2 small">{event.place || "At a participating restaurant"}</p>
-                <div className="p-3 bg-light rounded-3 mb-3 border shadow-inner">
+                <div className="d-flex align-items-center mb-3 pb-3 border-bottom" style={{ gap: "12px" }}>
+                  <div
+                    className="rounded-3 d-flex align-items-center justify-content-center text-danger flex-shrink-0"
+                    style={{ width: "34px", height: "34px", background: "#fef2f2", fontSize: "15px" }}
+                  >
+                    <i className="fa-solid fa-map-marker-alt" style={{ lineHeight: 1 }}></i>
+                  </div>
+                  <div>
+                    <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px", lineHeight: 1.2 }}>Venue Location</h5>
+                    <span className="text-muted small" style={{ fontSize: "12px" }}>{event.place || "At a participating restaurant"}</span>
+                  </div>
+                </div>
+                <div className="p-3 bg-light rounded-3 mb-3 border">
                   <span className="text-muted small d-block mb-1">Address Details</span>
                   <p className="text-dark fw-semibold mb-0 small" style={{ lineHeight: "1.4" }}>
                     {venueDisplay}
                   </p>
                 </div>
 
+                {/* Cohesive Action Buttons */}
                 {isRestaurantOption && restaurant && (
                   <div className="d-flex flex-column gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-primary w-100 rounded-pill py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                      onClick={() => setShowVenueModal(true)}
-                      style={{ background: "#4f46e5", border: "none" }}
-                    >
-                      <i className="fa-solid fa-circle-info"></i>
-                      View Venue Details
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary w-100 rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
-                      onClick={() => {
-                        const mId = event?.merchantId?._id || event?.merchantId || restaurant?.merchantId?._id || restaurant?.merchantId || event?.serviceLocationId?.merchantId?._id || event?.serviceLocationId?.merchantId || "68c286d5a6251e9e18485481";
-                        const mName = encodeURIComponent(chosenRestaurantName || restaurant?.serviceName || "Restaurant");
-                        const eId = event?.eventId || event?.id || eventId;
-                        router.push(`/merchant-chat?eventId=${eId}&merchantId=${mId}&merchantName=${mName}`);
-                      }}
-                    >
-                      <i className="fa-solid fa-comments"></i> Chat with Restaurant
-                    </button>
-                  </div>
-                )}
-
-                {isRestaurantOption && event.isMyEvent && (
-                  <div className="mt-3 pt-3 border-top">
-                    {reservation ? (
-                      <div className="p-3 rounded-3 border text-start" style={{
-                        background: reservation.status === "active" ? "#f0fdf4" : reservation.status === "cancelled" ? "#fef2f2" : "#fffbeb",
-                        borderColor: reservation.status === "active" ? "#bbf7d0" : reservation.status === "cancelled" ? "#fecaca" : "#fcd34d"
-                      }}>
-                        <div className="d-flex align-items-center justify-content-between mb-1.5">
-                          <small className="fw-bold" style={{
-                            color: reservation.status === "active" ? "#166534" : reservation.status === "cancelled" ? "#991b1b" : "#92400e"
-                          }}>
-                            <i className={reservation.status === "active" ? "fa-solid fa-circle-check me-1 text-success" : reservation.status === "cancelled" ? "fa-solid fa-circle-xmark me-1 text-danger" : "fa-solid fa-clock me-1 text-warning"}></i>
-                            {reservation.status === "active" ? "Reservation Confirmed" : reservation.status === "cancelled" ? "Reservation Cancelled" : "Reservation Pending"}
-                          </small>
-                          <Link href="/my-reservations" className="text-decoration-none small fw-semibold" style={{ fontSize: "11px" }}>
-                            Manage
-                          </Link>
-                        </div>
-                        <p className="text-muted small mb-0" style={{ fontSize: "12px" }}>
-                          Table for <strong>{reservation.adultCount || event.selectedGuests?.length || 1} Guests</strong>
-                          {reservation.status === "pending" && " (Awaiting venue confirmation)"}
-                        </p>
-                      </div>
-                    ) : (
+                    {event.isMyEvent && !reservation && (
                       <button
                         type="button"
-                        className="btn w-100 rounded-pill py-2.5 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                        className="btn btn-primary w-100 rounded-3 py-2.5 fw-semibold shadow-xs d-flex align-items-center justify-content-center gap-2"
                         onClick={handleOpenReservationModal}
-                        style={{ border: "1.5px solid #7c3aed", color: "#7c3aed", background: "#f5f3ff" }}
+                        style={{ background: "#3e56f0", border: "none", fontSize: "13.5px", height: "40px" }}
                       >
                         <i className="fa-solid fa-utensils"></i>
                         Reserve Table at Venue
                       </button>
                     )}
+
+                    <div className="d-flex gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-light border flex-grow-1 rounded-3 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                        onClick={() => setShowVenueModal(true)}
+                        style={{ background: "#ffffff", borderColor: "#e2e8f0", color: "#334155", fontSize: "13px", height: "38px" }}
+                      >
+                        <i className="fa-solid fa-circle-info text-primary"></i>
+                        View Details
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-light border flex-grow-1 rounded-3 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                        onClick={() => {
+                          const mId = event?.merchantId?._id || event?.merchantId || restaurant?.merchantId?._id || restaurant?.merchantId || event?.serviceLocationId?.merchantId?._id || event?.serviceLocationId?.merchantId || "68c286d5a6251e9e18485481";
+                          const mName = encodeURIComponent(chosenRestaurantName || restaurant?.serviceName || "Restaurant");
+                          const eId = event?.eventId || event?.id || eventId;
+                          router.push(`/merchant-chat?eventId=${eId}&merchantId=${mId}&merchantName=${mName}`);
+                        }}
+                        style={{ background: "#ffffff", borderColor: "#e2e8f0", color: "#334155", fontSize: "13px", height: "38px" }}
+                      >
+                        <i className="fa-solid fa-comments text-primary"></i>
+                        Chat
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isRestaurantOption && event.isMyEvent && reservation && (
+                  <div className="mt-3 pt-3 border-top">
+                    <div className="p-3 rounded-3 border text-start" style={{
+                      background: reservation.status === "active" ? "#f0fdf4" : reservation.status === "cancelled" ? "#fef2f2" : "#fffbeb",
+                      borderColor: reservation.status === "active" ? "#bbf7d0" : reservation.status === "cancelled" ? "#fecaca" : "#fcd34d"
+                    }}>
+                      <div className="d-flex align-items-center justify-content-between mb-1.5">
+                        <small className="fw-bold" style={{
+                          color: reservation.status === "active" ? "#166534" : reservation.status === "cancelled" ? "#991b1b" : "#92400e"
+                        }}>
+                          <i className={reservation.status === "active" ? "fa-solid fa-circle-check me-1 text-success" : reservation.status === "cancelled" ? "fa-solid fa-circle-xmark me-1 text-danger" : "fa-solid fa-clock me-1 text-warning"}></i>
+                          {reservation.status === "active" ? "Reservation Confirmed" : reservation.status === "cancelled" ? "Reservation Cancelled" : "Reservation Pending"}
+                        </small>
+                        <Link href="/my-reservations" className="text-decoration-none small fw-semibold" style={{ fontSize: "11px" }}>
+                          Manage
+                        </Link>
+                      </div>
+                      <p className="text-muted small mb-0" style={{ fontSize: "12px" }}>
+                        Table for <strong>{reservation.adultCount || event.selectedGuests?.length || 1} Guests</strong>
+                        {reservation.status === "pending" && " (Awaiting venue confirmation)"}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>

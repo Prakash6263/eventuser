@@ -182,25 +182,58 @@ a.btn {
     padding-top: 6px !important;
     padding-bottom: 6px !important;
   }
+  .navbar-toggler {
+    border: none !important;
+    padding: 4px 6px !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+  .navbar-toggler:focus {
+    box-shadow: none !important;
+  }
   .right-header .create-btn span {
     display: none !important;
   }
   .right-header .create-btn {
-    padding: 7px 12px !important;
+    padding: 7px 11px !important;
     min-width: unset !important;
-    border-radius: 50px !important;
+    border-radius: 8px !important;
     font-size: 13px !important;
+    height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #3e56f0 !important;
+    color: #ffffff !important;
+    border: none !important;
   }
   .right-header .create-btn i {
     margin: 0 !important;
     font-size: 14px !important;
   }
+  .right-header button[title="Logout"] {
+    width: 34px !important;
+    height: 34px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    color: #64748b !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
   .right-header button[title="Logout"] span {
     display: none !important;
   }
-  .right-header button[title="Logout"] {
-    padding: 7px 11px !important;
-    height: 36px !important;
+  .right-header button[title="Logout"] i {
+    margin: 0 !important;
+    font-size: 13px !important;
+  }
+  .right-header button[title="Logout"]:hover {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #ef4444 !important;
   }
   .res-main-logo img,
   .main-logo img {

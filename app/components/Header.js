@@ -45,13 +45,13 @@ export default function Header() {
         <nav className="navbar navbar-expand-lg bg-barren barren-head navbar fixed-top justify-content-sm-start pt-0 pb-0">
           <div className="container">
             <button
-              className="navbar-toggler"
+              className="navbar-toggler border-0 shadow-none p-1 text-dark"
               type="button"
               onClick={toggleOffcanvas}
               aria-label="Toggle navigation"
             >
-              <span className="navbar-toggler-icon">
-                <i className="fa-solid fa-bars"></i>
+              <span className="navbar-toggler-icon d-flex align-items-center justify-content-center">
+                <i className="fa-solid fa-bars text-dark" style={{ fontSize: "19px" }}></i>
               </span>
             </button>
             <Link className="navbar-brand order-1 order-lg-0 ml-lg-0 ml-2 me-auto" href="/">
@@ -204,7 +204,7 @@ export default function Header() {
                 {isLoggedIn && (
                 <li className="me-2">
                   <a href="/create-event" className="create-btn btn-hover" onClick={handleCreateEventClick}>
-                    <i className="fa-solid fa-calendar-days me-1"></i>
+                    <i className="fa-solid fa-plus me-1"></i>
                     <span>Create Event</span>
                   </a>
                 </li>
@@ -213,8 +213,8 @@ export default function Header() {
                   <li className="d-flex align-items-center gap-2">
                     <button
                       onClick={handleLogout}
-                      className="btn btn-outline-danger btn-sm rounded-pill px-3 py-2 fw-semibold"
-                      style={{ height: "40px" }}
+                      className="btn btn-light border btn-sm px-2.5 py-1.5 fw-semibold d-flex align-items-center justify-content-center text-muted"
+                      style={{ height: "36px", borderRadius: "8px", borderColor: "#e2e8f0" }}
                       title="Logout"
                     >
                       <i className="fa-solid fa-right-from-bracket me-1"></i>
