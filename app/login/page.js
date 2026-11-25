@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import CountryCodePicker from "../components/CountryCodePicker";
 import { authService } from "../services/authService";
 
 export default function LoginPage() {
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Mobile OTP form state
+  const [countryCode, setCountryCode] = useState("+91");
   const [mobile, setMobile] = useState("");
   const [mobileStep, setMobileStep] = useState(1); // 1 = Send OTP, 2 = Verify OTP
   const [otp, setOtp] = useState("");
@@ -61,14 +63,20 @@ export default function LoginPage() {
         }
       } else {
         // Mobile OTP Flow
+        const formattedCode = countryCode.startsWith("+") ? countryCode : `+${countryCode}`;
+        const cleanDigits = mobile.trim().replace(/^0+/, "");
+        const formattedMobile = mobile.trim().startsWith("+")
+          ? mobile.trim()
+          : `${formattedCode}${cleanDigits}`;
+
         if (mobileStep === 1) {
-          if (!mobile || mobile.trim().length < 5) {
+          if (!mobile || cleanDigits.length < 5) {
             setErrorMsg("Please enter a valid mobile number.");
             setLoading(false);
             return;
           }
 
-          const res = await authService.sendLoginOtp({ mobile });
+          const res = await authService.sendLoginOtp({ mobile: formattedMobile });
 
           if (res && res.status) {
             setSuccessMsg(res.message || "OTP sent successfully to your mobile!");
@@ -85,7 +93,7 @@ export default function LoginPage() {
           }
 
           const res = await authService.verifyLoginOtp({
-            mobile,
+            mobile: formattedMobile,
             otp,
             register_id: "34444",
             ios_register_id: "34444",
@@ -113,7 +121,12 @@ export default function LoginPage() {
     setSuccessMsg("");
     setLoading(true);
     try {
-      const res = await authService.sendLoginOtp({ mobile });
+      const formattedCode = countryCode.startsWith("+") ? countryCode : `+${countryCode}`;
+      const cleanDigits = mobile.trim().replace(/^0+/, "");
+      const formattedMobile = mobile.trim().startsWith("+")
+        ? mobile.trim()
+        : `${formattedCode}${cleanDigits}`;
+      const res = await authService.sendLoginOtp({ mobile: formattedMobile });
       if (res && res.status) {
         setSuccessMsg(res.message || "OTP resent successfully!");
       } else {
@@ -276,29 +289,39 @@ export default function LoginPage() {
                 /* MOBILE OTP LOGIN FORM */
                 <>
                   {mobileStep === 1 ? (
-                    <div className="form-group mb-4 position-relative">
-                      <span
-                        className="position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"
-                        style={{ zIndex: 10, fontSize: "16px" }}
-                      >
-                        <i className="fa-solid fa-mobile-screen-button"></i>
-                      </span>
-                      <input
-                        className="form-control rounded-4 border-light-subtle ps-5"
-                        type="tel"
-                        placeholder="Mobile Number"
-                        value={mobile}
-                        onChange={(e) => setMobile(e.target.value)}
-                        style={{ height: "50px", background: "#ffffff", border: "1px solid #d1d5db" }}
-                        required
-                      />
+                    <div className="form-group mb-4">
+                      <div className="d-flex gap-2 align-items-center">
+                        <div style={{ width: "95px", flexShrink: 0 }}>
+                          <CountryCodePicker
+                            value={countryCode}
+                            onChange={(val) => setCountryCode(val)}
+                            style={{
+                              border: "1px solid #d1d5db",
+                              background: "#fff",
+                              height: "50px",
+                              borderRadius: "14px",
+                            }}
+                          />
+                        </div>
+                        <div className="flex-grow-1 position-relative">
+                          <input
+                            className="form-control rounded-4 border-light-subtle px-3"
+                            type="tel"
+                            placeholder="Enter mobile number"
+                            value={mobile}
+                            onChange={(e) => setMobile(e.target.value.replace(/[^0-9]/g, ""))}
+                            style={{ height: "50px", background: "#ffffff", border: "1px solid #d1d5db" }}
+                            required
+                          />
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     /* Step 2: OTP Verification */
                     <div>
                       <div className="d-flex align-items-center justify-content-between mb-3 p-2 px-3 rounded-3 bg-light border">
                         <span className="small text-muted">
-                          OTP sent to <strong>{mobile}</strong>
+                          OTP sent to <strong>{countryCode} {mobile}</strong>
                         </span>
                         <button
                           type="button"

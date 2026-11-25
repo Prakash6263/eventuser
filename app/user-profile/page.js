@@ -401,7 +401,7 @@ export default function UserProfilePage() {
                                 <input
                                   className="form-control bg-light"
                                   type="text"
-                                  value={`${countryCode} ${mobile}`}
+                                  value={`${countryCode ? (countryCode.startsWith("+") ? countryCode : `+${countryCode}`) : "+91"} ${mobile}`}
                                   readOnly
                                 />
                               </div>

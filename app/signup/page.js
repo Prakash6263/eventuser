@@ -36,11 +36,14 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      const formattedCode = countryCode.startsWith("+") ? countryCode : `+${countryCode}`;
+      const cleanMobile = mobile.trim().replace(/^0+/, "");
+
       const res = await authService.signup({
         fullName,
         email,
-        mobile,
-        countryCode,
+        mobile: cleanMobile,
+        countryCode: formattedCode,
         password,
         register_id: "34444",
       });
@@ -50,7 +53,7 @@ export default function SignupPage() {
         const targetUserId = res.userId || "";
         setTimeout(() => {
           router.push(
-            `/verification?userId=${encodeURIComponent(targetUserId)}&email=${encodeURIComponent(email)}&mobile=${encodeURIComponent(mobile)}&countryCode=${encodeURIComponent(countryCode)}`
+            `/verification?userId=${encodeURIComponent(targetUserId)}&email=${encodeURIComponent(email)}&mobile=${encodeURIComponent(cleanMobile)}&countryCode=${encodeURIComponent(formattedCode)}`
           );
         }, 1200);
       } else {

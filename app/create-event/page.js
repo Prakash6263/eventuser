@@ -489,15 +489,18 @@ export default function CreateEventPage() {
 
   const saveContact = async () => {
     const name = newContact.name.trim();
-    const phone = newContact.phone.trim();
+    const rawPhone = newContact.phone.trim();
+    const cleanPhone = rawPhone.replace(/^0+/, "");
     const email = newContact.email.trim();
-    const countryCode = newContact.countryCode || "+91";
+    const countryCode = (newContact.countryCode || "+91").startsWith("+")
+      ? (newContact.countryCode || "+91")
+      : `+${newContact.countryCode || "91"}`;
 
-    if (!name || !phone) {
+    if (!name || !cleanPhone) {
       setContactError("Name and phone number are required.");
       return;
     }
-    if (!/^\+?[0-9 ()-]{7,20}$/.test(phone)) {
+    if (!/^\+?[0-9 ()-]{7,20}$/.test(rawPhone)) {
       setContactError("Enter a valid phone number.");
       return;
     }
@@ -505,7 +508,7 @@ export default function CreateEventPage() {
       setContactError("Enter a valid email address or leave it empty.");
       return;
     }
-    if (contacts.some((contact) => contact.id === phone || contact.mobile === phone || contact._id === phone)) {
+    if (contacts.some((contact) => contact.id === cleanPhone || contact.mobile === cleanPhone || contact._id === cleanPhone)) {
       setContactError("A contact with this phone number already exists.");
       return;
     }
@@ -520,7 +523,7 @@ export default function CreateEventPage() {
             {
               name,
               email: email || "",
-              mobile: phone,
+              mobile: cleanPhone,
               countryCode,
             },
           ],

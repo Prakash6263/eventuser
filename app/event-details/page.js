@@ -1060,10 +1060,10 @@ function EventDetailsContent() {
                 {event.selectedGuests && event.selectedGuests.length > 0 ? (
                   <div className="row g-3">
                     {event.selectedGuests.map((guest, idx) => (
-                      <div key={guest.id || idx} className="col-12 col-sm-6 col-lg-6 col-xxl-4">
-                        <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-white shadow-xs h-100" style={{ borderColor: "#eef2f6", gap: "10px" }}>
+                      <div key={guest.id || idx} className="col-12 col-md-6 col-xxl-6">
+                        <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-white shadow-xs h-100" style={{ borderColor: "#eef2f6", gap: "12px" }}>
                           {/* Left: Avatar + Guest Details */}
-                          <div className="d-flex align-items-center gap-2.5 min-w-0 flex-grow-1 overflow-hidden">
+                          <div className="d-flex align-items-center gap-2.5 min-w-0 flex-grow-1">
                             <div
                               className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0 shadow-xs"
                               style={{
@@ -1075,7 +1075,7 @@ function EventDetailsContent() {
                             >
                               {getInitials(guest.name)}
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-grow-1">
                               <h6 className="fw-bold mb-1 text-dark text-truncate" style={{ fontSize: "13.5px" }}>{guest.name}</h6>
                               <div className="d-flex align-items-center">
                                 <span
