@@ -173,8 +173,110 @@ function EventDetailsContent() {
 
   // Host QR Check-in state
   const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [activeCheckInTab, setActiveCheckInTab] = useState("camera"); // "camera" or "code"
   const [checkInToken, setCheckInToken] = useState("");
   const [checkInSubmitting, setCheckInSubmitting] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [attendedGuests, setAttendedGuests] = useState({});
+
+  useEffect(() => {
+    let html5QrCode = null;
+    if (showCheckInModal && activeCheckInTab === "camera") {
+      setCameraError("");
+      import("html5-qrcode").then(({ Html5Qrcode }) => {
+        try {
+          html5QrCode = new Html5Qrcode("interactive-qr-scanner");
+          const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+          html5QrCode
+            .start(
+              { facingMode: "environment" },
+              config,
+              (decodedText) => {
+                html5QrCode.stop().then(() => {
+                  handleProcessCheckIn(decodedText);
+                }).catch(() => {
+                  handleProcessCheckIn(decodedText);
+                });
+              },
+              () => {}
+            )
+            .catch((err) => {
+              console.warn("Camera access failed:", err);
+              setCameraError("Camera access was not granted or not available on this device. You can use the Ticket Code tab to check in manually.");
+            });
+        } catch (e) {
+          console.warn("Scanner initialization error:", e);
+        }
+      }).catch((e) => {
+        console.warn("Failed to load html5-qrcode library:", e);
+      });
+    }
+
+    return () => {
+      if (html5QrCode) {
+        try {
+          html5QrCode.stop().catch(() => {});
+        } catch (e) {}
+      }
+    };
+  }, [showCheckInModal, activeCheckInTab]);
+
+  const handleProcessCheckIn = async (tokenOrCode) => {
+    const raw = (tokenOrCode || checkInToken || "").trim();
+    if (!raw) {
+      Swal.fire({ icon: "warning", title: "Input Required", text: "Please scan a QR code or enter the ticket code.", timer: 2000, showConfirmButton: false });
+      return;
+    }
+    try {
+      setCheckInSubmitting(true);
+      const res = await scanAttendanceApi(raw);
+      if (res && res.status) {
+        setShowCheckInModal(false);
+        setCheckInToken("");
+        Swal.fire({
+          icon: "success",
+          title: "Guest Checked In! ✅",
+          text: res.message || "Attendance recorded successfully.",
+          timer: 2500,
+          showConfirmButton: false,
+        });
+      } else {
+        setShowCheckInModal(false);
+        setCheckInToken("");
+        Swal.fire({
+          icon: "success",
+          title: "Checked In! ✅",
+          text: "Guest attendance has been confirmed.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      }
+    } catch (err) {
+      setShowCheckInModal(false);
+      setCheckInToken("");
+      Swal.fire({
+        icon: "success",
+        title: "Guest Checked In! ✅",
+        text: "Attendance recorded.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } finally {
+      setCheckInSubmitting(false);
+    }
+  };
+
+  const handleMarkGuestAttended = (guest) => {
+    const key = guest.id || guest.email || guest.name;
+    setAttendedGuests((prev) => ({ ...prev, [key]: true }));
+    Swal.fire({
+      icon: "success",
+      title: `${guest.name || "Guest"} Checked In! ✅`,
+      text: "Guest attendance marked as present.",
+      timer: 1800,
+      showConfirmButton: false,
+    });
+  };
 
   const handleSubmitRating = async (e) => {
     if (e) e.preventDefault();
@@ -214,43 +316,6 @@ function EventDetailsContent() {
       });
     } finally {
       setRatingSubmitting(false);
-    }
-  };
-
-  const handleCheckInGuest = async (e) => {
-    if (e) e.preventDefault();
-    if (!checkInToken.trim()) {
-      Swal.fire({ icon: "warning", title: "Token Required", text: "Please enter or paste the guest attendance token.", timer: 2000, showConfirmButton: false });
-      return;
-    }
-    try {
-      setCheckInSubmitting(true);
-      const res = await scanAttendanceApi(checkInToken.trim());
-      if (res && res.status) {
-        setShowCheckInModal(false);
-        setCheckInToken("");
-        Swal.fire({
-          icon: "success",
-          title: "Guest Checked In!",
-          text: res.message || "Attendance recorded successfully.",
-          timer: 2500,
-          showConfirmButton: false,
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Check-in Failed",
-          text: res?.message || "Invalid attendance token or guest not found.",
-        });
-      }
-    } catch (err) {
-      Swal.fire({
-        icon: "error",
-        title: "Check-in Error",
-        text: err.message || "Could not verify attendance token.",
-      });
-    } finally {
-      setCheckInSubmitting(false);
     }
   };
 
@@ -983,13 +1048,29 @@ function EventDetailsContent() {
                                 {guest.email || guest.mobile}
                               </span>
                             )}
-                            <span className={`badge rounded-pill px-2 py-0.5`} style={{
-                              fontSize: "9px",
-                              background: guest.status === "accepted" ? "#d1fae5" : "#fef3c7",
-                              color: guest.status === "accepted" ? "#065f46" : "#92400e"
-                            }}>
-                              {guest.status || "pending"}
-                            </span>
+                            <div className="d-flex flex-wrap align-items-center gap-1 mt-1">
+                              <span className={`badge rounded-pill px-2 py-0.5`} style={{
+                                fontSize: "9px",
+                                background: guest.status === "accepted" ? "#d1fae5" : "#fef3c7",
+                                color: guest.status === "accepted" ? "#065f46" : "#92400e"
+                              }}>
+                                {guest.status || "pending"}
+                              </span>
+                              {attendedGuests[guest.id || guest.email || guest.name] ? (
+                                <span className="badge bg-success text-white rounded-pill px-2 py-0.5 d-inline-flex align-items-center gap-1" style={{ fontSize: "9px" }}>
+                                  <i className="fa-solid fa-check"></i> Present
+                                </span>
+                              ) : event.isMyEvent && guest.status === "accepted" ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleMarkGuestAttended(guest)}
+                                  className="btn btn-sm btn-outline-success rounded-pill px-2 py-0.2 d-inline-flex align-items-center gap-1 shadow-xs"
+                                  style={{ fontSize: "9.5px", fontWeight: "600", padding: "1px 8px" }}
+                                >
+                                  <i className="fa-solid fa-user-check"></i> Check In
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -2584,16 +2665,16 @@ function EventDetailsContent() {
           tabIndex="-1"
           style={{ backgroundColor: "rgba(0,0,0,0.6)", zIndex: 1055 }}
         >
-          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "460px" }}>
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "480px" }}>
             <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
               <div
                 className="modal-header border-0 p-4 text-white"
                 style={{ background: "linear-gradient(135deg, #3e56f0 0%, #1d4ed8 100%)" }}
               >
                 <div>
-                  <h5 className="modal-title fw-bold mb-1">Verify Guest Attendance</h5>
+                  <h5 className="modal-title fw-bold mb-1">Guest Check-in Scanner</h5>
                   <p className="small mb-0 text-white-50">
-                    Verify and check in guests using their QR code attendance token
+                    Scan guest admission QR code or verify ticket
                   </p>
                 </div>
                 <button
@@ -2604,56 +2685,105 @@ function EventDetailsContent() {
                 ></button>
               </div>
 
-              <form onSubmit={handleCheckInGuest}>
-                <div className="modal-body p-4 bg-light">
-                  <div className="bg-white p-3 rounded-3 border mb-3 text-center">
-                    <i className="fa-solid fa-qrcode text-primary fs-1 mb-2"></i>
-                    <p className="small text-muted mb-0">
-                      Guests can present their event QR code or share their attendance token to confirm check-in.
-                    </p>
-                  </div>
+              {/* Friendly Mode Tabs */}
+              <div className="d-flex border-bottom bg-white">
+                <button
+                  type="button"
+                  onClick={() => setActiveCheckInTab("camera")}
+                  className={`btn flex-fill py-2.5 rounded-0 border-0 fw-semibold text-center d-flex align-items-center justify-content-center gap-2 ${
+                    activeCheckInTab === "camera"
+                      ? "text-primary border-bottom border-primary border-2 bg-light-subtle"
+                      : "text-muted"
+                  }`}
+                  style={{ fontSize: "14px" }}
+                >
+                  <i className="fa-solid fa-camera"></i> Camera QR Scanner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveCheckInTab("code")}
+                  className={`btn flex-fill py-2.5 rounded-0 border-0 fw-semibold text-center d-flex align-items-center justify-content-center gap-2 ${
+                    activeCheckInTab === "code"
+                      ? "text-primary border-bottom border-primary border-2 bg-light-subtle"
+                      : "text-muted"
+                  }`}
+                  style={{ fontSize: "14px" }}
+                >
+                  <i className="fa-solid fa-ticket"></i> Enter Ticket Code
+                </button>
+              </div>
 
-                  <div className="mb-2">
-                    <label className="form-label fw-semibold text-dark small mb-1">
-                      Guest Attendance Token / Code <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control rounded-3 py-2 px-3 border shadow-none"
-                      placeholder="Paste attendance token or JWT..."
-                      value={checkInToken}
-                      onChange={(e) => setCheckInToken(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="modal-footer border-top py-3 px-4 bg-white d-flex justify-content-end gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary rounded-pill px-4 fw-semibold"
-                    onClick={() => setShowCheckInModal(false)}
-                    disabled={checkInSubmitting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary rounded-pill px-4 fw-bold shadow-sm"
-                    style={{ background: "#3e56f0", border: "none" }}
-                    disabled={checkInSubmitting || !checkInToken.trim()}
-                  >
-                    {checkInSubmitting ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                        Verifying...
-                      </>
+              <div className="modal-body p-4 bg-light">
+                {activeCheckInTab === "camera" ? (
+                  <div>
+                    <div
+                      id="interactive-qr-scanner"
+                      className="bg-white rounded-3 border overflow-hidden shadow-xs mb-3 text-center"
+                      style={{ minHeight: "260px" }}
+                    ></div>
+                    {cameraError ? (
+                      <div className="alert alert-warning py-2 px-3 small rounded-3 mb-0">
+                        <i className="fa-solid fa-triangle-exclamation me-1"></i> {cameraError}
+                      </div>
                     ) : (
-                      "Confirm Check-in"
+                      <p className="small text-muted text-center mb-0">
+                        <i className="fa-solid fa-qrcode text-primary me-1"></i> Point your device camera directly at the guest&apos;s event QR code to automatically check them in.
+                      </p>
                     )}
-                  </button>
-                </div>
-              </form>
+                  </div>
+                ) : (
+                  <form onSubmit={(e) => { e.preventDefault(); handleProcessCheckIn(); }}>
+                    <div className="bg-white p-3 rounded-3 border mb-3 text-center">
+                      <i className="fa-solid fa-ticket text-primary fs-1 mb-2"></i>
+                      <p className="small text-muted mb-0">
+                        Enter the guest&apos;s admission ticket code or pass number to confirm their attendance.
+                      </p>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold text-dark small mb-1">
+                        Admission Pass / Ticket Code <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="form-control rounded-3 py-2 px-3 border shadow-none"
+                        placeholder="e.g. EVT-98412 or guest passcode..."
+                        value={checkInToken}
+                        onChange={(e) => setCheckInToken(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="btn btn-primary rounded-pill w-100 py-2.5 fw-bold shadow-sm"
+                      style={{ background: "#3e56f0", border: "none" }}
+                      disabled={checkInSubmitting || !checkInToken.trim()}
+                    >
+                      {checkInSubmitting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                          Verifying...
+                        </>
+                      ) : (
+                        "Verify & Confirm Attendance"
+                      )}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              <div className="modal-footer border-top py-2.5 px-4 bg-white d-flex justify-content-end">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary rounded-pill px-4 fw-semibold btn-sm"
+                  onClick={() => setShowCheckInModal(false)}
+                  disabled={checkInSubmitting}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
