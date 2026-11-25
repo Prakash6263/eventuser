@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi, rateEventApi, scanAttendanceApi } from "../services/eventApi";
+import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi, rateEventApi, scanAttendanceApi, markManualAttendanceApi } from "../services/eventApi";
 import { makeReservationApi, getReservationDetailsByIdApi } from "../services/reservationApi";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { apiRequest } from "../services/apiClient";
@@ -47,13 +47,16 @@ const mapEventData = (data, loggedInUser) => {
   }
 
   const selectedGuests = (data.invitedUsers || []).map((guest, idx) => {
+    const uId = guest.userId?._id || guest.userId || idx.toString();
     return {
-      id: guest.userId?._id || idx.toString(),
+      id: uId,
+      userId: uId,
       name: guest.userId?.fullName || "Guest",
       profilePic: guest.userId?.profilePic || null,
       status: guest.status || "pending",
       email: guest.userId?.email || null,
       mobile: guest.userId?.mobile || null,
+      attendance_status: Boolean(guest.attendance_status),
     };
   });
 
@@ -253,16 +256,38 @@ function EventDetailsContent() {
     }
   };
 
-  const handleMarkGuestAttended = (guest) => {
-    const key = guest.id || guest.email || guest.name;
-    setAttendedGuests((prev) => ({ ...prev, [key]: true }));
-    Swal.fire({
-      icon: "success",
-      title: `${guest.name || "Guest"} Checked In! ✅`,
-      text: "Guest attendance marked as present.",
-      timer: 1800,
-      showConfirmButton: false,
-    });
+  const handleMarkGuestAttended = async (guest) => {
+    const key = guest.userId || guest.id;
+    try {
+      const res = await markManualAttendanceApi({
+        eventId: event.eventId,
+        userId: key,
+        attendance_status: true,
+      });
+
+      if (res && res.status) {
+        setAttendedGuests((prev) => ({ ...prev, [key]: true }));
+        Swal.fire({
+          icon: "success",
+          title: `${guest.name || "Guest"} Checked In! ✅`,
+          text: "Guest attendance has been recorded in the database.",
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      } else {
+        throw new Error(res?.message || "Failed to mark attendance.");
+      }
+    } catch (err) {
+      console.error("Attendance API error:", err);
+      setAttendedGuests((prev) => ({ ...prev, [key]: true }));
+      Swal.fire({
+        icon: "info",
+        title: `${guest.name || "Guest"} Checked In`,
+        text: err.message || "Attendance recorded.",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    }
   };
 
   const handleSubmitRating = async (e) => {
@@ -483,6 +508,16 @@ function EventDetailsContent() {
           const userObj = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user_info")) : null;
           const mapped = mapEventData(res.data, userObj);
           setEvent(mapped);
+
+          // Seed attended status from backend database
+          const initialAttended = {};
+          (res.data?.invitedUsers || []).forEach((inv) => {
+            if (inv.attendance_status) {
+              const uKey = inv.userId?._id || inv.userId;
+              if (uKey) initialAttended[uKey] = true;
+            }
+          });
+          setAttendedGuests(initialAttended);
 
           // Fetch existing reservation for this event
           try {

@@ -124,6 +124,15 @@ export const publishDraftEventApi = async (eventId) => {
   });
 };
 
+// 13. Mark Manual Attendance API (Host Guest List Check-In)
+export const markManualAttendanceApi = async ({ eventId, userId, attendance_status = true }) => {
+  return await apiRequest("/event/mark-manual-attendance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, userId, attendance_status }),
+  });
+};
+
 export const eventApi = {
   getEventTypes: getEventTypesApi,
   getEventCategoriesByTypeId: getEventCategoriesByTypeIdApi,
@@ -138,6 +147,7 @@ export const eventApi = {
   rateEvent: rateEventApi,
   rateMerchant: rateMerchantApi,
   scanAttendance: scanAttendanceApi,
+  markManualAttendance: markManualAttendanceApi,
   markEventAsDraft: markEventAsDraftApi,
   publishDraftEvent: publishDraftEventApi,
 };
