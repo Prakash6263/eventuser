@@ -10,7 +10,7 @@ export default function Preloader() {
     // Hide preloader once component hydrates and page loads
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 700);
+    }, 600);
     return () => clearTimeout(timer);
   }, []);
 
@@ -23,19 +23,32 @@ export default function Preloader() {
         position: "fixed",
         top: 0,
         left: 0,
+        right: 0,
+        bottom: 0,
         width: "100vw",
-        height: "100vh",
+        height: "100dvh",
         backgroundColor: "#ffffff",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        zIndex: 999999,
+        zIndex: 9999999,
+        overflow: "hidden",
+        margin: 0,
+        padding: 0,
       }}
     >
-      <div className="text-center">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          margin: 0,
+          padding: 0,
+        }}
+      >
         <CirclesWithBar
-          height="100"
-          width="100"
+          height="72"
+          width="72"
           color="#3e56f0"
           outerCircleColor="#3e56f0"
           innerCircleColor="#3e56f0"
@@ -43,9 +56,6 @@ export default function Preloader() {
           ariaLabel="circles-with-bar-loading"
           visible={true}
         />
-        <h5 className="mt-3 fw-bold text-muted" style={{ fontSize: "16px", letterSpacing: "1px" }}>
-          Loading Eventuna...
-        </h5>
       </div>
     </div>
   );
