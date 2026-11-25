@@ -1025,49 +1025,84 @@ function EventDetailsContent() {
                 {event.selectedGuests && event.selectedGuests.length > 0 ? (
                   <div className="row g-3">
                     {event.selectedGuests.map((guest, idx) => (
-                      <div key={guest.id || idx} className="col-12 col-sm-6 col-md-4">
-                        <div className="d-flex align-items-center p-3 rounded-3 border bg-light-subtle shadow-sm h-100">
-                          <div
-                            className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold me-3 flex-shrink-0 shadow-sm"
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              fontSize: "13px",
-                              background: ["#ff8a8a", "#8fb9ff", "#ffc88f", "#a2e0a2", "#e8a2e8"][idx % 5]
-                            }}
-                          >
-                            {getInitials(guest.name)}
-                          </div>
-                          <div className="overflow-hidden w-100">
-                            <h6 className="fw-bold mb-0 text-dark text-truncate small">{guest.name}</h6>
-                            {(guest.email || guest.mobile) && (
-                              <span className="text-muted d-block mb-1 text-truncate" style={{ fontSize: "10px" }}>
-                                {guest.email || guest.mobile}
-                              </span>
-                            )}
-                            <div className="d-flex flex-wrap align-items-center gap-1 mt-1">
-                              <span className={`badge rounded-pill px-2 py-0.5`} style={{
-                                fontSize: "9px",
-                                background: guest.status === "accepted" ? "#d1fae5" : "#fef3c7",
-                                color: guest.status === "accepted" ? "#065f46" : "#92400e"
-                              }}>
-                                {guest.status || "pending"}
-                              </span>
-                              {attendedGuests[guest.id || guest.email || guest.name] ? (
-                                <span className="badge bg-success text-white rounded-pill px-2 py-0.5 d-inline-flex align-items-center gap-1" style={{ fontSize: "9px" }}>
-                                  <i className="fa-solid fa-check"></i> Present
-                                </span>
-                              ) : event.isMyEvent && guest.status === "accepted" ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleMarkGuestAttended(guest)}
-                                  className="btn btn-sm btn-outline-success rounded-pill px-2 py-0.2 d-inline-flex align-items-center gap-1 shadow-xs"
-                                  style={{ fontSize: "9.5px", fontWeight: "600", padding: "1px 8px" }}
-                                >
-                                  <i className="fa-solid fa-user-check"></i> Check In
-                                </button>
-                              ) : null}
+                      <div key={guest.id || idx} className="col-12 col-md-6 col-lg-4">
+                        <div className="d-flex align-items-center justify-content-between p-3 rounded-3 border bg-white shadow-xs h-100" style={{ borderColor: "#eef2f6" }}>
+                          {/* Left: Avatar + Guest Details */}
+                          <div className="d-flex align-items-center gap-3 overflow-hidden me-2">
+                            <div
+                              className="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold flex-shrink-0 shadow-xs"
+                              style={{
+                                width: "38px",
+                                height: "38px",
+                                fontSize: "14px",
+                                background: ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"][idx % 5]
+                              }}
+                            >
+                              {getInitials(guest.name)}
                             </div>
+                            <div className="overflow-hidden">
+                              <h6 className="fw-bold mb-1 text-dark text-truncate" style={{ fontSize: "13.5px" }}>{guest.name}</h6>
+                              <div className="d-flex align-items-center gap-1.5">
+                                <span
+                                  className="badge px-2 py-0.5 d-inline-flex align-items-center gap-1"
+                                  style={{
+                                    fontSize: "10.5px",
+                                    fontWeight: "600",
+                                    borderRadius: "6px",
+                                    background: guest.status === "accepted" ? "#ecfdf5" : "#fffbeb",
+                                    color: guest.status === "accepted" ? "#047857" : "#b45309",
+                                    border: `1px solid ${guest.status === "accepted" ? "#a7f3d0" : "#fde68a"}`
+                                  }}
+                                >
+                                  <span
+                                    className="rounded-circle d-inline-block"
+                                    style={{
+                                      width: "5px",
+                                      height: "5px",
+                                      background: guest.status === "accepted" ? "#10b981" : "#f59e0b"
+                                    }}
+                                  ></span>
+                                  <span style={{ textTransform: "capitalize" }}>{guest.status || "pending"}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Check-In Action or Checked-In Status */}
+                          <div className="flex-shrink-0">
+                            {attendedGuests[guest.id || guest.email || guest.name] ? (
+                              <span
+                                className="badge px-2.5 py-1.5 d-inline-flex align-items-center gap-1.5"
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: "600",
+                                  borderRadius: "8px",
+                                  background: "#ecfdf5",
+                                  color: "#047857",
+                                  border: "1px solid #a7f3d0"
+                                }}
+                              >
+                                <i className="fa-solid fa-circle-check text-success"></i>
+                                <span>Checked In</span>
+                              </span>
+                            ) : event.isMyEvent && guest.status === "accepted" ? (
+                              <button
+                                type="button"
+                                onClick={() => handleMarkGuestAttended(guest)}
+                                className="btn btn-sm btn-outline-success px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs"
+                                style={{
+                                  fontSize: "11.5px",
+                                  height: "30px",
+                                  borderRadius: "8px",
+                                  borderColor: "#a7f3d0",
+                                  color: "#047857",
+                                  background: "#f0fdf4"
+                                }}
+                              >
+                                <i className="fa-solid fa-user-check"></i>
+                                <span>Check In</span>
+                              </button>
+                            ) : null}
                           </div>
                         </div>
                       </div>
