@@ -1616,9 +1616,9 @@ function EventDetailsContent() {
                       type="button"
                       onClick={() => setShowCheckInModal(true)}
                       className="btn btn-primary rounded-pill w-100 fw-semibold mt-3 shadow-xs"
-                      style={{ background: "#3e56f0", border: "none" }}
+                      style={{ background: "#3e56f0", border: "none", height: "42px", fontSize: "14px" }}
                     >
-                      <i className="fa-solid fa-qrcode me-2"></i> Check-in Guest (Verify Token)
+                      <i className="fa-solid fa-qrcode me-2"></i> Scan Guest QR
                     </button>
                   )}
                 </div>
