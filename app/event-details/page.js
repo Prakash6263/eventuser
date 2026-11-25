@@ -1326,35 +1326,30 @@ function EventDetailsContent() {
               )}
 
               {/* Event Discussion & Group Chat Card */}
-              <div className="card border-0 rounded-4 shadow-sm p-3 p-sm-4 bg-white mb-4">
-                <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+              <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                <div className="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
                   <div className="d-flex align-items-center" style={{ gap: "12px" }}>
                     <div
-                      className="rounded-3 d-flex align-items-center justify-content-center text-primary flex-shrink-0"
-                      style={{ width: "36px", height: "36px", background: "#eef2ff", fontSize: "16px" }}
+                      className="rounded-circle d-flex align-items-center justify-content-center text-primary flex-shrink-0"
+                      style={{ width: "40px", height: "40px", background: "#eef2ff", fontSize: "17px" }}
                     >
-                      <i className="bi bi-chat-left-dots-fill" style={{ lineHeight: 1 }}></i>
+                      <i className="bi bi-chat-dots-fill" style={{ lineHeight: 1 }}></i>
                     </div>
                     <div className="d-flex flex-column justify-content-center">
-                      <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px", lineHeight: 1.2 }}>Event Discussion & Group Chat</h5>
+                      <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px", lineHeight: 1.2 }}>Event Group Chat</h5>
                       <span className="text-muted small" style={{ fontSize: "12px", lineHeight: 1.3, marginTop: "2px" }}>
-                        Live channel for all confirmed attendees & organizer
+                        Live channel for confirmed attendees & organizer
                       </span>
                     </div>
                   </div>
-                  <span className="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 fw-semibold d-inline-flex align-items-center flex-shrink-0" style={{ fontSize: "11px", gap: "6px" }}>
+                  <span className="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2.5 py-1 fw-semibold d-inline-flex align-items-center flex-shrink-0" style={{ fontSize: "11px", gap: "6px" }}>
                     <span className="bg-success rounded-circle d-inline-block" style={{ width: "6px", height: "6px", flexShrink: 0 }}></span>
                     <span>Live Channel</span>
                   </span>
                 </div>
 
-                <p className="text-secondary small mb-3" style={{ lineHeight: "1.55", fontSize: "13px" }}>
-                  Connect with the event host and fellow guests. Coordinate arrival plans, share updates, or ask event questions before the party starts.
-                </p>
-
-                {/* Attendees Avatar Stack & Action */}
-                <div className="p-3 rounded-3 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3" style={{ background: "#f8fafc", border: "1px solid #eef2f6" }}>
-                  <div className="d-flex align-items-center gap-2.5">
+                <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 pt-1">
+                  <div className="d-flex align-items-center" style={{ gap: "12px" }}>
                     <div className="d-flex align-items-center">
                       {event.selectedGuests && event.selectedGuests.length > 0 ? (
                         event.selectedGuests.slice(0, 4).map((g, idx) => (
@@ -1362,8 +1357,8 @@ function EventDetailsContent() {
                             key={g.id || idx}
                             className="rounded-circle border border-2 border-white d-flex align-items-center justify-content-center fw-bold text-white shadow-xs overflow-hidden"
                             style={{
-                              width: "32px",
-                              height: "32px",
+                              width: "34px",
+                              height: "34px",
                               marginLeft: idx === 0 ? "0" : "-10px",
                               background: ["#4f46e5", "#10b981", "#f59e0b", "#ec4899"][idx % 4],
                               fontSize: "12px",
@@ -1381,77 +1376,77 @@ function EventDetailsContent() {
                       ) : (
                         <div
                           className="rounded-circle border border-2 border-white d-flex align-items-center justify-content-center fw-bold text-white shadow-xs"
-                          style={{ width: "32px", height: "32px", background: "#4f46e5", fontSize: "12px" }}
+                          style={{ width: "34px", height: "34px", background: "#4f46e5", fontSize: "12px" }}
                         >
                           {getInitials(event.organizerName)}
                         </div>
                       )}
                     </div>
                     <div>
-                      <span className="text-dark fw-bold d-block" style={{ fontSize: "13px", lineHeight: 1.2 }}>
+                      <span className="text-dark fw-bold d-block" style={{ fontSize: "13.5px", lineHeight: 1.2 }}>
                         {event.selectedGuests && event.selectedGuests.length > 0
                           ? `${event.selectedGuests.length} ${event.selectedGuests.length === 1 ? "participant" : "participants"}`
                           : "Host active"}
                       </span>
-                      <small className="text-muted" style={{ fontSize: "11px" }}>in live chat room</small>
+                      <small className="text-muted" style={{ fontSize: "11.5px" }}>in live chat room</small>
                     </div>
                   </div>
 
                   <Link
                     href={`/chat?chatId=${groupChat?._id || ""}&eventName=${encodeURIComponent(event.eventTitle)}&eventId=${event.eventId}`}
                     className="btn btn-primary rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center justify-content-center shadow-xs text-white text-decoration-none w-100 w-sm-auto"
-                    style={{ background: "#3e56f0", border: "none", fontSize: "13px", gap: "8px", minHeight: "38px" }}
+                    style={{ background: "#3e56f0", border: "none", fontSize: "13px", gap: "8px", height: "40px" }}
                   >
-                    <i className="bi bi-chat-dots-fill text-white" style={{ fontSize: "13px" }}></i>
-                    <span>Open Event Group Chat</span>
+                    <i className="bi bi-chat-text-fill text-white" style={{ fontSize: "13px" }}></i>
+                    <span>Open Group Chat</span>
                   </Link>
                 </div>
               </div>
 
               {/* Venue Highlights & Directions Showcase Card */}
-              <div className="card border-0 rounded-4 shadow-sm p-3 p-sm-4 bg-white mb-4">
-                <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+              <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                <div className="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
                   <div className="d-flex align-items-center" style={{ gap: "12px" }}>
                     <div
-                      className="rounded-3 d-flex align-items-center justify-content-center text-success flex-shrink-0"
-                      style={{ width: "36px", height: "36px", background: "#ecfdf5", fontSize: "16px" }}
+                      className="rounded-circle d-flex align-items-center justify-content-center text-success flex-shrink-0"
+                      style={{ width: "40px", height: "40px", background: "#ecfdf5", fontSize: "17px" }}
                     >
                       <i className="bi bi-geo-alt-fill" style={{ lineHeight: 1 }}></i>
                     </div>
                     <div className="d-flex flex-column justify-content-center">
-                      <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px", lineHeight: 1.2 }}>Venue Highlights & Directions</h5>
+                      <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px", lineHeight: 1.2 }}>Venue & Location</h5>
                       <span className="text-muted small" style={{ fontSize: "12px", lineHeight: 1.3, marginTop: "2px" }}>
-                        Everything you need to know about reaching {displayRestaurantName}
+                        Directions and venue details
                       </span>
                     </div>
                   </div>
                   {displayCapacity && (
-                    <span className="badge rounded-pill bg-light text-secondary border px-2.5 py-1.5 small fw-semibold d-inline-flex align-items-center flex-shrink-0" style={{ fontSize: "11px", gap: "6px" }}>
+                    <span className="badge rounded-pill bg-light text-secondary border px-2.5 py-1 fw-semibold d-inline-flex align-items-center flex-shrink-0" style={{ fontSize: "11px", gap: "6px" }}>
                       <i className="bi bi-people-fill text-muted" style={{ fontSize: "12px", lineHeight: 1 }}></i>
                       <span>Capacity: {displayCapacity}</span>
                     </span>
                   )}
                 </div>
 
-                <div className="row g-3">
-                  <div className="col-md-7">
-                    <div className="p-3 rounded-3 h-100 d-flex flex-column justify-content-between" style={{ background: "#f8fafc", border: "1px solid #eef2f6" }}>
+                <div className="row g-4 pt-1">
+                  <div className="col-12 col-md-7">
+                    <div className="d-flex flex-column h-100 justify-content-between">
                       <div>
-                        <div className="d-flex align-items-center gap-1.5 mb-1.5">
-                          <i className="bi bi-geo-alt text-primary" style={{ fontSize: "13px" }}></i>
-                          <span className="text-muted small text-uppercase fw-bold" style={{ fontSize: "10.5px", letterSpacing: "0.6px" }}>Full Address</span>
-                        </div>
-                        <h6 className="fw-bold text-dark mb-2" style={{ fontSize: "14px", lineHeight: "1.45" }}>
-                          {venueDisplay}
+                        <h6 className="fw-bold text-dark mb-1.5" style={{ fontSize: "15px", lineHeight: "1.3" }}>
+                          {displayRestaurantName}
                         </h6>
+                        <p className="text-secondary mb-2.5 d-flex align-items-start gap-2" style={{ fontSize: "13px", lineHeight: "1.5" }}>
+                          <i className="bi bi-pin-map text-primary flex-shrink-0 mt-0.5" style={{ fontSize: "14px" }}></i>
+                          <span>{venueDisplay}</span>
+                        </p>
                         {displayPhone && (
-                          <div className="mt-2 pt-2 border-top">
+                          <div className="mb-3">
                             <a
                               href={`tel:${displayPhone.replace(/[^0-9+]/g, "")}`}
-                              className="text-decoration-none text-secondary small d-inline-flex align-items-center"
-                              style={{ fontSize: "12.5px", gap: "8px" }}
+                              className="text-decoration-none text-secondary small d-inline-flex align-items-center gap-2"
+                              style={{ fontSize: "12.5px" }}
                             >
-                              <span className="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width: "24px", height: "24px", background: "#eff6ff", color: "#3e56f0" }}>
+                              <span className="d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style={{ width: "22px", height: "22px", background: "#eff6ff", color: "#3e56f0" }}>
                                 <i className="bi bi-telephone-fill" style={{ fontSize: "11px", lineHeight: 1 }}></i>
                               </span>
                               <span className="fw-semibold text-dark">{displayPhone}</span>
@@ -1459,13 +1454,14 @@ function EventDetailsContent() {
                           </div>
                         )}
                       </div>
-                      <div className="pt-3 mt-3 border-top d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
+
+                      <div className="pt-2 d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
                         <a
                           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(venueDisplay)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="btn btn-primary rounded-pill px-3.5 py-2 fw-semibold d-inline-flex align-items-center justify-content-center shadow-xs flex-grow-1"
-                          style={{ background: "#3e56f0", borderColor: "#3e56f0", fontSize: "12.5px", gap: "8px", minHeight: "38px" }}
+                          className="btn btn-outline-primary rounded-pill px-3.5 py-2 fw-semibold d-inline-flex align-items-center justify-content-center shadow-xs flex-grow-1 flex-sm-grow-0"
+                          style={{ fontSize: "12.5px", gap: "8px", height: "38px" }}
                         >
                           <i className="bi bi-compass-fill" style={{ fontSize: "13px" }}></i>
                           <span>Get Directions</span>
@@ -1473,9 +1469,9 @@ function EventDetailsContent() {
                         {isRestaurantOption && restaurant && (
                           <button
                             type="button"
-                            className="btn btn-outline-secondary rounded-pill px-3.5 py-2 fw-semibold text-secondary shadow-xs d-inline-flex align-items-center justify-content-center"
+                            className="btn btn-outline-secondary rounded-pill px-3.5 py-2 fw-semibold text-secondary shadow-xs d-inline-flex align-items-center justify-content-center flex-grow-1 flex-sm-grow-0"
                             onClick={() => setShowVenueModal(true)}
-                            style={{ fontSize: "12.5px", gap: "8px", minHeight: "38px", background: "#fff" }}
+                            style={{ fontSize: "12.5px", gap: "8px", height: "38px", background: "#fff" }}
                           >
                             <i className="bi bi-info-circle-fill text-primary" style={{ fontSize: "13px" }}></i>
                             <span>Venue Profile</span>
@@ -1486,24 +1482,26 @@ function EventDetailsContent() {
                   </div>
 
                   {/* Venue Amenities Tags */}
-                  <div className="col-md-5">
-                    <div className="p-3 rounded-3 h-100" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                      <span className="text-muted small text-uppercase fw-semibold d-block mb-2.5" style={{ fontSize: "10.5px", letterSpacing: "0.5px" }}>Venue Amenities</span>
-                      <div className="d-flex flex-column" style={{ gap: "10px" }}>
-                        <div className="d-flex align-items-center" style={{ gap: "10px", fontSize: "12.5px" }}>
-                          <i className="bi bi-check-circle-fill text-success" style={{ fontSize: "15px", lineHeight: 1, flexShrink: 0 }}></i>
+                  <div className="col-12 col-md-5">
+                    <div className="p-3 rounded-3 h-100" style={{ background: "#f8fafc", border: "1px solid #eef2f6" }}>
+                      <span className="text-muted small text-uppercase fw-bold d-block mb-2.5" style={{ fontSize: "10.5px", letterSpacing: "0.5px" }}>
+                        Venue Amenities
+                      </span>
+                      <div className="d-flex flex-column gap-2">
+                        <div className="d-flex align-items-center gap-2" style={{ fontSize: "12.5px" }}>
+                          <i className="bi bi-check-circle-fill text-success" style={{ fontSize: "14px", flexShrink: 0 }}></i>
                           <span className="text-dark fw-medium">Parking Space Available</span>
                         </div>
-                        <div className="d-flex align-items-center" style={{ gap: "10px", fontSize: "12.5px" }}>
-                          <i className="bi bi-check-circle-fill text-success" style={{ fontSize: "15px", lineHeight: 1, flexShrink: 0 }}></i>
+                        <div className="d-flex align-items-center gap-2" style={{ fontSize: "12.5px" }}>
+                          <i className="bi bi-check-circle-fill text-success" style={{ fontSize: "14px", flexShrink: 0 }}></i>
                           <span className="text-dark fw-medium">Dine-in Reserved Seating</span>
                         </div>
-                        <div className="d-flex align-items-center" style={{ gap: "10px", fontSize: "12.5px" }}>
-                          <i className="bi bi-check-circle-fill text-success" style={{ fontSize: "15px", lineHeight: 1, flexShrink: 0 }}></i>
+                        <div className="d-flex align-items-center gap-2" style={{ fontSize: "12.5px" }}>
+                          <i className="bi bi-check-circle-fill text-success" style={{ fontSize: "14px", flexShrink: 0 }}></i>
                           <span className="text-dark fw-medium">Guest Wi-Fi & AC Seating</span>
                         </div>
-                        <div className="d-flex align-items-center" style={{ gap: "10px", fontSize: "12.5px" }}>
-                          <i className="bi bi-check-circle-fill text-success" style={{ fontSize: "15px", lineHeight: 1, flexShrink: 0 }}></i>
+                        <div className="d-flex align-items-center gap-2" style={{ fontSize: "12.5px" }}>
+                          <i className="bi bi-check-circle-fill text-success" style={{ fontSize: "14px", flexShrink: 0 }}></i>
                           <span className="text-dark fw-medium">Wheelchair Accessible</span>
                         </div>
                       </div>
