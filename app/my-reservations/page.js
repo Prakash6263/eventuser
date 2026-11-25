@@ -802,6 +802,57 @@ export default function MyReservationsPage() {
           background: #e2e8f0;
           color: #1e293b;
         }
+        @media (max-width: 768px) {
+          .res-stat-card {
+            flex-direction: column;
+            text-align: center;
+            padding: 12px 6px;
+            gap: 6px;
+            border-radius: 12px;
+          }
+          .res-stat-icon-wrap {
+            width: 34px;
+            height: 34px;
+            font-size: 15px;
+            border-radius: 10px;
+            margin: 0 auto;
+          }
+          .res-stat-number {
+            font-size: 18px;
+          }
+          .res-stat-label {
+            font-size: 10.5px;
+            margin-top: 2px;
+            line-height: 1.2;
+          }
+          .res-search-input-wrap {
+            max-width: 100%;
+          }
+          .modern-reservation-body {
+            padding: 16px;
+          }
+          .res-actions-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+            width: 100% !important;
+            margin-top: 14px !important;
+          }
+          .res-actions-grid .res-btn-view {
+            grid-column: span 2 !important;
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 10px 14px !important;
+            font-size: 13.5px !important;
+          }
+          .res-actions-grid .res-btn-secondary,
+          .res-actions-grid .res-btn-cancel {
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 8px 10px !important;
+            font-size: 12px !important;
+          }
+        }
       `}</style>
       <Header />
       <div className="wrapper">
@@ -904,9 +955,9 @@ export default function MyReservationsPage() {
                   </div>
 
                   {/* Counters Section */}
-                  <div className="row g-3 mb-4">
+                  <div className="row g-2 g-md-3 mb-3 mb-md-4">
                     {/* Counter 1: Upcoming */}
-                    <div className="col-md-4">
+                    <div className="col-4 col-md-4">
                       <div className="res-stat-card stat-upcoming">
                         <div className="res-stat-icon-wrap">
                           <i className="bi bi-calendar2-check"></i>
@@ -919,7 +970,7 @@ export default function MyReservationsPage() {
                     </div>
 
                     {/* Counter 2: Completed */}
-                    <div className="col-md-4">
+                    <div className="col-4 col-md-4">
                       <div className="res-stat-card stat-completed">
                         <div className="res-stat-icon-wrap">
                           <i className="bi bi-check-circle"></i>
@@ -932,7 +983,7 @@ export default function MyReservationsPage() {
                     </div>
 
                     {/* Counter 3: Cancelled */}
-                    <div className="col-md-4">
+                    <div className="col-4 col-md-4">
                       <div className="res-stat-card stat-cancelled">
                         <div className="res-stat-icon-wrap">
                           <i className="bi bi-x-circle"></i>
@@ -1008,8 +1059,8 @@ export default function MyReservationsPage() {
                               </div>
 
                               {/* Action buttons */}
-                              <div className="col-lg-auto">
-                                <div className="d-flex flex-wrap gap-2">
+                              <div className="col-12 col-lg-auto">
+                                <div className="res-actions-grid d-flex flex-wrap gap-2">
                                   <button
                                     className="res-btn-view"
                                     onClick={() => handleViewDetails(res)}
