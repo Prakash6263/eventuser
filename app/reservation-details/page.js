@@ -380,8 +380,8 @@ export default function ReservationDetailsPage() {
         <div className="event-dt-block p-80">
           <div className="container">
             <div className="row">
-              {/* Profile Sidebar */}
-              <div className="col-lg-3">
+              {/* Profile Sidebar (Desktop only) */}
+              <div className="col-lg-3 d-none d-lg-block">
                 <div className="user-profile-sidebar">
                   <div className="user-profile-sidebar-top">
                     <div className="user-profile-img" style={{ overflow: "hidden" }}>

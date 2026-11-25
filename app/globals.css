@@ -283,6 +283,13 @@ a.btn {
   }
 }
 
+/* ── Global Mobile Dashboard Protection ── */
+@media (max-width: 991px) {
+  .user-profile-sidebar {
+    display: none !important;
+  }
+}
+
 /* ── Mobile Responsiveness Enhancements ── */
 @media (max-width: 576px) {
   /* Navbar Compact Layout */
