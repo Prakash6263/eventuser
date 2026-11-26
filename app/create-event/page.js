@@ -2805,11 +2805,12 @@ function GuestsStep({ guests: guestResults, search, setSearch, selectedGuests, t
               <span>Add a contact to invite them to your event.</span>
               <button
                 type="button"
-                className="btn btn-primary rounded-pill px-3.5 py-2 mt-3 fw-semibold btn-sm shadow-sm"
+                className="btn btn-primary rounded-pill px-4 py-2 mt-3 fw-semibold shadow-sm d-inline-flex align-items-center justify-content-center"
                 onClick={openAddContact}
-                style={{ background: "#5b5fc7", borderColor: "#5b5fc7" }}
+                style={{ background: "#3e56f0", borderColor: "#3e56f0", fontSize: "13.5px", gap: "8px", height: "40px", color: "#fff" }}
               >
-                <i className="fa-solid fa-user-plus me-1.5"></i> Add New Contact
+                <i className="fa-solid fa-user-plus" style={{ fontSize: "13px", color: "#fff", display: "inline-block", margin: 0 }}></i>
+                <span>Add New Contact</span>
               </button>
             </div>
           )}
