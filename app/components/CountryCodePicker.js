@@ -82,7 +82,7 @@ export default function CountryCodePicker({ value, onChange, className, style })
           <div
             className="custom-scrollbar"
             style={{
-              maxHeight: "220px",
+              maxHeight: "260px",
               overflowY: "auto",
               paddingRight: "2px",
             }}
