@@ -582,22 +582,22 @@ export default function EventsPage() {
   const getStatusBadge = (status = "") => {
     const s = status.toString().toLowerCase();
     if (s === "accepted" || s === "approved") {
-      return <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Accepted</span>;
+      return <span className="badge bg-success-subtle text-success rounded-pill px-2 py-1 fw-semibold" style={{ fontSize: "11px" }}>Accepted</span>;
     }
     if (s === "pending" || s === "waiting for action" || s === "waiting") {
-      return <span className="badge bg-warning-subtle text-warning rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Pending</span>;
+      return <span className="badge bg-warning-subtle text-warning rounded-pill px-2 py-1 fw-semibold" style={{ fontSize: "11px" }}>Pending</span>;
     }
     if (s === "rejected" || s === "cancelled" || s === "canceled" || s === "declined") {
-      return <span className="badge bg-danger-subtle text-danger rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Cancelled</span>;
+      return <span className="badge bg-danger-subtle text-danger rounded-pill px-2 py-1 fw-semibold" style={{ fontSize: "11px" }}>Cancelled</span>;
     }
     if (s === "completed") {
-      return <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Completed</span>;
+      return <span className="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-1 fw-semibold" style={{ fontSize: "11px" }}>Completed</span>;
     }
     if (s === "ongoingevent" || s === "ongoing" || s === "upcoming") {
-      return <span className="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px" }}>Upcoming</span>;
+      return <span className="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 fw-semibold" style={{ fontSize: "11px" }}>Upcoming</span>;
     }
     // Fallback display for dynamic status
-    return <span className="badge bg-light text-dark border rounded-pill px-2.5 py-1.5 fw-semibold" style={{ fontSize: "11px", textTransform: "capitalize" }}>{status || "Event"}</span>;
+    return <span className="badge bg-light text-dark border rounded-pill px-2 py-1 fw-semibold" style={{ fontSize: "11px", textTransform: "capitalize" }}>{status || "Event"}</span>;
   };
 
   const getMemberInvitationStatus = (memberId) => {

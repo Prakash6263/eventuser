@@ -120,6 +120,11 @@ export default function UserProfilePage() {
     e.preventDefault();
     setActionMsg({ type: "", text: "" });
 
+    if (!newPassword || newPassword.length < 6) {
+      setActionMsg({ type: "danger", text: "Password must be at least 6 characters long." });
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setActionMsg({ type: "danger", text: "New password and confirm password do not match!" });
       return;

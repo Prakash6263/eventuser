@@ -1480,11 +1480,11 @@ function EventDetailsContent() {
                                 <i className="fa-solid fa-circle-check text-success"></i>
                                 <span>Checked In</span>
                               </span>
-                            ) : event.isMyEvent && guest.status === "accepted" ? (
+                            ) : event.isMyEvent && guest.status === "accepted" && !["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.eventStatus || event.status || "").toLowerCase()) ? (
                               <button
                                 type="button"
                                 onClick={() => handleMarkGuestAttended(guest)}
-                                className="btn btn-sm btn-outline-success px-2.5 py-1 fw-semibold d-inline-flex align-items-center shadow-xs text-nowrap"
+                                className="btn btn-sm btn-outline-success px-2 py-1 fw-semibold d-inline-flex align-items-center shadow-xs text-nowrap"
                                 style={{
                                   fontSize: "11.5px",
                                   height: "30px",
@@ -1499,12 +1499,12 @@ function EventDetailsContent() {
                                 <i className="fa-solid fa-user-check"></i>
                                 <span>Check In</span>
                               </button>
-                            ) : event.isMyEvent && (guest.status || "pending").toLowerCase() === "pending" ? (
+                            ) : event.isMyEvent && (guest.status || "pending").toLowerCase() === "pending" && !["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.eventStatus || event.status || "").toLowerCase()) ? (
                               <button
                                 type="button"
                                 onClick={() => handleSendReminder(guest)}
                                 disabled={remindingGuestId === (guest.userId || guest.id)}
-                                className="btn btn-sm btn-outline-primary px-2.5 py-1 fw-semibold d-inline-flex align-items-center shadow-xs text-nowrap"
+                                className="btn btn-sm btn-outline-primary px-2 py-1 fw-semibold d-inline-flex align-items-center shadow-xs text-nowrap"
                                 style={{
                                   fontSize: "11.5px",
                                   height: "30px",
@@ -2059,10 +2059,10 @@ function EventDetailsContent() {
                 {/* Cohesive Action Buttons */}
                 {isRestaurantOption && restaurant && (
                   <div className="d-flex flex-column gap-2">
-                    {event.isMyEvent && !reservation && (
+                    {event.isMyEvent && !reservation && !["completed", "expired", "rejected", "canceled", "cancelled"].includes((event.eventStatus || event.status || "").toLowerCase()) && (
                       <button
                         type="button"
-                        className="btn btn-primary w-100 rounded-3 py-2.5 fw-semibold shadow-xs d-flex align-items-center justify-content-center gap-2"
+                        className="btn btn-primary w-100 rounded-3 py-2 fw-semibold shadow-xs d-flex align-items-center justify-content-center gap-2"
                         onClick={handleOpenReservationModal}
                         style={{ background: "#3e56f0", border: "none", fontSize: "13.5px", height: "40px" }}
                       >

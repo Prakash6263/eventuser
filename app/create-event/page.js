@@ -986,7 +986,40 @@ export default function CreateEventPage() {
       } else {
         setStep("guestInfo");
       }
-    } else if (step === "guestInfo") setStep("registry");
+    } else if (step === "guestInfo") {
+      if (bringGuests === "Yes" && (!maxGuests || Number(maxGuests) < 1)) {
+        setDialog({
+          title: "Invalid Guest Limit",
+          message: "Maximum additional guests must be at least 1.",
+          confirmLabel: "OK",
+          onConfirm: () => setDialog(null),
+        });
+        return;
+      }
+      if (rsvp === "Yes" && rsvpBy) {
+        const todayIso = new Date().toISOString().split("T")[0];
+        const eventIso = `${year}-${String(month + 1).padStart(2, "0")}-${String(selectedDate).padStart(2, "0")}`;
+        if (rsvpBy < todayIso) {
+          setDialog({
+            title: "Invalid RSVP Deadline",
+            message: "RSVP deadline cannot be in the past.",
+            confirmLabel: "OK",
+            onConfirm: () => setDialog(null),
+          });
+          return;
+        }
+        if (rsvpBy > eventIso) {
+          setDialog({
+            title: "Invalid RSVP Deadline",
+            message: "RSVP deadline cannot be after the event date.",
+            confirmLabel: "OK",
+            onConfirm: () => setDialog(null),
+          });
+          return;
+        }
+      }
+      setStep("registry");
+    }
     else if (step === "registry") setStep("notes");
     else if (step === "notes") setStep("content");
     else if (step === "content") {
@@ -1055,7 +1088,7 @@ export default function CreateEventPage() {
     (step !== "place" || Boolean(place)) &&
     (step !== "restaurants" || Boolean(selectedRestaurant)) &&
     (step !== "guests" || selectedGuests.length > 0) &&
-    (step !== "guestInfo" || (bringGuests === "No" || Boolean(maxGuests))) &&
+    (step !== "guestInfo" || (bringGuests === "No" || (Boolean(maxGuests) && Number(maxGuests) >= 1))) &&
     (step !== "guestInfo" || (rsvp === "No" || Boolean(rsvpBy))) &&
     (step !== "content" || (Boolean(eventTitle.trim()) && Boolean(invitationMessage.trim())));
 
@@ -1604,7 +1637,17 @@ export default function CreateEventPage() {
                         <Field label="Is RSVP required?" hint="Ask invitees to confirm whether they will attend.">
                           <select value={rsvp} onChange={(event) => setRsvp(event.target.value)}><option>No</option><option>Yes</option></select>
                         </Field>
-                        {rsvp === "Yes" && <Field label="RSVP deadline" hint="Choose the final date for guest responses."><input type="date" value={rsvpBy} onChange={(event) => setRsvpBy(event.target.value)} /></Field>}
+                        {rsvp === "Yes" && (
+                          <Field label="RSVP deadline" hint="Choose the final date for guest responses.">
+                            <input
+                              type="date"
+                              value={rsvpBy}
+                              min={new Date().toISOString().split("T")[0]}
+                              max={`${year}-${String(month + 1).padStart(2, "0")}-${String(selectedDate).padStart(2, "0")}`}
+                              onChange={(event) => setRsvpBy(event.target.value)}
+                            />
+                          </Field>
+                        )}
                       </div>
                     )}
 

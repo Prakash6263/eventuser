@@ -71,12 +71,12 @@ export default function NotificationsPage() {
         const profRes = await authService.getUserProfile();
         if (profRes && profRes.status && profRes.user) {
           setProfile(profRes.user);
-          currentUserId = String(profRes.user._id || profRes.user.id || "");
+          currentUserId = String(profRes.user.userId || profRes.user._id || profRes.user.id || "");
         } else {
           const localUser = authService.getUser();
           if (localUser) {
             setProfile(localUser);
-            currentUserId = String(localUser._id || localUser.id || "");
+            currentUserId = String(localUser.userId || localUser._id || localUser.id || "");
           }
         }
       } catch (err) {
@@ -93,7 +93,7 @@ export default function NotificationsPage() {
           // Verify actual rating status from /event/ratings so rated events never allow duplicate reviews
           // Also check localStorage backup for rated event IDs (persists across refreshes)
           const localRatedIds = getLocalRatedIds();
-          if (completeList.length > 0 && currentUserId) {
+          if (completeList.length > 0) {
             completeList = await Promise.all(
               completeList.map(async (item) => {
                 // Check localStorage first (fast, no network)
@@ -101,6 +101,7 @@ export default function NotificationsPage() {
                 if (localRatedIds.includes(String(item.eventId))) {
                   return { ...item, isRated: true };
                 }
+                if (!currentUserId) return item;
                 try {
                   const rRes = await getEventRatingsApi(item.eventId);
                   const rList = Array.isArray(rRes?.data) ? rRes.data : [];
