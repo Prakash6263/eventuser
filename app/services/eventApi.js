@@ -142,6 +142,47 @@ export const updateEventStatusApi = async ({ eventId, status }) => {
   });
 };
 
+// 15. Cancel Event API
+export const cancelEventApi = async (eventId) => {
+  return await apiRequest(`/event/cancel-event/${eventId}`, {
+    method: "POST",
+  });
+};
+
+// 16. Delete Event API
+export const deleteEventApi = async (eventId) => {
+  return await apiRequest("/event/delete-event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId }),
+  });
+};
+
+// 17. Send Invitation Reminder API
+export const sendInvitationReminderApi = async ({ eventId, userId }) => {
+  return await apiRequest("/event/send-reminder", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, userId }),
+  });
+};
+
+// 18. Get Attendance QR Code API
+export const getAttendanceQrApi = async ({ eventId, userId }) => {
+  return await apiRequest(`/event/attendance-qr?eventId=${encodeURIComponent(eventId)}&userId=${encodeURIComponent(userId)}`, {
+    method: "GET",
+  });
+};
+
+// 19. Vote on Event Poll API
+export const voteEventPollApi = async ({ pollId, optionId, action = "vote" }) => {
+  return await apiRequest("/event/event-poll-vote", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pollId, optionId, action }),
+  });
+};
+
 export const eventApi = {
   getEventTypes: getEventTypesApi,
   getEventCategoriesByTypeId: getEventCategoriesByTypeIdApi,
@@ -151,6 +192,11 @@ export const eventApi = {
   createEvent: createEventApi,
   updateEvent: updateEventApi,
   updateEventStatus: updateEventStatusApi,
+  cancelEvent: cancelEventApi,
+  deleteEvent: deleteEventApi,
+  sendInvitationReminder: sendInvitationReminderApi,
+  getAttendanceQr: getAttendanceQrApi,
+  voteEventPoll: voteEventPollApi,
   getMyEvents: getMyEventsApi,
   getMyCreatedEvents: getMyCreatedEventsApi,
   getEventMedia: getEventMediaApi,

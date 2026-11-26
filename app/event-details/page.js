@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { getMerchantsByServiceApi, updateEventApi, updateEventStatusApi, publishDraftEventApi, rateEventApi, scanAttendanceApi, markManualAttendanceApi } from "../services/eventApi";
+import { getMerchantsByServiceApi, updateEventApi, updateEventStatusApi, cancelEventApi, deleteEventApi, sendInvitationReminderApi, publishDraftEventApi, rateEventApi, scanAttendanceApi, markManualAttendanceApi } from "../services/eventApi";
 import { makeReservationApi, getReservationDetailsByIdApi } from "../services/reservationApi";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { apiRequest } from "../services/apiClient";
@@ -156,6 +156,9 @@ function EventDetailsContent() {
 
   // Complete Event state
   const [completingEvent, setCompletingEvent] = useState(false);
+  const [cancelingEvent, setCancelingEvent] = useState(false);
+  const [deletingEvent, setDeletingEvent] = useState(false);
+  const [remindingGuestId, setRemindingGuestId] = useState(null);
 
   // Table Reservation state
   const [reservation, setReservation] = useState(null);
@@ -529,6 +532,128 @@ function EventDetailsContent() {
       });
     } finally {
       setCompletingEvent(false);
+    }
+  };
+
+  const handleCancelEvent = async () => {
+    if (!event?.eventId) return;
+    const result = await Swal.fire({
+      title: "Cancel this Event?",
+      text: "This will mark your event as cancelled and notify invited guests.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#f59e0b",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, Cancel Event",
+      cancelButtonText: "Keep Event",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setCancelingEvent(true);
+      const res = await cancelEventApi(event.eventId);
+      if (res && res.status) {
+        setEvent((prev) => (prev ? { ...prev, status: "canceled" } : prev));
+        await Swal.fire({
+          icon: "success",
+          title: "Event Cancelled",
+          text: res.message || "Your event has been cancelled.",
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Cancel Failed",
+          text: res?.message || "Could not cancel event.",
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to cancel event.",
+      });
+    } finally {
+      setCancelingEvent(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!event?.eventId) return;
+    const result = await Swal.fire({
+      title: "Delete Event Permanently?",
+      text: "This action cannot be undone. All event details and guest lists will be removed.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setDeletingEvent(true);
+      const res = await deleteEventApi(event.eventId);
+      if (res && res.status) {
+        await Swal.fire({
+          icon: "success",
+          title: "Event Deleted",
+          text: "Your event has been deleted.",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        router.push("/my-events");
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Delete Failed",
+          text: res?.message || "Could not delete event.",
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to delete event.",
+      });
+    } finally {
+      setDeletingEvent(false);
+    }
+  };
+
+  const handleSendReminder = async (guest) => {
+    const targetUserId = guest.userId || guest.id;
+    if (!event?.eventId || !targetUserId) return;
+    try {
+      setRemindingGuestId(targetUserId);
+      const res = await sendInvitationReminderApi({ eventId: event.eventId, userId: targetUserId });
+      if (res && res.status) {
+        Swal.fire({
+          icon: "success",
+          title: "Reminder Sent!",
+          text: `Invitation reminder sent to ${guest.name}.`,
+          timer: 1600,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Failed",
+          text: res?.message || "Could not send reminder.",
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to send reminder.",
+      });
+    } finally {
+      setRemindingGuestId(null);
     }
   };
 
@@ -1190,6 +1315,23 @@ function EventDetailsContent() {
                               >
                                 <i className="fa-solid fa-user-check"></i>
                                 <span>Check In</span>
+                              </button>
+                            ) : event.isMyEvent && (guest.status || "pending").toLowerCase() === "pending" ? (
+                              <button
+                                type="button"
+                                onClick={() => handleSendReminder(guest)}
+                                disabled={remindingGuestId === (guest.userId || guest.id)}
+                                className="btn btn-sm btn-outline-primary px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs text-nowrap"
+                                style={{
+                                  fontSize: "11.5px",
+                                  height: "30px",
+                                  borderRadius: "8px",
+                                  whiteSpace: "nowrap"
+                                }}
+                                title="Send invitation reminder"
+                              >
+                                <i className={`fa-solid ${remindingGuestId === (guest.userId || guest.id) ? "fa-spinner fa-spin" : "fa-bell"}`}></i>
+                                <span>{remindingGuestId === (guest.userId || guest.id) ? "Sending..." : "Remind"}</span>
                               </button>
                             ) : null}
                           </div>
@@ -2007,6 +2149,29 @@ function EventDetailsContent() {
                       >
                         <i className="fa-solid fa-pen-to-square"></i> Edit Event
                       </button>
+                      {event.isMyEvent && !["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.status || "").toLowerCase()) && (
+                        <button
+                          type="button"
+                          className="btn btn-outline-warning rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                          style={{ color: "#b45309", borderColor: "#f59e0b" }}
+                          onClick={handleCancelEvent}
+                          disabled={cancelingEvent}
+                        >
+                          <i className={`fa-solid ${cancelingEvent ? "fa-spinner fa-spin" : "fa-ban"}`}></i>
+                          {cancelingEvent ? "Cancelling..." : "Cancel Event"}
+                        </button>
+                      )}
+                      {event.isMyEvent && (
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                          onClick={handleDeleteEvent}
+                          disabled={deletingEvent}
+                        >
+                          <i className={`fa-regular ${deletingEvent ? "fa-spinner fa-spin" : "fa-trash-can"}`}></i>
+                          {deletingEvent ? "Deleting..." : "Delete Event"}
+                        </button>
+                      )}
                     </div>
                   )}
 
