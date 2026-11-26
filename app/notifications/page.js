@@ -45,6 +45,24 @@ export default function NotificationsPage() {
     }
   };
 
+  // Helper: get locally stored rated event IDs
+  const getLocalRatedIds = () => {
+    try {
+      return JSON.parse(localStorage.getItem("ratedEventIds") || "[]");
+    } catch { return []; }
+  };
+
+  // Helper: save a rated event ID to localStorage
+  const saveLocalRatedId = (eventId) => {
+    try {
+      const existing = getLocalRatedIds();
+      if (!existing.includes(String(eventId))) {
+        existing.push(String(eventId));
+        localStorage.setItem("ratedEventIds", JSON.stringify(existing));
+      }
+    } catch {}
+  };
+
   // Load profile and notifications
   useEffect(() => {
     const loadData = async () => {
@@ -73,17 +91,31 @@ export default function NotificationsPage() {
           let completeList = Array.isArray(raw.completeEvent) ? raw.completeEvent : [];
 
           // Verify actual rating status from /event/ratings so rated events never allow duplicate reviews
+          // Also check localStorage backup for rated event IDs (persists across refreshes)
+          const localRatedIds = getLocalRatedIds();
           if (completeList.length > 0 && currentUserId) {
             completeList = await Promise.all(
               completeList.map(async (item) => {
+                // Check localStorage first (fast, no network)
                 if (item.isRated || !item.eventId) return item;
+                if (localRatedIds.includes(String(item.eventId))) {
+                  return { ...item, isRated: true };
+                }
                 try {
                   const rRes = await getEventRatingsApi(item.eventId);
                   const rList = Array.isArray(rRes?.data) ? rRes.data : [];
-                  const alreadyRated = rList.some(
-                    (r) => String(r.userId?._id || r.userId || "") === currentUserId
-                  );
-                  return alreadyRated ? { ...item, isRated: true } : item;
+                  const alreadyRated = rList.some((r) => {
+                    // Handle both: populated object {_id, fullName} and plain ID string
+                    const rUserId = String(
+                      r.userId?._id || r.userId?._id?.toString?.() || r.userId || ""
+                    );
+                    return rUserId === currentUserId;
+                  });
+                  if (alreadyRated) {
+                    saveLocalRatedId(item.eventId); // persist locally
+                    return { ...item, isRated: true };
+                  }
+                  return item;
                 } catch {
                   return item;
                 }
@@ -177,6 +209,9 @@ export default function NotificationsPage() {
 
       const res = await rateEventApi(payload);
       if (res && res.status) {
+        // Persist rated event ID to localStorage so it survives page refresh
+        saveLocalRatedId(selectedRateEvent.eventId);
+
         Swal.fire({
           title: "Thank You!",
           text: res.message || "Event rated successfully",
@@ -195,6 +230,8 @@ export default function NotificationsPage() {
         setSelectedRateEvent(null);
       } else {
         if (res?.message && res.message.toLowerCase().includes("already")) {
+          // Backend says already rated — persist locally too
+          saveLocalRatedId(selectedRateEvent.eventId);
           setNotificationGroups((prev) => ({
             ...prev,
             completeEvent: prev.completeEvent.map((item) =>
