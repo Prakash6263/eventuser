@@ -133,6 +133,15 @@ export const markManualAttendanceApi = async ({ eventId, userId, attendance_stat
   });
 };
 
+// 14. Update Event Status API (pending, OngoingEvent, completed)
+export const updateEventStatusApi = async ({ eventId, status }) => {
+  return await apiRequest("/event/update-event-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ eventId, status }),
+  });
+};
+
 export const eventApi = {
   getEventTypes: getEventTypesApi,
   getEventCategoriesByTypeId: getEventCategoriesByTypeIdApi,
@@ -141,6 +150,7 @@ export const eventApi = {
   getEventNotes: getEventNotesApi,
   createEvent: createEventApi,
   updateEvent: updateEventApi,
+  updateEventStatus: updateEventStatusApi,
   getMyEvents: getMyEventsApi,
   getMyCreatedEvents: getMyCreatedEventsApi,
   getEventMedia: getEventMediaApi,

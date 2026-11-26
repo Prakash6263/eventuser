@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { getMerchantsByServiceApi, updateEventApi, publishDraftEventApi, rateEventApi, scanAttendanceApi, markManualAttendanceApi } from "../services/eventApi";
+import { getMerchantsByServiceApi, updateEventApi, updateEventStatusApi, publishDraftEventApi, rateEventApi, scanAttendanceApi, markManualAttendanceApi } from "../services/eventApi";
 import { makeReservationApi, getReservationDetailsByIdApi } from "../services/reservationApi";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { apiRequest } from "../services/apiClient";
@@ -153,6 +153,9 @@ function EventDetailsContent() {
 
   // Publish Draft state
   const [publishing, setPublishing] = useState(false);
+
+  // Complete Event state
+  const [completingEvent, setCompletingEvent] = useState(false);
 
   // Table Reservation state
   const [reservation, setReservation] = useState(null);
@@ -480,6 +483,52 @@ function EventDetailsContent() {
       });
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const handleCompleteEvent = async () => {
+    if (!event?.eventId) return;
+    const result = await Swal.fire({
+      title: "Mark Event as Completed?",
+      text: "Guests will be notified that the event has ended and can rate their experience.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, Mark Completed",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setCompletingEvent(true);
+      const res = await updateEventStatusApi({ eventId: event.eventId, status: "completed" });
+      if (res && res.status) {
+        setEvent((prev) => (prev ? { ...prev, status: "completed" } : prev));
+        await Swal.fire({
+          icon: "success",
+          title: "Event Completed!",
+          text: "Your event has been marked as completed.",
+          timer: 1800,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Update Failed",
+          text: res?.message || "Could not mark event as completed.",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to complete event:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to update event status.",
+      });
+    } finally {
+      setCompletingEvent(false);
     }
   };
 
@@ -1927,6 +1976,26 @@ function EventDetailsContent() {
                           ) : (
                             <>
                               <i className="fa-solid fa-rocket"></i> Publish & Make Live
+                            </>
+                          )}
+                        </button>
+                      )}
+                      {event.isMyEvent && !["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.status || "").toLowerCase()) && (
+                        <button
+                          type="button"
+                          className="btn btn-success rounded-pill py-2 fw-semibold text-white shadow-sm d-flex align-items-center justify-content-center gap-2"
+                          style={{ background: "#10b981", border: "none" }}
+                          onClick={handleCompleteEvent}
+                          disabled={completingEvent}
+                        >
+                          {completingEvent ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm" role="status"></span>
+                              Completing...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fa-solid fa-circle-check"></i> Mark as Completed
                             </>
                           )}
                         </button>
