@@ -222,32 +222,44 @@ export default function NotificationsPage() {
         .notif-header-row {
           display: grid;
           grid-template-columns: 2.2fr 2fr 1fr;
-          background-color: #3e56f0;
-          color: #ffffff;
-          padding: 12px 18px;
-          font-weight: 600;
+          background-color: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #64748b;
+          padding: 11px 18px;
+          font-weight: 700;
           border-radius: 10px;
-          font-size: 13.5px;
+          font-size: 11.5px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          align-items: center;
         }
         .notif-header-row-2col {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          background-color: #3e56f0;
-          color: #ffffff;
-          padding: 12px 18px;
-          font-weight: 600;
+          grid-template-columns: 1.3fr 1fr;
+          background-color: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #64748b;
+          padding: 11px 18px;
+          font-weight: 700;
           border-radius: 10px;
-          font-size: 13.5px;
+          font-size: 11.5px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          align-items: center;
         }
         .notif-header-row-completed {
           display: grid;
-          grid-template-columns: 2.5fr 2fr 1.2fr;
-          background-color: #3e56f0;
-          color: #ffffff;
-          padding: 12px 18px;
-          font-weight: 600;
+          grid-template-columns: 2.4fr 1.6fr 1.2fr;
+          background-color: #f8fafc;
+          border: 1px solid #e2e8f0;
+          color: #64748b;
+          padding: 11px 18px;
+          font-weight: 700;
           border-radius: 10px;
-          font-size: 13.5px;
+          font-size: 11.5px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          align-items: center;
         }
         .notif-row-link {
           display: grid;
@@ -258,6 +270,7 @@ export default function NotificationsPage() {
           transition: all 0.2s ease;
           text-decoration: none !important;
           color: #1e293b !important;
+          align-items: center;
         }
         .notif-row-link:hover {
           background-color: #f8fafc;
@@ -267,13 +280,14 @@ export default function NotificationsPage() {
         }
         .notif-row-link-2col {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1.3fr 1fr;
           background-color: #ffffff;
           border: 1px solid #edf2f7;
           border-radius: 10px;
           transition: all 0.2s ease;
           text-decoration: none !important;
           color: #1e293b !important;
+          align-items: center;
         }
         .notif-row-link-2col:hover {
           background-color: #f8fafc;
@@ -283,12 +297,13 @@ export default function NotificationsPage() {
         }
         .notif-row-completed {
           display: grid;
-          grid-template-columns: 2.5fr 2fr 1.2fr;
+          grid-template-columns: 2.4fr 1.6fr 1.2fr;
           background-color: #ffffff;
           border: 1px solid #edf2f7;
           border-radius: 10px;
           transition: all 0.2s ease;
           color: #1e293b !important;
+          align-items: center;
         }
         .notif-row-completed:hover {
           background-color: #f8fafc;
@@ -299,6 +314,7 @@ export default function NotificationsPage() {
           padding: 14px 18px;
           display: flex;
           align-items: center;
+          gap: 8px;
           font-size: 13.5px;
           color: #475569;
           min-width: 0;
@@ -309,11 +325,31 @@ export default function NotificationsPage() {
           display: flex;
           flex-direction: column;
           justify-content: center;
+          gap: 2px;
           font-size: 14px;
           color: #0f172a;
           font-weight: 600;
           min-width: 0;
           word-break: break-word;
+        }
+        @media (max-width: 767.98px) {
+          .notif-header-row,
+          .notif-header-row-2col,
+          .notif-header-row-completed {
+            display: none;
+          }
+          .notif-row-link,
+          .notif-row-link-2col,
+          .notif-row-completed {
+            grid-template-columns: 1fr;
+            padding: 12px 14px;
+            gap: 8px;
+          }
+          .notif-cell,
+          .notif-cell-bold {
+            padding: 2px 0;
+            justify-content: flex-start !important;
+          }
         }
       `}</style>
 
@@ -477,8 +513,8 @@ export default function NotificationsPage() {
                                   {/* Reservation Request Update Section */}
                                   {newReservations.length > 0 && (
                                     <div className="mb-4">
-                                      <div className="d-flex align-items-center gap-2 mb-2.5">
-                                        <span className="badge bg-warning-subtle text-warning-emphasis px-2.5 py-1 rounded-pill small fw-bold">
+                                      <div className="d-flex align-items-center gap-2 mb-3">
+                                        <span className="badge bg-warning-subtle text-warning-emphasis px-3 py-1 rounded-pill small fw-bold">
                                           <i className="fa-solid fa-clock me-1"></i> Booking Updates
                                         </span>
                                         <h5 className="fw-bold text-dark mb-0" style={{ fontSize: "16px" }}>Reservation Request Updates</h5>
@@ -488,7 +524,7 @@ export default function NotificationsPage() {
                                         <div className="notif-header-row">
                                           <div>Event Name</div>
                                           <div>Event Date & Time</div>
-                                          <div>No. of Seats</div>
+                                          <div className="text-end">Seats</div>
                                         </div>
                                         {newReservations.map((notif, idx) => (
                                           <Link
@@ -498,16 +534,16 @@ export default function NotificationsPage() {
                                           >
                                             <div className="notif-cell-bold">
                                               <span>{notif.eventName || "Event Reservation"}</span>
-                                              <small className="text-primary fw-medium" style={{ fontSize: "11px" }}>
+                                              <small className="text-primary fw-medium" style={{ fontSize: "11.5px" }}>
                                                 {notif.tasks || "Reservation Update"}
                                               </small>
                                             </div>
                                             <div className="notif-cell">
-                                              <i className="fa-regular fa-calendar me-1.5 text-muted"></i>
-                                              {notif.eventDate} {notif.eventTime ? `• ${notif.eventTime}` : ""}
+                                              <i className="fa-regular fa-calendar text-muted"></i>
+                                              <span>{notif.eventDate} {notif.eventTime ? `• ${notif.eventTime}` : ""}</span>
                                             </div>
-                                            <div className="notif-cell">
-                                              <span className="badge bg-light text-dark border rounded-pill px-2.5 py-1">
+                                            <div className="notif-cell justify-content-end">
+                                              <span className="badge bg-light text-dark border rounded-pill px-3 py-1">
                                                 {notif.noSeats || "1"} Seats
                                               </span>
                                             </div>
@@ -520,8 +556,8 @@ export default function NotificationsPage() {
                                   {/* Other Invitations Section */}
                                   {newOthers.length > 0 && (
                                     <div>
-                                      <div className="d-flex align-items-center gap-2 mb-2.5">
-                                        <span className="badge bg-primary-subtle text-primary px-2.5 py-1 rounded-pill small fw-bold">
+                                      <div className="d-flex align-items-center gap-2 mb-3">
+                                        <span className="badge bg-primary-subtle text-primary px-3 py-1 rounded-pill small fw-bold">
                                           <i className="fa-solid fa-envelope me-1"></i> Invitations
                                         </span>
                                         <h5 className="fw-bold text-dark mb-0" style={{ fontSize: "16px" }}>Event Invitations</h5>
@@ -531,7 +567,7 @@ export default function NotificationsPage() {
                                         <div className="notif-header-row">
                                           <div>Event Name</div>
                                           <div>Event Date & Time</div>
-                                          <div>Guests Allowed</div>
+                                          <div className="text-end">Guests</div>
                                         </div>
                                         {newOthers.map((notif, idx) => (
                                           <Link
@@ -541,16 +577,16 @@ export default function NotificationsPage() {
                                           >
                                             <div className="notif-cell-bold">
                                               <span>{notif.eventName || "Event Invitation"}</span>
-                                              <small className="text-success fw-medium" style={{ fontSize: "11px" }}>
+                                              <small className="text-success fw-medium" style={{ fontSize: "11.5px" }}>
                                                 You&apos;re Invited!
                                               </small>
                                             </div>
                                             <div className="notif-cell">
-                                              <i className="fa-regular fa-calendar me-1.5 text-muted"></i>
-                                              {notif.eventDate} {notif.eventTime ? `• ${notif.eventTime}` : ""}
+                                              <i className="fa-regular fa-calendar text-muted"></i>
+                                              <span>{notif.eventDate} {notif.eventTime ? `• ${notif.eventTime}` : ""}</span>
                                             </div>
-                                            <div className="notif-cell">
-                                              <span className="badge bg-light text-dark border rounded-pill px-2.5 py-1">
+                                            <div className="notif-cell justify-content-end">
+                                              <span className="badge bg-light text-dark border rounded-pill px-3 py-1">
                                                 {notif.noSeats || "1"} Guests
                                               </span>
                                             </div>
@@ -567,9 +603,12 @@ export default function NotificationsPage() {
                           {/* ── 2. TASK TAB ── */}
                           {activeTab === "task" && (
                             <div className="col-12 animate__animated animate__fadeIn">
-                              <h5 className="fw-bold text-dark mb-2.5" style={{ fontSize: "16px" }}>
-                                Tasks you need to complete
-                              </h5>
+                              <div className="mb-3">
+                                <h5 className="fw-bold text-dark mb-1" style={{ fontSize: "16px" }}>
+                                  Tasks you need to complete
+                                </h5>
+                                <span className="text-muted small">Pending actions and RSVP updates</span>
+                              </div>
                               <div className="notif-list">
                                 <div className="notif-header-row-2col">
                                   <div>Event Name & Date</div>
@@ -584,16 +623,16 @@ export default function NotificationsPage() {
                                     >
                                       <div className="notif-cell-bold">
                                         <div>{notif.eventName}</div>
-                                        <small className="text-muted fw-normal mt-0.5">
-                                          <i className="fa-regular fa-calendar me-1"></i>
-                                          {notif.eventDate}
+                                        <small className="text-muted fw-normal d-inline-flex align-items-center" style={{ gap: "6px", fontSize: "12px" }}>
+                                          <i className="fa-regular fa-calendar"></i>
+                                          <span>{notif.eventDate}</span>
                                         </small>
                                       </div>
                                       <div className="notif-cell text-dark fw-medium">
-                                        <span className="badge bg-warning-subtle text-warning-emphasis me-2 rounded-pill px-2 py-0.5 small">
+                                        <span className="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2 py-1 small">
                                           Task
                                         </span>
-                                        {notif.tasks}
+                                        <span>{notif.tasks}</span>
                                       </div>
                                     </Link>
                                   ))
@@ -611,8 +650,8 @@ export default function NotificationsPage() {
                           {/* ── 3. COMPLETED TAB ── */}
                           {activeTab === "completed" && (
                             <div className="col-12 animate__animated animate__fadeIn">
-                              <div className="d-flex align-items-center justify-content-between mb-2.5">
-                                <h5 className="fw-bold text-dark mb-0" style={{ fontSize: "16px" }}>
+                              <div className="mb-3">
+                                <h5 className="fw-bold text-dark mb-1" style={{ fontSize: "16px" }}>
                                   Completed Events Rating & Feedback
                                 </h5>
                                 <span className="text-muted small">Help organizers improve by rating past events</span>
@@ -622,7 +661,7 @@ export default function NotificationsPage() {
                                 <div className="notif-header-row-completed">
                                   <div>Event Name</div>
                                   <div>Event Date</div>
-                                  <div className="text-end pe-2">Rating Action</div>
+                                  <div className="text-end">Rating Action</div>
                                 </div>
                                 {completedNotifications.length > 0 ? (
                                   completedNotifications.map((notif, idx) => (
@@ -632,27 +671,32 @@ export default function NotificationsPage() {
                                     >
                                       <div className="notif-cell-bold">
                                         <span>{notif.eventName || "Completed Event"}</span>
-                                        <small className="text-muted fw-normal" style={{ fontSize: "11px" }}>
+                                        <small className="text-muted fw-normal" style={{ fontSize: "12px" }}>
                                           {notif.tasks || "Event Completed"}
                                         </small>
                                       </div>
                                       <div className="notif-cell">
-                                        <i className="fa-regular fa-calendar me-1.5 text-muted"></i>
-                                        {notif.eventDate || "Date TBD"}
+                                        <i className="fa-regular fa-calendar text-muted"></i>
+                                        <span>{notif.eventDate || "Date TBD"}</span>
                                       </div>
                                       <div className="notif-cell justify-content-end">
                                         {notif.isRated ? (
-                                          <span className="badge bg-success-subtle text-success rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1">
-                                            <i className="fa-solid fa-star text-warning"></i> Rated
+                                          <span
+                                            className="badge bg-success-subtle text-success rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center"
+                                            style={{ gap: "6px", fontSize: "12px" }}
+                                          >
+                                            <i className="fa-solid fa-star text-warning"></i>
+                                            <span>Rated</span>
                                           </span>
                                         ) : (
                                           <button
                                             type="button"
-                                            className="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1"
+                                            className="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center"
                                             onClick={() => handleRatingClick(notif)}
-                                            style={{ background: "#3e56f0", border: "none" }}
+                                            style={{ background: "#3e56f0", border: "none", gap: "6px" }}
                                           >
-                                            <i className="fa-regular fa-star"></i> Rate Event
+                                            <i className="fa-regular fa-star"></i>
+                                            <span>Rate Event</span>
                                           </button>
                                         )}
                                       </div>
