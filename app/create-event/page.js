@@ -1125,8 +1125,8 @@ export default function CreateEventPage() {
 
                     <div className="row g-3 mb-3">
                       <div className="col-12 col-md-6">
-                        <div className="d-flex align-items-start gap-2.5">
-                          <i className="fa-solid fa-calendar-day text-primary mt-1" style={{ fontSize: "16px" }}></i>
+                        <div className="d-flex align-items-start" style={{ gap: "10px" }}>
+                          <i className="fa-solid fa-calendar-day text-primary mt-1 flex-shrink-0" style={{ fontSize: "16px" }}></i>
                           <div>
                             <small className="text-muted d-block fw-semibold">Date & Time</small>
                             <strong style={{ fontSize: "14px", color: "#1f2937" }}>
@@ -1138,8 +1138,8 @@ export default function CreateEventPage() {
                       </div>
 
                       <div className="col-12 col-md-6">
-                        <div className="d-flex align-items-start gap-2.5">
-                          <i className="fa-solid fa-location-dot text-danger mt-1" style={{ fontSize: "16px" }}></i>
+                        <div className="d-flex align-items-start" style={{ gap: "10px" }}>
+                          <i className="fa-solid fa-location-dot text-danger mt-1 flex-shrink-0" style={{ fontSize: "16px" }}></i>
                           <div>
                             <small className="text-muted d-block fw-semibold">Venue / Location</small>
                             <strong style={{ fontSize: "14px", color: "#1f2937" }}>
@@ -1203,12 +1203,12 @@ export default function CreateEventPage() {
                 {/* Restaurant Reservation Prompt */}
                 {selectedRestaurant && (
                   <div 
-                    className="p-3.5 mb-3 rounded-4 d-flex flex-wrap align-items-center justify-content-between gap-3 text-start mt-3"
+                    className="p-3 p-md-4 mb-3 rounded-4 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 text-start mt-3"
                     style={{ background: "#f5f3ff", border: "1.5px solid #c4b5fd" }}
                   >
                     <div>
-                      <div className="d-flex align-items-center gap-2 mb-1">
-                        <span className="badge rounded-pill text-white" style={{ background: "#7c3aed", fontSize: "11px" }}>Recommended Step</span>
+                      <div className="d-flex align-items-center mb-1" style={{ gap: "8px" }}>
+                        <span className="badge rounded-pill text-white" style={{ background: "#7c3aed", fontSize: "11px" }}>Recommended</span>
                         <strong className="text-dark" style={{ fontSize: "15px" }}>Table Reservation</strong>
                       </div>
                       <p className="text-muted small mb-0" style={{ fontSize: "13px" }}>
@@ -1221,57 +1221,82 @@ export default function CreateEventPage() {
                         setResAdultCount(String(selectedGuests?.length || 1));
                         setReservationModal(true);
                       }}
-                      className="btn rounded-pill px-4 py-2 text-white fw-bold shadow-sm d-flex align-items-center gap-2"
-                      style={{ background: "#7c3aed", borderColor: "#7c3aed", fontSize: "13.5px" }}
+                      className="btn rounded-pill px-4 py-2 text-white fw-semibold shadow-sm d-inline-flex align-items-center justify-content-center flex-shrink-0 text-nowrap"
+                      style={{ background: "#7c3aed", borderColor: "#7c3aed", fontSize: "13.5px", gap: "8px", height: "40px" }}
                     >
-                      <i className="fa-solid fa-utensils"></i> Reserve Table Now
+                      <i className="fa-solid fa-utensils"></i>
+                      <span>Reserve Table</span>
                     </button>
                   </div>
                 )}
 
                 {/* Action Buttons */}
-                <div className="d-flex flex-wrap align-items-center justify-content-center gap-2.5 mt-4">
+                <div className="d-flex flex-wrap align-items-center justify-content-center mt-4" style={{ gap: "10px" }}>
                   <button
                     onClick={() => router.push(createdEventId ? `/event-details?eventId=${createdEventId}` : "/my-events")}
-                    className="btn btn-primary rounded-pill px-4 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 text-white shadow-sm"
+                    className="btn btn-primary rounded-3 px-4 fw-semibold d-inline-flex align-items-center justify-content-center text-white shadow-xs text-nowrap"
                     style={{
-                      background: "#5b5fc7",
-                      borderColor: "#5b5fc7",
-                      minWidth: "150px",
-                      fontSize: "14.5px",
-                      height: "46px"
+                      background: "#3e56f0",
+                      borderColor: "#3e56f0",
+                      fontSize: "13.5px",
+                      height: "42px",
+                      gap: "8px",
                     }}
                   >
-                    <i className="fa-solid fa-calendar-check"></i> View Event Details
+                    <i className="fa-solid fa-calendar-check"></i>
+                    <span>View Event</span>
                   </button>
 
                   <button
                     onClick={() => router.push("/my-events")}
-                    className="btn btn-outline-primary rounded-pill px-4 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm"
-                    style={{ minWidth: "130px", fontSize: "14.5px", height: "46px" }}
+                    className="btn btn-light border rounded-3 px-4 fw-semibold d-inline-flex align-items-center justify-content-center shadow-xs text-nowrap"
+                    style={{
+                      background: "#f8fafc",
+                      borderColor: "#e2e8f0",
+                      color: "#1e293b",
+                      fontSize: "13.5px",
+                      height: "42px",
+                      gap: "8px",
+                    }}
                   >
-                    <i className="fa-solid fa-list-check"></i> My Events
+                    <i className="fa-solid fa-list-check text-primary"></i>
+                    <span>My Events</span>
                   </button>
 
                   <button
                     onClick={handleRecallEvent}
                     disabled={isRecalling}
-                    className="btn btn-outline-warning rounded-pill px-3.5 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm"
-                    style={{ minWidth: "120px", fontSize: "14px", height: "46px" }}
+                    className="btn rounded-3 px-3 fw-semibold d-inline-flex align-items-center justify-content-center text-nowrap"
+                    style={{
+                      background: "#fffbeb",
+                      border: "1px solid #fde68a",
+                      color: "#b45309",
+                      fontSize: "13.5px",
+                      height: "42px",
+                      gap: "8px",
+                    }}
                   >
                     {isRecalling ? (
-                      <><i className="fa-solid fa-spinner fa-spin"></i> Recalling...</>
+                      <><i className="fa-solid fa-spinner fa-spin"></i><span>Recalling...</span></>
                     ) : (
-                      <><i className="fa-solid fa-rotate-left"></i> Recall</>
+                      <><i className="fa-solid fa-rotate-left"></i><span>Recall</span></>
                     )}
                   </button>
 
                   <button
                     onClick={() => router.push("/")}
-                    className="btn btn-outline-secondary rounded-pill px-3.5 py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2 shadow-sm"
-                    style={{ minWidth: "100px", fontSize: "14px", height: "46px" }}
+                    className="btn btn-light border rounded-3 px-3 fw-semibold d-inline-flex align-items-center justify-content-center text-nowrap"
+                    style={{
+                      background: "#ffffff",
+                      borderColor: "#e2e8f0",
+                      color: "#475569",
+                      fontSize: "13.5px",
+                      height: "42px",
+                      gap: "8px",
+                    }}
                   >
-                    <i className="fa-solid fa-house"></i> Home
+                    <i className="fa-solid fa-house"></i>
+                    <span>Home</span>
                   </button>
                 </div>
               </section>
