@@ -2248,14 +2248,14 @@ function EventDetailsContent() {
                     </div>
                   )}
 
-                  {/* Organizer Event Controls (Edit & Publish) */}
+                  {/* Organizer Event Controls */}
                   {event.isMyEvent && (
                     <div className="border-top pt-3 mt-2 d-flex flex-column gap-2 animate__animated animate__fadeIn">
                       {event.status?.toLowerCase() === "draft" && (
                         <button 
                           type="button" 
-                          className="btn btn-success rounded-pill py-2.5 fw-bold text-white shadow-sm d-flex align-items-center justify-content-center gap-2"
-                          style={{ background: "#10b981", border: "none" }}
+                          className="btn btn-success rounded-3 w-100 fw-semibold text-white shadow-xs d-flex align-items-center justify-content-center gap-2"
+                          style={{ background: "#10b981", border: "none", height: "40px", fontSize: "13.5px" }}
                           onClick={handlePublishDraft}
                           disabled={publishing}
                         >
@@ -2271,11 +2271,12 @@ function EventDetailsContent() {
                           )}
                         </button>
                       )}
-                      {event.isMyEvent && !["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.status || "").toLowerCase()) && (
+
+                      {!["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.status || "").toLowerCase()) && (
                         <button
                           type="button"
-                          className="btn btn-success rounded-pill py-2 fw-semibold text-white shadow-sm d-flex align-items-center justify-content-center gap-2"
-                          style={{ background: "#10b981", border: "none" }}
+                          className="btn btn-success rounded-3 w-100 fw-semibold text-white shadow-xs d-flex align-items-center justify-content-center gap-2"
+                          style={{ background: "#10b981", border: "none", height: "40px", fontSize: "13.5px" }}
                           onClick={handleCompleteEvent}
                           disabled={completingEvent}
                         >
@@ -2291,36 +2292,52 @@ function EventDetailsContent() {
                           )}
                         </button>
                       )}
+
                       <button 
                         type="button" 
-                        className="btn btn-outline-primary rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                        className="btn btn-light border rounded-3 w-100 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                        style={{ background: "#f8fafc", borderColor: "#e2e8f0", color: "#1e293b", height: "38px", fontSize: "13px" }}
                         onClick={handleOpenEditModal}
                       >
-                        <i className="fa-solid fa-pen-to-square"></i> Edit Event
+                        <i className="fa-solid fa-pen-to-square text-primary"></i> Edit Event
                       </button>
-                      {event.isMyEvent && !["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.status || "").toLowerCase()) && (
+
+                      <div className="d-flex gap-2 pt-1">
+                        {!["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.status || "").toLowerCase()) && (
+                          <button
+                            type="button"
+                            className="btn rounded-3 flex-grow-1 fw-semibold d-flex align-items-center justify-content-center gap-1.5 text-nowrap"
+                            style={{
+                              background: "#fffbeb",
+                              border: "1px solid #fde68a",
+                              color: "#b45309",
+                              height: "34px",
+                              fontSize: "12px",
+                            }}
+                            onClick={handleCancelEvent}
+                            disabled={cancelingEvent}
+                          >
+                            <i className={`fa-solid ${cancelingEvent ? "fa-spinner fa-spin" : "fa-ban"}`}></i>
+                            <span>{cancelingEvent ? "Cancelling..." : "Cancel Event"}</span>
+                          </button>
+                        )}
                         <button
                           type="button"
-                          className="btn btn-outline-warning rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
-                          style={{ color: "#b45309", borderColor: "#f59e0b" }}
-                          onClick={handleCancelEvent}
-                          disabled={cancelingEvent}
-                        >
-                          <i className={`fa-solid ${cancelingEvent ? "fa-spinner fa-spin" : "fa-ban"}`}></i>
-                          {cancelingEvent ? "Cancelling..." : "Cancel Event"}
-                        </button>
-                      )}
-                      {event.isMyEvent && (
-                        <button
-                          type="button"
-                          className="btn btn-outline-danger rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                          className="btn rounded-3 flex-grow-1 fw-semibold d-flex align-items-center justify-content-center gap-1.5 text-nowrap"
+                          style={{
+                            background: "#fef2f2",
+                            border: "1px solid #fecaca",
+                            color: "#dc2626",
+                            height: "34px",
+                            fontSize: "12px",
+                          }}
                           onClick={handleDeleteEvent}
                           disabled={deletingEvent}
                         >
                           <i className={`fa-regular ${deletingEvent ? "fa-spinner fa-spin" : "fa-trash-can"}`}></i>
-                          {deletingEvent ? "Deleting..." : "Delete Event"}
+                          <span>{deletingEvent ? "Deleting..." : "Delete Event"}</span>
                         </button>
-                      )}
+                      </div>
                     </div>
                   )}
 
