@@ -9,7 +9,7 @@ import Footer from "../components/Footer";
 import SafeImage from "../components/SafeImage";
 import { authService } from "../services/authService";
 import { getUserNotificationsApi } from "../services/notificationApi";
-import { rateEventApi } from "../services/eventApi";
+import { rateEventApi, getEventRatingsApi } from "../services/eventApi";
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -47,30 +47,53 @@ export default function NotificationsPage() {
 
   // Load profile and notifications
   useEffect(() => {
-    const loadProfile = async () => {
+    const loadData = async () => {
+      let currentUserId = "";
       try {
         const profRes = await authService.getUserProfile();
         if (profRes && profRes.status && profRes.user) {
           setProfile(profRes.user);
+          currentUserId = String(profRes.user._id || profRes.user.id || "");
         } else {
           const localUser = authService.getUser();
-          if (localUser) setProfile(localUser);
+          if (localUser) {
+            setProfile(localUser);
+            currentUserId = String(localUser._id || localUser.id || "");
+          }
         }
       } catch (err) {
         console.error("Profile load failed:", err);
       }
-    };
-    loadProfile();
 
-    const fetchNotifications = async () => {
       try {
         setLoading(true);
         const res = await getUserNotificationsApi();
         if (res && res.status && res.notifications) {
           const raw = res.notifications;
+          let completeList = Array.isArray(raw.completeEvent) ? raw.completeEvent : [];
+
+          // Verify actual rating status from /event/ratings so rated events never allow duplicate reviews
+          if (completeList.length > 0 && currentUserId) {
+            completeList = await Promise.all(
+              completeList.map(async (item) => {
+                if (item.isRated || !item.eventId) return item;
+                try {
+                  const rRes = await getEventRatingsApi(item.eventId);
+                  const rList = Array.isArray(rRes?.data) ? rRes.data : [];
+                  const alreadyRated = rList.some(
+                    (r) => String(r.userId?._id || r.userId || "") === currentUserId
+                  );
+                  return alreadyRated ? { ...item, isRated: true } : item;
+                } catch {
+                  return item;
+                }
+              })
+            );
+          }
+
           setNotificationGroups({
             newEvent: Array.isArray(raw.newEvent) ? raw.newEvent : [],
-            completeEvent: Array.isArray(raw.completeEvent) ? raw.completeEvent : [],
+            completeEvent: completeList,
             reservationUpdate: Array.isArray(raw.reservationUpdate) ? raw.reservationUpdate : [],
             other: Array.isArray(raw.other) ? raw.other : [],
           });
@@ -94,7 +117,7 @@ export default function NotificationsPage() {
         setLoading(false);
       }
     };
-    fetchNotifications();
+    loadData();
   }, []);
 
   // 1. Group: Reservation Updates (from reservationUpdate array + any newEvent with reservationType === "1")
@@ -171,10 +194,19 @@ export default function NotificationsPage() {
 
         setSelectedRateEvent(null);
       } else {
+        if (res?.message && res.message.toLowerCase().includes("already")) {
+          setNotificationGroups((prev) => ({
+            ...prev,
+            completeEvent: prev.completeEvent.map((item) =>
+              item.eventId === selectedRateEvent.eventId ? { ...item, isRated: true } : item
+            ),
+          }));
+          setSelectedRateEvent(null);
+        }
         Swal.fire({
-          title: "Error",
+          title: "Notice",
           text: res?.message || "Failed to submit rating. Please try again.",
-          icon: "error",
+          icon: res?.message?.toLowerCase().includes("already") ? "info" : "error",
           confirmButtonColor: "#3e56f0",
         });
       }
