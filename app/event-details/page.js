@@ -75,6 +75,8 @@ const mapEventData = (data, loggedInUser) => {
     rawStatus = "Upcoming";
   }
 
+  const lifecycleStatus = (data.status || data.eventCurrentStatus || "pending").toLowerCase();
+
   return {
     eventId: data._id,
     eventTitle: data.eventTitle || "Untitled Event",
@@ -107,6 +109,8 @@ const mapEventData = (data, loggedInUser) => {
     organizerName: data.eventcreator?.fullName || "Organizer",
     eventAttendanceQr: data.eventAttendanceQr || data.attendanceQrToken || null,
     status: rawStatus,
+    eventStatus: lifecycleStatus,
+    invitationStatus: data.myInvitationStatus || "",
     isMyEvent: !!isMyEvent,
     additionalServices: data.additionalServices || [],
     serviceLocationId: data.serviceLocationId || null,
@@ -337,10 +341,10 @@ function EventDetailsContent() {
   };
 
   useEffect(() => {
-    if (event?.eventId && event?.status?.toLowerCase() === "completed") {
+    if (event?.eventId && (event?.eventStatus === "completed" || event?.status?.toLowerCase() === "completed")) {
       fetchEventReviews(event.eventId);
     }
-  }, [event?.eventId, event?.status]);
+  }, [event?.eventId, event?.eventStatus, event?.status]);
 
   const handleSubmitRating = async (e) => {
     if (e) e.preventDefault();
@@ -556,7 +560,7 @@ function EventDetailsContent() {
       setCompletingEvent(true);
       const res = await updateEventStatusApi({ eventId: event.eventId, status: "completed" });
       if (res && res.status) {
-        setEvent((prev) => (prev ? { ...prev, status: "completed" } : prev));
+        setEvent((prev) => (prev ? { ...prev, status: "completed", eventStatus: "completed" } : prev));
         await Swal.fire({
           icon: "success",
           title: "Event Completed!",
@@ -602,7 +606,7 @@ function EventDetailsContent() {
       setCancelingEvent(true);
       const res = await cancelEventApi(event.eventId);
       if (res && res.status) {
-        setEvent((prev) => (prev ? { ...prev, status: "canceled" } : prev));
+        setEvent((prev) => (prev ? { ...prev, status: "canceled", eventStatus: "canceled" } : prev));
         await Swal.fire({
           icon: "success",
           title: "Event Cancelled",
@@ -1228,7 +1232,7 @@ function EventDetailsContent() {
                   </div>
 
                   {/* Completed Event Rating Banner */}
-                  {event.status && event.status.toLowerCase() === "completed" && (
+                  {(event.eventStatus === "completed" || (event.status && event.status.toLowerCase() === "completed")) && (
                     <div className="p-3 mb-4 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-xs" style={{ background: "#fef3c7", border: "1px solid #fde68a" }}>
                       <div className="d-flex align-items-center gap-2">
                         <i className="fa-solid fa-award text-warning fs-3"></i>
@@ -1262,7 +1266,7 @@ function EventDetailsContent() {
               </div>
 
               {/* Event Reviews & Ratings Card (shown when event is completed) */}
-              {event.status && event.status.toLowerCase() === "completed" && (
+              {(event.eventStatus === "completed" || (event.status && event.status.toLowerCase() === "completed")) && (
                 <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
                   <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4 pb-3 border-bottom">
                     <div className="d-flex align-items-center" style={{ gap: "12px" }}>
@@ -2195,8 +2199,8 @@ function EventDetailsContent() {
                     </div>
                   )}
 
-                  {/* Invitation Action Buttons */}
-                  {!event.isMyEvent && (
+                  {/* Invitation Action Buttons (hidden once event is completed, expired, or canceled) */}
+                  {!event.isMyEvent && !["completed", "expired", "canceled", "cancelled", "rejected"].includes(event.eventStatus || "") && (
                     <div className="border-top pt-3 mt-2">
                       {["accepted", "ongoing", "approved", "ongoingevent", "upcoming"].includes(event.status?.toLowerCase()) && (
                         <div className="d-grid gap-2">
