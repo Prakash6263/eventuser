@@ -1306,8 +1306,19 @@ function EventDetailsContent() {
                   ) : eventReviews.length > 0 ? (
                     <div className="d-flex flex-column gap-3">
                       {eventReviews.map((rev, rIdx) => {
-                        const reviewerName = rev.userId?.fullName || rev.userName || "Event Guest";
-                        const reviewerPic = rev.userId?.profilePic || null;
+                        const revUserId = String(rev.userId?._id || rev.userId || "");
+                        const matchedGuest = (event.selectedGuests || []).find(
+                          (g) => String(g.userId || g.id || "") === revUserId
+                        );
+                        const reviewerName =
+                          rev.userId?.fullName ||
+                          rev.userId?.name ||
+                          matchedGuest?.name ||
+                          rev.userName ||
+                          (rev.userId?.email ? rev.userId.email.split("@")[0] : "") ||
+                          (rev.userId?.mobile ? rev.userId.mobile : "") ||
+                          "Event Guest";
+                        const reviewerPic = rev.userId?.profilePic || matchedGuest?.profilePic || null;
                         const stars = Math.max(1, Math.min(5, Number(rev.rating || 5)));
                         const reviewDate = rev.createdAt
                           ? new Date(rev.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -1319,7 +1330,7 @@ function EventDetailsContent() {
                             style={{ borderColor: "#eef2f6" }}
                           >
                             <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
-                              <div className="d-flex align-items-center gap-2.5 min-w-0">
+                              <div className="d-flex align-items-center min-w-0" style={{ gap: "10px" }}>
                                 <div
                                   className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0 overflow-hidden"
                                   style={{ width: "36px", height: "36px", background: "#4f46e5", fontSize: "13px" }}
