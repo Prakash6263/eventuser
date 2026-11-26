@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SafeImage from "../components/SafeImage";
-import { getMyCreatedEventsApi } from "../services/eventApi";
+import { getMyCreatedEventsApi, getMyJoinedEventsApi, getMyInvitationsApi } from "../services/eventApi";
 import { authService } from "../services/authService";
 
 export default function MyEventsPage() {
@@ -23,19 +23,68 @@ export default function MyEventsPage() {
       setError(null);
       try {
         // Fetch user profile
+        let currentUserId = "";
         const profRes = await authService.getUserProfile();
         if (profRes && profRes.status && profRes.user) {
           setProfile(profRes.user);
+          currentUserId = String(profRes.user._id || profRes.user.id || "");
         } else {
           const localUser = authService.getUser();
-          if (localUser) setProfile(localUser);
+          if (localUser) {
+            setProfile(localUser);
+            currentUserId = String(localUser._id || localUser.id || "");
+          }
         }
 
-        // Fetch events list
-        const eventsRes = await getMyCreatedEventsApi();
-        if (eventsRes && eventsRes.status && Array.isArray(eventsRes.data)) {
+        // Fetch created events, joined events, and invitations in parallel
+        const [createdRes, joinedRes, invitationsRes] = await Promise.all([
+          getMyCreatedEventsApi().catch(() => null),
+          getMyJoinedEventsApi().catch(() => null),
+          getMyInvitationsApi().catch(() => null),
+        ]);
+
+        const mergedMap = new Map();
+
+        const addEventsToMap = (list, sourceType) => {
+          if (!Array.isArray(list)) return;
+          list.forEach((evt) => {
+            const id = String(evt._id || evt.id || "");
+            if (!id) return;
+            const existing = mergedMap.get(id);
+            const enriched = {
+              ...evt,
+              _isCreatedByMe: existing?._isCreatedByMe || sourceType === "created",
+            };
+            if (sourceType === "joined" && !enriched.myInvitationStatus) {
+              enriched.myInvitationStatus = "accepted";
+            }
+            if (!enriched.myInvitationStatus && currentUserId && Array.isArray(evt.invitedUsers)) {
+              const myEntry = evt.invitedUsers.find((inv) => {
+                const uId = inv?.userId?._id || inv?.userId;
+                return uId && String(uId) === currentUserId;
+              });
+              if (myEntry?.status) {
+                enriched.myInvitationStatus = myEntry.status;
+              }
+            }
+            mergedMap.set(id, { ...(existing || {}), ...enriched });
+          });
+        };
+
+        if (createdRes?.status && Array.isArray(createdRes.data)) {
+          addEventsToMap(createdRes.data, "created");
+        }
+        if (joinedRes?.status && Array.isArray(joinedRes.data)) {
+          addEventsToMap(joinedRes.data, "joined");
+        }
+        if (invitationsRes?.status && Array.isArray(invitationsRes.data)) {
+          addEventsToMap(invitationsRes.data, "invitation");
+        }
+
+        const combinedList = Array.from(mergedMap.values());
+        if (combinedList.length > 0 || createdRes?.status || joinedRes?.status || invitationsRes?.status) {
           // Map backend events to UI structure
-          const mapped = eventsRes.data.map((evt) => {
+          const mapped = combinedList.map((evt) => {
             // Date parsing & formatting
             let formattedDate = "";
             try {
@@ -90,21 +139,30 @@ export default function MyEventsPage() {
             } else if (rawStatus === "cancelled" || rawStatus === "canceled") {
               uiStatus = "Canceled";
               badgeClass = "bg-danger";
-            } else if (rawStatus === "rejected" || invStatus === "rejected") {
-              uiStatus = "Rejected";
-              badgeClass = "bg-danger";
             } else if (rawStatus === "expired" || currentStatus === "expired") {
               uiStatus = "Expired";
               badgeClass = "bg-dark";
             } else if (rawStatus === "completed" || currentStatus === "completed") {
               uiStatus = "Completed";
               badgeClass = "bg-secondary";
-            } else if (rawStatus === "pending" || invStatus === "pending") {
+            } else if (!evt._isCreatedByMe && (invStatus === "accepted" || rawStatus === "accepted")) {
+              uiStatus = "Accepted";
+              badgeClass = "bg-success";
+            } else if (!evt._isCreatedByMe && (invStatus === "rejected" || invStatus === "declined" || rawStatus === "rejected")) {
+              uiStatus = "Rejected";
+              badgeClass = "bg-danger";
+            } else if (!evt._isCreatedByMe && invStatus === "pending") {
               uiStatus = "Pending";
               badgeClass = "bg-warning text-dark";
+            } else if (rawStatus === "rejected" || invStatus === "rejected" || invStatus === "declined") {
+              uiStatus = "Rejected";
+              badgeClass = "bg-danger";
             } else if (rawStatus === "accepted" || invStatus === "accepted") {
               uiStatus = "Accepted";
               badgeClass = "bg-success";
+            } else if (rawStatus === "pending" || invStatus === "pending") {
+              uiStatus = "Pending";
+              badgeClass = "bg-warning text-dark";
             } else if (rawStatus === "ongoingevent" || rawStatus === "ongoing" || rawStatus === "upcoming" || currentStatus === "upcoming") {
               uiStatus = "Upcoming";
               badgeClass = "bg-info text-dark";
@@ -129,7 +187,7 @@ export default function MyEventsPage() {
           });
           setEvents(mapped);
         } else {
-          setError(eventsRes?.message || "Failed to load events.");
+          setError(createdRes?.message || joinedRes?.message || "Failed to load events.");
         }
       } catch (err) {
         console.error("Failed loading data:", err);
@@ -229,12 +287,18 @@ export default function MyEventsPage() {
                 <div className="user-profile-wrapper border p-3 p-md-4 bg-white rounded-3 shadow-sm">
                   {/* Sticky Filter Header on Scroll */}
                   <div className="sticky-filter-header bg-white pb-3 mb-4 border-bottom">
-                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                      <h4 className="user-profile-card-title fw-bold m-0" style={{ fontSize: "18px" }}>My Events</h4>
-                      {/* Status Tabs Filter with Smooth Horizontal Scroll on Mobile */}
+                    <div className="d-flex flex-column gap-3">
+                      <div className="d-flex align-items-center justify-content-between">
+                        <h4 className="user-profile-card-title fw-bold m-0 text-nowrap" style={{ fontSize: "19px" }}>
+                          My Events
+                        </h4>
+                        <span className="text-muted small">{filteredEvents.length} {filteredEvents.length === 1 ? "event" : "events"}</span>
+                      </div>
+                      {/* Status Tabs Filter - Wraps cleanly on Desktop, Horizontal Scroll on Mobile */}
                       <div
-                        className="d-flex align-items-center gap-1.5 overflow-x-auto py-1 no-scrollbar w-100 w-md-auto"
+                        className="d-flex align-items-center flex-nowrap flex-md-wrap overflow-x-auto py-1 no-scrollbar w-100"
                         style={{
+                          gap: "8px",
                           maxWidth: "100%",
                           WebkitOverflowScrolling: "touch",
                           scrollbarWidth: "none",
@@ -244,12 +308,12 @@ export default function MyEventsPage() {
                           <button
                             key={tab}
                             type="button"
-                            className={`btn btn-sm rounded-pill px-3 py-1.5 fw-semibold flex-shrink-0 transition shadow-xs ${
+                            className={`btn btn-sm rounded-pill fw-semibold flex-shrink-0 transition shadow-xs ${
                               activeTab === tab
                                 ? "btn-primary text-white"
                                 : "btn-outline-secondary text-secondary bg-light-subtle"
                             }`}
-                            style={{ fontSize: "12px", whiteSpace: "nowrap" }}
+                            style={{ fontSize: "12.5px", whiteSpace: "nowrap", padding: "6px 14px" }}
                             onClick={() => setActiveTab(tab)}
                           >
                             {tab}

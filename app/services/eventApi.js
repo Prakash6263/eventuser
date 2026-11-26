@@ -64,6 +64,21 @@ export const getMyCreatedEventsApi = async () => {
   });
 };
 
+// 7b. Get My Joined Events API (Accepted invitations)
+export const getMyJoinedEventsApi = async () => {
+  return await apiRequest("/event/my-joined-events", {
+    method: "GET",
+  });
+};
+
+// 7c. Get My Invitations API (Pending, Accepted, Declined)
+export const getMyInvitationsApi = async (status) => {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return await apiRequest(`/event/my-invitations${query}`, {
+    method: "GET",
+  });
+};
+
 // 8. Get Event Media API
 export const getEventMediaApi = async (eventId) => {
   return await apiRequest(`/event-media/media?eventId=${eventId}`, {
@@ -215,6 +230,8 @@ export const eventApi = {
   voteEventPoll: voteEventPollApi,
   getMyEvents: getMyEventsApi,
   getMyCreatedEvents: getMyCreatedEventsApi,
+  getMyJoinedEvents: getMyJoinedEventsApi,
+  getMyInvitations: getMyInvitationsApi,
   getEventMedia: getEventMediaApi,
   rateEvent: rateEventApi,
   getEventRatings: getEventRatingsApi,
