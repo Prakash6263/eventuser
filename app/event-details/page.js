@@ -1284,8 +1284,8 @@ function EventDetailsContent() {
 
                     {ratingSummary.count > 0 && (
                       <span
-                        className="badge rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-1.5 text-nowrap"
-                        style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", fontSize: "12.5px" }}
+                        className="badge rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center text-nowrap"
+                        style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", fontSize: "12.5px", gap: "6px" }}
                       >
                         <i className="fa-solid fa-star text-warning"></i>
                         <span>{ratingSummary.avgRating.toFixed(1)}</span>
@@ -1433,7 +1433,7 @@ function EventDetailsContent() {
                           <div className="flex-shrink-0 ms-1">
                             {attendedGuests[guest.id || guest.email || guest.name] ? (
                               <span
-                                className="badge px-2.5 py-1.5 d-inline-flex align-items-center gap-1.5 text-nowrap"
+                                className="badge px-2.5 py-1.5 d-inline-flex align-items-center text-nowrap"
                                 style={{
                                   fontSize: "11px",
                                   fontWeight: "600",
@@ -1441,7 +1441,8 @@ function EventDetailsContent() {
                                   background: "#ecfdf5",
                                   color: "#047857",
                                   border: "1px solid #a7f3d0",
-                                  whiteSpace: "nowrap"
+                                  whiteSpace: "nowrap",
+                                  gap: "6px"
                                 }}
                               >
                                 <i className="fa-solid fa-circle-check text-success"></i>
@@ -1451,7 +1452,7 @@ function EventDetailsContent() {
                               <button
                                 type="button"
                                 onClick={() => handleMarkGuestAttended(guest)}
-                                className="btn btn-sm btn-outline-success px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs text-nowrap"
+                                className="btn btn-sm btn-outline-success px-2.5 py-1 fw-semibold d-inline-flex align-items-center shadow-xs text-nowrap"
                                 style={{
                                   fontSize: "11.5px",
                                   height: "30px",
@@ -1459,7 +1460,8 @@ function EventDetailsContent() {
                                   borderColor: "#a7f3d0",
                                   color: "#047857",
                                   background: "#f0fdf4",
-                                  whiteSpace: "nowrap"
+                                  whiteSpace: "nowrap",
+                                  gap: "6px"
                                 }}
                               >
                                 <i className="fa-solid fa-user-check"></i>
@@ -1470,12 +1472,13 @@ function EventDetailsContent() {
                                 type="button"
                                 onClick={() => handleSendReminder(guest)}
                                 disabled={remindingGuestId === (guest.userId || guest.id)}
-                                className="btn btn-sm btn-outline-primary px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs text-nowrap"
+                                className="btn btn-sm btn-outline-primary px-2.5 py-1 fw-semibold d-inline-flex align-items-center shadow-xs text-nowrap"
                                 style={{
                                   fontSize: "11.5px",
                                   height: "30px",
                                   borderRadius: "8px",
-                                  whiteSpace: "nowrap"
+                                  whiteSpace: "nowrap",
+                                  gap: "6px"
                                 }}
                                 title="Send invitation reminder"
                               >
@@ -2306,13 +2309,16 @@ function EventDetailsContent() {
                         {!["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.status || "").toLowerCase()) && (
                           <button
                             type="button"
-                            className="btn rounded-3 flex-grow-1 fw-semibold d-flex align-items-center justify-content-center gap-1.5 text-nowrap"
+                            className="btn rounded-3 px-2 fw-semibold d-flex align-items-center justify-content-center text-nowrap"
                             style={{
+                              flex: "1 1 0",
+                              minWidth: 0,
                               background: "#fffbeb",
                               border: "1px solid #fde68a",
                               color: "#b45309",
-                              height: "34px",
-                              fontSize: "12px",
+                              height: "36px",
+                              fontSize: "12.5px",
+                              gap: "6px",
                             }}
                             onClick={handleCancelEvent}
                             disabled={cancelingEvent}
@@ -2323,13 +2329,16 @@ function EventDetailsContent() {
                         )}
                         <button
                           type="button"
-                          className="btn rounded-3 flex-grow-1 fw-semibold d-flex align-items-center justify-content-center gap-1.5 text-nowrap"
+                          className="btn rounded-3 px-2 fw-semibold d-flex align-items-center justify-content-center text-nowrap"
                           style={{
+                            flex: "1 1 0",
+                            minWidth: 0,
                             background: "#fef2f2",
                             border: "1px solid #fecaca",
                             color: "#dc2626",
-                            height: "34px",
-                            fontSize: "12px",
+                            height: "36px",
+                            fontSize: "12.5px",
+                            gap: "6px",
                           }}
                           onClick={handleDeleteEvent}
                           disabled={deletingEvent}
