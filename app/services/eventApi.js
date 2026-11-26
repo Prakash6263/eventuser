@@ -81,6 +81,22 @@ export const rateEventApi = async (payload) => {
   });
 };
 
+// 9a-2. Get Event Ratings & Reviews API
+export const getEventRatingsApi = async (eventId) => {
+  if (!eventId) return { status: false, data: [] };
+  return await apiRequest(`/event/ratings?eventId=${encodeURIComponent(eventId)}`, {
+    method: "GET",
+  });
+};
+
+// 9a-3. Get Event Rating Summary API
+export const getEventRatingSummaryApi = async (eventId) => {
+  if (!eventId) return { status: false, data: { avgRating: 0, count: 0 } };
+  return await apiRequest(`/event/rating-summary?eventId=${encodeURIComponent(eventId)}`, {
+    method: "GET",
+  });
+};
+
 // 9b. Rate Merchant API
 export const rateMerchantApi = async (payload) => {
   return await apiRequest("/merchant/rate", {
@@ -201,6 +217,8 @@ export const eventApi = {
   getMyCreatedEvents: getMyCreatedEventsApi,
   getEventMedia: getEventMediaApi,
   rateEvent: rateEventApi,
+  getEventRatings: getEventRatingsApi,
+  getEventRatingSummary: getEventRatingSummaryApi,
   rateMerchant: rateMerchantApi,
   scanAttendance: scanAttendanceApi,
   markManualAttendance: markManualAttendanceApi,

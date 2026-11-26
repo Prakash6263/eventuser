@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { getMerchantsByServiceApi, updateEventApi, updateEventStatusApi, cancelEventApi, deleteEventApi, sendInvitationReminderApi, publishDraftEventApi, rateEventApi, scanAttendanceApi, markManualAttendanceApi } from "../services/eventApi";
+import { getMerchantsByServiceApi, updateEventApi, updateEventStatusApi, cancelEventApi, deleteEventApi, sendInvitationReminderApi, publishDraftEventApi, rateEventApi, getEventRatingsApi, getEventRatingSummaryApi, scanAttendanceApi, markManualAttendanceApi } from "../services/eventApi";
 import { makeReservationApi, getReservationDetailsByIdApi } from "../services/reservationApi";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { apiRequest } from "../services/apiClient";
@@ -179,6 +179,9 @@ function EventDetailsContent() {
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [eventReviews, setEventReviews] = useState([]);
+  const [ratingSummary, setRatingSummary] = useState({ avgRating: 0, count: 0 });
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   // Host QR Check-in state
   const [showCheckInModal, setShowCheckInModal] = useState(false);
@@ -296,6 +299,49 @@ function EventDetailsContent() {
     }
   };
 
+  const fetchEventReviews = async (targetEventId) => {
+    if (!targetEventId) return;
+    try {
+      setLoadingReviews(true);
+      const [ratingsRes, summaryRes] = await Promise.all([
+        getEventRatingsApi(targetEventId).catch(() => null),
+        getEventRatingSummaryApi(targetEventId).catch(() => null),
+      ]);
+
+      const list = Array.isArray(ratingsRes?.data) ? ratingsRes.data : [];
+      setEventReviews(list);
+
+      if (summaryRes?.status && summaryRes?.data) {
+        setRatingSummary({
+          avgRating: Number(summaryRes.data.avgRating || 0),
+          count: Number(summaryRes.data.count || list.length || 0),
+        });
+      } else if (list.length > 0) {
+        const avg = list.reduce((sum, r) => sum + Number(r.rating || 0), 0) / list.length;
+        setRatingSummary({ avgRating: avg, count: list.length });
+      } else {
+        setRatingSummary({ avgRating: 0, count: 0 });
+      }
+
+      try {
+        const rawUser = window.localStorage.getItem("user") || window.localStorage.getItem("eventuna_user");
+        const parsedUser = rawUser ? JSON.parse(rawUser) : null;
+        const myId = parsedUser?._id || parsedUser?.id;
+        if (myId && list.some((r) => String(r.userId?._id || r.userId) === String(myId))) {
+          setHasRated(true);
+        }
+      } catch (e) {}
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  useEffect(() => {
+    if (event?.eventId && event?.status?.toLowerCase() === "completed") {
+      fetchEventReviews(event.eventId);
+    }
+  }, [event?.eventId, event?.status]);
+
   const handleSubmitRating = async (e) => {
     if (e) e.preventDefault();
     if (!ratingScore || ratingScore < 1) {
@@ -312,6 +358,8 @@ function EventDetailsContent() {
       if (res && res.status) {
         setHasRated(true);
         setShowRatingModal(false);
+        setRatingComment("");
+        fetchEventReviews(event.eventId);
         Swal.fire({
           icon: "success",
           title: "Thank You!",
@@ -1212,6 +1260,107 @@ function EventDetailsContent() {
                   </div>
                 </div>
               </div>
+
+              {/* Event Reviews & Ratings Card (shown when event is completed) */}
+              {event.status && event.status.toLowerCase() === "completed" && (
+                <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
+                  <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4 pb-3 border-bottom">
+                    <div className="d-flex align-items-center" style={{ gap: "12px" }}>
+                      <div
+                        className="rounded-3 d-flex align-items-center justify-content-center text-warning flex-shrink-0"
+                        style={{ width: "36px", height: "36px", background: "#fef3c7", fontSize: "16px" }}
+                      >
+                        <i className="fa-solid fa-star" style={{ lineHeight: 1 }}></i>
+                      </div>
+                      <div>
+                        <h5 className="fw-bold text-dark m-0" style={{ fontSize: "16px", lineHeight: 1.2 }}>
+                          Event Reviews & Ratings
+                        </h5>
+                        <span className="text-muted small" style={{ fontSize: "12px" }}>
+                          Feedback shared by attendees & host
+                        </span>
+                      </div>
+                    </div>
+
+                    {ratingSummary.count > 0 && (
+                      <span
+                        className="badge rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-1.5 text-nowrap"
+                        style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a", fontSize: "12.5px" }}
+                      >
+                        <i className="fa-solid fa-star text-warning"></i>
+                        <span>{ratingSummary.avgRating.toFixed(1)}</span>
+                        <span className="fw-normal text-muted">({ratingSummary.count} {ratingSummary.count === 1 ? "review" : "reviews"})</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {loadingReviews ? (
+                    <div className="text-center py-4 text-muted small">
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Loading reviews...
+                    </div>
+                  ) : eventReviews.length > 0 ? (
+                    <div className="d-flex flex-column gap-3">
+                      {eventReviews.map((rev, rIdx) => {
+                        const reviewerName = rev.userId?.fullName || rev.userName || "Event Guest";
+                        const reviewerPic = rev.userId?.profilePic || null;
+                        const stars = Math.max(1, Math.min(5, Number(rev.rating || 5)));
+                        const reviewDate = rev.createdAt
+                          ? new Date(rev.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                          : "";
+                        return (
+                          <div
+                            key={rev._id || rIdx}
+                            className="p-3 rounded-3 border bg-light-subtle"
+                            style={{ borderColor: "#eef2f6" }}
+                          >
+                            <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+                              <div className="d-flex align-items-center gap-2.5 min-w-0">
+                                <div
+                                  className="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0 overflow-hidden"
+                                  style={{ width: "36px", height: "36px", background: "#4f46e5", fontSize: "13px" }}
+                                >
+                                  {reviewerPic ? (
+                                    <img src={reviewerPic} alt={reviewerName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                  ) : (
+                                    reviewerName.charAt(0).toUpperCase()
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <h6 className="fw-bold text-dark m-0 text-truncate" style={{ fontSize: "14px" }}>
+                                    {reviewerName}
+                                  </h6>
+                                  {reviewDate && (
+                                    <small className="text-muted" style={{ fontSize: "11.5px" }}>{reviewDate}</small>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="d-flex align-items-center gap-1 flex-shrink-0" style={{ fontSize: "13px" }}>
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <i
+                                    key={n}
+                                    className={`fa-solid fa-star ${n <= stars ? "text-warning" : "text-muted opacity-25"}`}
+                                  ></i>
+                                ))}
+                              </div>
+                            </div>
+                            {rev.comment && (
+                              <p className="text-secondary m-0" style={{ fontSize: "13.5px", lineHeight: "1.5" }}>
+                                {rev.comment}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <i className="fa-regular fa-comment-dots text-muted mb-2" style={{ fontSize: "24px" }}></i>
+                      <p className="text-muted small m-0">No reviews yet. Be the first to rate this event!</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Guest List Card */}
               <div className="card border-0 rounded-4 shadow-sm p-4 bg-white mb-4">
