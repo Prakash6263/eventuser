@@ -63,6 +63,15 @@ export default function ReservationDetailsPage() {
       setTimingError("Please select date, start time, and end time.");
       return;
     }
+    if (timingEndTime <= timingStartTime) {
+      setTimingError("End time must be greater than start time.");
+      return;
+    }
+    const todayIso = new Date().toISOString().split("T")[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(timingDate) && timingDate < todayIso) {
+      setTimingError("Event date cannot be in the past.");
+      return;
+    }
     setTimingError("");
     setIsUpdatingTiming(true);
 

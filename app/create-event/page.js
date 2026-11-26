@@ -36,11 +36,10 @@ const locations = [
 ];
 
 
-function getCalendarDays(month) {
-  const currentYear = new Date().getFullYear();
-  const firstDay = new Date(currentYear, month, 1).getDay();
-  const monthLength = new Date(currentYear, month + 1, 0).getDate();
-  const previousMonthLength = new Date(currentYear, month, 0).getDate();
+function getCalendarDays(month, year = new Date().getFullYear()) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const monthLength = new Date(year, month + 1, 0).getDate();
+  const previousMonthLength = new Date(year, month, 0).getDate();
   const days = [];
 
   for (let index = firstDay - 1; index >= 0; index -= 1) {
@@ -62,6 +61,7 @@ export default function CreateEventPage() {
   const [step, setStep] = useState("date");
   const [isEditingFromReview, setIsEditingFromReview] = useState(false);
   const [month, setMonth] = useState(currentDate.getMonth());
+  const [year, setYear] = useState(currentDate.getFullYear());
   const [selectedDate, setSelectedDate] = useState(currentDate.getDate());
   const [eventEndDate, setEventEndDate] = useState(currentDate.getDate());
   const [startTime, setStartTime] = useState("18:00");
@@ -355,7 +355,7 @@ export default function CreateEventPage() {
     }
   };
 
-  const calendarDays = useMemo(() => getCalendarDays(month), [month]);
+  const calendarDays = useMemo(() => getCalendarDays(month, year), [month, year]);
   const activeIndex = steps.findIndex((item) => item.id === step);
   const visibleGuests = contacts.filter((guest) =>
     `${guest.name || ""} ${guest.id || ""} ${guest.email || ""}`.toLowerCase().includes(guestSearch.toLowerCase())
@@ -600,9 +600,8 @@ export default function CreateEventPage() {
 
       const startDay = Number(selectedDate);
       const endDay = Number(eventEndDate ?? selectedDate);
-      const currentYear = new Date().getFullYear();
-      const formattedDate = `${currentYear}-${(month + 1).toString().padStart(2, "0")}-${startDay.toString().padStart(2, "0")}`;
-      const formattedEndDate = `${currentYear}-${(month + 1).toString().padStart(2, "0")}-${endDay.toString().padStart(2, "0")}`;
+      const formattedDate = `${year}-${(month + 1).toString().padStart(2, "0")}-${startDay.toString().padStart(2, "0")}`;
+      const formattedEndDate = `${year}-${(month + 1).toString().padStart(2, "0")}-${endDay.toString().padStart(2, "0")}`;
       formData.append("eventDate", formattedDate);
       formData.append("eventEndDate", formattedEndDate);
       formData.append("eventStartTime", startTime);
@@ -895,6 +894,31 @@ export default function CreateEventPage() {
         showInvalidTime();
         return;
       }
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const pickedDate = new Date(year, month, Number(selectedDate));
+      if (pickedDate < todayMidnight) {
+        setDialog({
+          title: "Invalid date",
+          message: "Please select today or a future date for your event.",
+          confirmLabel: "OK",
+          onConfirm: () => setDialog(null),
+        });
+        return;
+      }
+      if (pickedDate.getTime() === todayMidnight.getTime()) {
+        const [sh, sm] = startTime.split(":").map(Number);
+        const startDateTime = new Date(year, month, Number(selectedDate), sh, sm);
+        if (startDateTime < now) {
+          setDialog({
+            title: "Invalid start time",
+            message: "Start time cannot be in the past for today's event.",
+            confirmLabel: "OK",
+            onConfirm: () => setDialog(null),
+          });
+          return;
+        }
+      }
       setStep("category");
     } else if (step === "category") {
       setStep("place");
@@ -1130,7 +1154,7 @@ export default function CreateEventPage() {
                           <div>
                             <small className="text-muted d-block fw-semibold">Date & Time</small>
                             <strong style={{ fontSize: "14px", color: "#1f2937" }}>
-                              {selectedDate} {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month]} {new Date().getFullYear()}
+                              {selectedDate} {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][month]} {year}
                               {startTime ? `, ${startTime}` : ""} {endTime ? ` - ${endTime}` : ""}
                             </strong>
                           </div>
@@ -1352,6 +1376,8 @@ export default function CreateEventPage() {
                       <DateTimeStep
                         month={month}
                         setMonth={setMonth}
+                        year={year}
+                        setYear={setYear}
                         selectedDate={selectedDate}
                         setSelectedDate={setSelectedDate}
                         eventEndDate={eventEndDate}
@@ -1632,6 +1658,7 @@ export default function CreateEventPage() {
                         registryUrl={registryUrl}
                         restaurants={merchantRestaurants}
                         month={month}
+                        year={year}
                         place={place}
                         selectedLocation={selectedLocation}
                         category={category}
@@ -1932,19 +1959,41 @@ function Field({ label, hint, children }) {
   return <label className={styles.field}><span>{label}</span>{children}<small>{hint}</small></label>;
 }
 
-function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, eventEndDate, setEventEndDate, onDateClick, resetDateRange, calendarDays, startTime, setStartTime, endTime, setEndTime }) {
-  const currentYear = new Date().getFullYear();
+function DateTimeStep({ month, setMonth, year, setYear, selectedDate, setSelectedDate, eventEndDate, setEventEndDate, onDateClick, resetDateRange, calendarDays, startTime, setStartTime, endTime, setEndTime }) {
+  const currentYear = year || new Date().getFullYear();
   const monthName = new Date(currentYear, month, 1).toLocaleString("en-US", { month: "long" });
   const rangeStart = Math.min(selectedDate, eventEndDate ?? selectedDate);
   const rangeEnd = Math.max(selectedDate, eventEndDate ?? selectedDate);
+  const today = new Date();
+  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const isAtCurrentMonth = currentYear <= today.getFullYear() && month <= today.getMonth();
+
+  const handlePrevMonth = () => {
+    if (isAtCurrentMonth) return;
+    if (month === 0) {
+      setMonth(11);
+      setYear(currentYear - 1);
+    } else {
+      setMonth(month - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (month === 11) {
+      setMonth(0);
+      setYear(currentYear + 1);
+    } else {
+      setMonth(month + 1);
+    }
+  };
 
   return (
     <div className={styles.dateLayout}>
       <div className={styles.calendarPanel}>
         <div className={styles.monthControls}>
-          <button onClick={() => setMonth((month + 11) % 12)} aria-label="Previous month"><i className="fa-solid fa-chevron-left"></i></button>
+          <button onClick={handlePrevMonth} disabled={isAtCurrentMonth} style={isAtCurrentMonth ? { opacity: 0.4, cursor: "not-allowed" } : {}} aria-label="Previous month"><i className="fa-solid fa-chevron-left"></i></button>
           <strong>{monthName} {currentYear}</strong>
-          <button onClick={() => setMonth((month + 1) % 12)} aria-label="Next month"><i className="fa-solid fa-chevron-right"></i></button>
+          <button onClick={handleNextMonth} aria-label="Next month"><i className="fa-solid fa-chevron-right"></i></button>
         </div>
         <div className={styles.weekdays}>{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <span key={day}>{day}</span>)}</div>
         <div className={styles.calendarGrid}>{calendarDays.map((day, index) => {
@@ -1952,7 +2001,9 @@ function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, eventEnd
             return <button key={`${day.number}-${index}`} className={styles.outsideDay} disabled>{day.number}</button>;
           }
 
-          const isInRange = day.number >= rangeStart && day.number <= rangeEnd;
+          const cellDate = new Date(currentYear, month, day.number);
+          const isPastDay = cellDate < todayMidnight;
+          const isInRange = !isPastDay && day.number >= rangeStart && day.number <= rangeEnd;
           const isSelectedStart = day.number === selectedDate;
           const isSelectedEnd = day.number === (eventEndDate ?? selectedDate);
           const isRangeStart = isInRange && day.number === rangeStart;
@@ -1961,13 +2012,15 @@ function DateTimeStep({ month, setMonth, selectedDate, setSelectedDate, eventEnd
           return (
             <button
               key={`${day.number}-${index}`}
+              disabled={isPastDay}
+              style={isPastDay ? { opacity: 0.35, cursor: "not-allowed" } : {}}
               className={[
                 isInRange ? styles.dateRangeSelected : "",
                 isRangeStart ? styles.dateRangeStart : "",
                 isRangeEnd ? styles.dateRangeEnd : "",
-                isSelectedStart || isSelectedEnd ? styles.selectedDay : "",
+                !isPastDay && (isSelectedStart || isSelectedEnd) ? styles.selectedDay : "",
               ].filter(Boolean).join(" ")}
-              onClick={() => onDateClick(day.number)}
+              onClick={() => !isPastDay && onDateClick(day.number)}
             >
               {day.number}
             </button>
@@ -2472,12 +2525,12 @@ function NotesStep({ notesList, loading, selectedNotes, setSelectedNotes, custom
   );
 }
 
-function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, setEventImageFile, selectedDate, eventEndDate, startTime, endTime, selectedRestaurant, selectedGuests, contacts, bringGuests, maxGuests, rsvp, rsvpBy, selectedNotes, customNote, registryUrl, restaurants, month, place, selectedLocation, category, eventType, onViewDetail, onEditStep }) {
+function ReviewStep({ eventTitle, invitationMessage, eventImage, setEventImage, setEventImageFile, selectedDate, eventEndDate, startTime, endTime, selectedRestaurant, selectedGuests, contacts, bringGuests, maxGuests, rsvp, rsvpBy, selectedNotes, customNote, registryUrl, restaurants, month, year, place, selectedLocation, category, eventType, onViewDetail, onEditStep }) {
   const restaurant = Array.isArray(restaurants) ? restaurants.find((item) => (item._id || item.id) === selectedRestaurant) : null;
   const invitedGuests = contacts.filter((guest) => selectedGuests.includes(guest.id));
   const allNotes = [...selectedNotes, ...(customNote.trim() ? [customNote.trim()] : [])];
   
-  const currentYear = new Date().getFullYear();
+  const currentYear = year || new Date().getFullYear();
   const monthName = new Date(currentYear, month, 1).toLocaleString("en-US", { month: "long" });
 
   const isRestaurantOption = place === "At a participating restaurant" || 

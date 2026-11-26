@@ -293,7 +293,12 @@ export default function MyReservationsPage() {
 
   const confirmCancel = async () => {
     if (!cancelModal.reason) {
-      alert("Please select a reason for cancellation.");
+      Swal.fire({
+        title: "Reason Required",
+        text: "Please select a reason for cancellation.",
+        icon: "warning",
+        confirmButtonColor: "#3e56f0",
+      });
       return;
     }
     setResSubmitting(true);
@@ -1086,12 +1091,16 @@ export default function MyReservationsPage() {
                                       <button
                                         className="res-btn-secondary"
                                         onClick={() => handleModifyClick(res)}
+                                        disabled={res.status === "Cancelled" || res.status === "Rejected"}
+                                        style={res.status === "Cancelled" || res.status === "Rejected" ? { opacity: 0.5, cursor: "not-allowed" } : {}}
                                       >
                                         <i className="bi bi-pencil-square"></i> Modify
                                       </button>
                                       <button
                                         className="res-btn-secondary"
                                         onClick={() => handleResend(res)}
+                                        disabled={res.status === "Cancelled" || res.status === "Rejected"}
+                                        style={res.status === "Cancelled" || res.status === "Rejected" ? { opacity: 0.5, cursor: "not-allowed" } : {}}
                                       >
                                         <i className="bi bi-send"></i> Resend
                                       </button>

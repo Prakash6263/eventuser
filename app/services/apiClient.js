@@ -24,6 +24,7 @@ export const clearUserScopedData = () => {
     localStorage.removeItem("eventuna-latest-reservation");
     localStorage.removeItem("event-details-back-url");
     localStorage.removeItem("event-details-back-label");
+    localStorage.removeItem("ratedEventIds");
   }
 };
 

@@ -328,11 +328,18 @@ function EventDetailsContent() {
       }
 
       try {
-        const rawUser = window.localStorage.getItem("user") || window.localStorage.getItem("eventuna_user");
-        const parsedUser = rawUser ? JSON.parse(rawUser) : null;
-        const myId = parsedUser?._id || parsedUser?.id;
-        if (myId && list.some((r) => String(r.userId?._id || r.userId) === String(myId))) {
+        const ratedIds = JSON.parse(window.localStorage.getItem("ratedEventIds") || "[]");
+        if (ratedIds.includes(String(targetEventId))) {
           setHasRated(true);
+        }
+        const rawUser = window.localStorage.getItem("user_info") || window.localStorage.getItem("user") || window.localStorage.getItem("eventuna_user");
+        const parsedUser = rawUser ? JSON.parse(rawUser) : null;
+        const myId = parsedUser?.userId || parsedUser?._id || parsedUser?.id;
+        if (myId && list.some((r) => String(r.userId?._id || r.userId || "") === String(myId))) {
+          setHasRated(true);
+          if (!ratedIds.includes(String(targetEventId))) {
+            window.localStorage.setItem("ratedEventIds", JSON.stringify([...ratedIds, String(targetEventId)]));
+          }
         }
       } catch (e) {}
     } finally {
@@ -361,6 +368,12 @@ function EventDetailsContent() {
       });
       if (res && res.status) {
         setHasRated(true);
+        try {
+          const ratedIds = JSON.parse(window.localStorage.getItem("ratedEventIds") || "[]");
+          if (!ratedIds.includes(String(event.eventId))) {
+            window.localStorage.setItem("ratedEventIds", JSON.stringify([...ratedIds, String(event.eventId)]));
+          }
+        } catch (e) {}
         setShowRatingModal(false);
         setRatingComment("");
         fetchEventReviews(event.eventId);
@@ -456,6 +469,10 @@ function EventDetailsContent() {
     e.preventDefault();
     if (!editTitle.trim()) {
       Swal.fire({ icon: "warning", title: "Event title is required", timer: 2000, showConfirmButton: false });
+      return;
+    }
+    if (editStartTime && editEndTime && editEndTime <= editStartTime) {
+      Swal.fire({ icon: "warning", title: "Invalid Time", text: "End time must be greater than start time." });
       return;
     }
 
@@ -2311,14 +2328,16 @@ function EventDetailsContent() {
                         </button>
                       )}
 
-                      <button 
-                        type="button" 
-                        className="btn btn-light border rounded-3 w-100 fw-semibold d-flex align-items-center justify-content-center gap-2"
-                        style={{ background: "#f8fafc", borderColor: "#e2e8f0", color: "#1e293b", height: "38px", fontSize: "13px" }}
-                        onClick={handleOpenEditModal}
-                      >
-                        <i className="fa-solid fa-pen-to-square text-primary"></i> Edit Event
-                      </button>
+                      {!["completed", "expired", "rejected", "canceled", "cancelled"].includes((event.eventStatus || event.status || "").toLowerCase()) && (
+                        <button 
+                          type="button" 
+                          className="btn btn-light border rounded-3 w-100 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                          style={{ background: "#f8fafc", borderColor: "#e2e8f0", color: "#1e293b", height: "38px", fontSize: "13px" }}
+                          onClick={handleOpenEditModal}
+                        >
+                          <i className="fa-solid fa-pen-to-square text-primary"></i> Edit Event
+                        </button>
+                      )}
 
                       <div className="d-flex gap-2 pt-1">
                         {!["draft", "completed", "expired", "rejected", "canceled", "cancelled"].includes((event.status || "").toLowerCase()) && (
