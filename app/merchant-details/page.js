@@ -359,30 +359,29 @@ function MerchantDetailsContent() {
 
   // Shared stepper component render
   const StepBar = () => (
-    <div className="d-flex align-items-center justify-content-center gap-0 mb-5">
+    <div className="d-flex align-items-center justify-content-center" style={{ gap: "0" }}>
       {[1, 2, 3].map((s) => (
         <div key={s} className="d-flex align-items-center">
-          <div className="d-flex flex-column align-items-center">
+          <div className="d-flex align-items-center" style={{ gap: "8px" }}>
             <div
               style={{
-                width: "42px", height: "42px", borderRadius: "50%",
-                background: bookingStep >= s ? "linear-gradient(135deg,#3e56f0,#2563eb)" : "#f1f5f9",
-                border: bookingStep >= s ? "2.5px solid #3e56f0" : "2px solid #e2e8f0",
+                width: "30px", height: "30px", borderRadius: "50%",
+                background: bookingStep >= s ? "#3e56f0" : "#f1f5f9",
+                border: bookingStep >= s ? "2px solid #3e56f0" : "1.5px solid #cbd5e1",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                color: bookingStep >= s ? "#fff" : "#94a3b8",
-                fontWeight: 700, fontSize: "15px",
-                boxShadow: bookingStep >= s ? "0 4px 14px rgba(62,86,240,0.35)" : "none",
-                transition: "all 0.3s ease",
+                color: bookingStep >= s ? "#fff" : "#64748b",
+                fontWeight: 700, fontSize: "12.5px",
+                transition: "all 0.25s ease",
               }}
             >
-              {bookingStep > s ? <i className="fa-solid fa-check" style={{ fontSize: "13px" }}></i> : s}
+              {bookingStep > s ? <i className="fa-solid fa-check" style={{ fontSize: "11px" }}></i> : s}
             </div>
-            <span style={{ fontSize: "10px", fontWeight: 600, color: bookingStep >= s ? "#3e56f0" : "#94a3b8", marginTop: "5px", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: "13px", fontWeight: bookingStep === s ? 700 : 600, color: bookingStep >= s ? "#0f172a" : "#94a3b8", whiteSpace: "nowrap" }}>
               {stepLabels[s - 1]}
             </span>
           </div>
           {s < 3 && (
-            <div style={{ width: "60px", height: "3px", margin: "0 4px", marginBottom: "16px", background: bookingStep > s ? "linear-gradient(90deg,#3e56f0,#2563eb)" : "#e2e8f0", borderRadius: "2px", transition: "background 0.3s" }}></div>
+            <div style={{ width: "44px", height: "2px", margin: "0 12px", background: bookingStep > s ? "#3e56f0" : "#e2e8f0", borderRadius: "2px" }}></div>
           )}
         </div>
       ))}
@@ -393,71 +392,92 @@ function MerchantDetailsContent() {
   //  BOOKING OVERLAY – Step 1: Select Items
   // ─────────────────────────────────────────────────────────────────
   if (bookingStep === 1) {
+    const productsList = merchant.products || [];
+    const mIdForChat = merchant.merchant?._id || merchant.merchant?.id || merchant.merchantId?._id || merchant.merchantId || merchant._id || merchant.id || "";
     return (
       <>
         <Header />
-        <div style={{ background: "#f0f4ff", flexGrow: 1, paddingBottom: "60px" }}>
-          {/* Gradient hero top */}
-          <div style={{ background: "linear-gradient(135deg,#3e56f0 0%,#2563eb 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
-            <div className="container" style={{ maxWidth: "680px" }}>
-              <div className="d-flex align-items-center gap-3 mb-2">
-                <button
-                  onClick={() => setBookingStep(0)}
-                  style={{ width: "40px", height: "40px", borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                >
-                  <i className="fa-solid fa-arrow-left"></i>
-                </button>
-                <div>
-                  <h4 className="fw-bold text-white m-0" style={{ letterSpacing: "-0.3px" }}>Select Items</h4>
-                  <span style={{ color: "rgba(255,255,255,0.72)", fontSize: "13px" }}>Add products to your order</span>
+        <div style={{ background: "#f8fafc", flexGrow: 1, paddingTop: "86px", paddingBottom: "64px", minHeight: "calc(100vh - 80px)" }}>
+          <div className="container" style={{ maxWidth: "820px" }}>
+            {/* Clean Unified Header + Stepper Card */}
+            <div className="bg-white rounded-4 border shadow-xs p-4 mb-4" style={{ borderColor: "#e2e8f0" }}>
+              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setBookingStep(0)}
+                    className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center"
+                    style={{ width: "38px", height: "38px", borderColor: "#e2e8f0", color: "#334155" }}
+                    aria-label="Back"
+                  >
+                    <i className="fa-solid fa-arrow-left" style={{ fontSize: "14px" }}></i>
+                  </button>
+                  <div>
+                    <h4 className="fw-bold text-dark m-0" style={{ fontSize: "19px", letterSpacing: "-0.3px" }}>Select Service Packages</h4>
+                    <span className="text-muted" style={{ fontSize: "13px" }}>Choose items from {cleanText(merchant.serviceName, "Merchant")}</span>
+                  </div>
                 </div>
+                <span className="badge rounded-pill px-3 py-2 fw-semibold" style={{ background: "#eef2ff", color: "#3e56f0", fontSize: "12px" }}>
+                  Step 1 of 3
+                </span>
               </div>
-            </div>
-          </div>
 
-          <div className="container" style={{ maxWidth: "680px" }}>
-            {/* Step bar on white card */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(62,86,240,0.10)" }}>
-              <StepBar />
+              <div className="py-2 mb-3 overflow-x-auto">
+                <StepBar />
+              </div>
+
               {/* Merchant info strip */}
-              <div className="d-flex align-items-center gap-3 p-3 rounded-3" style={{ background: "#eff6ff", border: "1.5px solid #dbeafe" }}>
-                <div style={{ width: "44px", height: "44px", borderRadius: "12px", background: "linear-gradient(135deg,#3e56f0,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <i className="fa-solid fa-store text-white" style={{ fontSize: "16px" }}></i>
+              <div className="d-flex align-items-center justify-content-between gap-3 p-3 rounded-3" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                <div className="d-flex align-items-center gap-3 overflow-hidden">
+                  <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#eef2ff", color: "#3e56f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <i className="fa-solid fa-store" style={{ fontSize: "16px" }}></i>
+                  </div>
+                  <div className="overflow-hidden">
+                    <div className="fw-bold text-dark text-truncate" style={{ fontSize: "14.5px" }}>{cleanText(merchant.serviceName, "Merchant Partner")}</div>
+                    <div className="text-muted text-truncate" style={{ fontSize: "12px" }}>{cleanText(merchant.cuisineName, serviceLabel)}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="fw-bold text-dark" style={{ fontSize: "14px" }}>{merchant.serviceName}</div>
-                  <div className="text-muted" style={{ fontSize: "12px" }}>{merchant.cuisineName || "Service Provider"}</div>
-                </div>
-                <span className="ms-auto badge rounded-pill px-3 py-2" style={{ background: "#e0e7ff", color: "#3e56f0", fontWeight: 700, fontSize: "11px" }}>
-                  {(merchant.products || []).length} Products
+                <span className="badge rounded-pill px-3 py-2 flex-shrink-0" style={{ background: "#eef2ff", color: "#3e56f0", fontWeight: 700, fontSize: "11.5px" }}>
+                  {productsList.length} {productsList.length === 1 ? "Package" : "Packages"}
                 </span>
               </div>
             </div>
 
             {/* Products list */}
             <div className="d-flex flex-column gap-3 mb-4">
-              {(!merchant.products || merchant.products.length === 0) && (
-                <div className="p-4 text-center bg-white rounded-4 border shadow-sm my-3">
-                  <div className="rounded-circle bg-light d-inline-flex align-items-center justify-content-center text-primary mb-3" style={{ width: "64px", height: "64px", fontSize: "28px" }}>
-                    <i className="fa-solid fa-utensils"></i>
+              {productsList.length === 0 && (
+                <div className="p-5 text-center bg-white rounded-4 border shadow-xs">
+                  <div className="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{ width: "64px", height: "64px", fontSize: "26px", background: "#eef2ff", color: "#3e56f0" }}>
+                    <i className="fa-solid fa-box-open"></i>
                   </div>
                   <h5 className="fw-bold text-dark mb-2">No Service Packages Listed</h5>
-                  <p className="text-muted small mb-4" style={{ maxWidth: "420px", margin: "0 auto" }}>
-                    This merchant does not offer individual catering or decor products for online ordering. For table reservations, please use the Table Reservation flow.
+                  <p className="text-muted small mb-4" style={{ maxWidth: "440px", margin: "0 auto", lineHeight: 1.6 }}>
+                    This provider has not listed fixed packages for online ordering yet. You can message them directly to discuss custom requirements and pricing.
                   </p>
-                  {eventId && (
+                  <div className="d-flex flex-wrap justify-content-center gap-2">
                     <button
                       type="button"
-                      onClick={() => router.push('/event-details?id=' + eventId)}
-                      className="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm"
-                      style={{ background: "linear-gradient(135deg,#3e56f0,#2563eb)", border: "none" }}
+                      onClick={() => {
+                        const mName = encodeURIComponent(merchant.serviceName || merchant.fullName || "Merchant");
+                        router.push(`/merchant-chat?${eventId ? `eventId=${eventId}&` : ""}merchantId=${mIdForChat}&merchantName=${mName}`);
+                      }}
+                      className="btn btn-primary rounded-pill px-4 py-2 fw-semibold shadow-xs d-inline-flex align-items-center gap-2"
+                      style={{ background: "#3e56f0", border: "none", fontSize: "13.5px" }}
                     >
-                      <i className="fa-regular fa-calendar-check me-2"></i> Go to Table Reservation
+                      <i className="fa-regular fa-comment-dots"></i> Contact Merchant
                     </button>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep(0)}
+                      className="btn btn-light border rounded-pill px-4 py-2 fw-semibold text-dark d-inline-flex align-items-center gap-2"
+                      style={{ borderColor: "#cbd5e1", fontSize: "13.5px" }}
+                    >
+                      <i className="fa-solid fa-arrow-left"></i> Back to Details
+                    </button>
+                  </div>
                 </div>
               )}
-              {(merchant.products || []).map(prod => {
+              {productsList.map(prod => {
                 const qty = quantities[prod._id] || 0;
                 const isSelected = qty > 0;
                 return (
@@ -520,23 +540,25 @@ function MerchantDetailsContent() {
               })}
             </div>
 
-            {/* Sticky footer */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "18px 24px", boxShadow: "0 -4px 30px rgba(62,86,240,0.12)", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1.5px solid #dbeafe" }}>
-              <div>
-                <div className="text-muted" style={{ fontSize: "12px", fontWeight: 600 }}>ORDER TOTAL</div>
-                <div style={{ fontWeight: 800, fontSize: "22px", color: selectedProducts.length > 0 ? "#3e56f0" : "#94a3b8" }}>
-                  {selectedProducts.length > 0 ? `SAR ${subtotal.toFixed(2)}` : "SAR 0.00"}
+            {/* Sticky footer (only shown when products exist) */}
+            {productsList.length > 0 && (
+              <div style={{ background: "#fff", borderRadius: "20px", padding: "18px 24px", boxShadow: "0 -4px 30px rgba(62,86,240,0.12)", display: "flex", alignItems: "center", justifyContent: "space-between", border: "1.5px solid #dbeafe" }}>
+                <div>
+                  <div className="text-muted" style={{ fontSize: "12px", fontWeight: 600 }}>ORDER TOTAL</div>
+                  <div style={{ fontWeight: 800, fontSize: "22px", color: selectedProducts.length > 0 ? "#3e56f0" : "#94a3b8" }}>
+                    {selectedProducts.length > 0 ? `SAR ${subtotal.toFixed(2)}` : "SAR 0.00"}
+                  </div>
+                  <div className="text-muted" style={{ fontSize: "11px" }}>{selectedProducts.length} item{selectedProducts.length !== 1 ? "s" : ""} selected</div>
                 </div>
-                <div className="text-muted" style={{ fontSize: "11px" }}>{selectedProducts.length} item{selectedProducts.length !== 1 ? "s" : ""} selected</div>
+                <button
+                  type="button"
+                  onClick={handleAddToOrder}
+                  style={{ background: selectedProducts.length > 0 ? "linear-gradient(135deg,#3e56f0,#2563eb)" : "#e2e8f0", color: selectedProducts.length > 0 ? "#fff" : "#94a3b8", border: "none", borderRadius: "50px", padding: "14px 28px", fontWeight: 700, fontSize: "14px", cursor: selectedProducts.length > 0 ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: "8px", boxShadow: selectedProducts.length > 0 ? "0 6px 20px rgba(62,86,240,0.35)" : "none", transition: "all 0.2s" }}
+                >
+                  ADD TO ORDER <i className="fa-solid fa-arrow-right"></i>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleAddToOrder}
-                style={{ background: selectedProducts.length > 0 ? "linear-gradient(135deg,#3e56f0,#2563eb)" : "#e2e8f0", color: selectedProducts.length > 0 ? "#fff" : "#94a3b8", border: "none", borderRadius: "50px", padding: "14px 28px", fontWeight: 700, fontSize: "14px", cursor: selectedProducts.length > 0 ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: "8px", boxShadow: selectedProducts.length > 0 ? "0 6px 20px rgba(62,86,240,0.35)" : "none", transition: "all 0.2s" }}
-              >
-                ADD TO ORDER <i className="fa-solid fa-arrow-right"></i>
-              </button>
-            </div>
+            )}
           </div>
         </div>
         <Footer />
@@ -551,29 +573,32 @@ function MerchantDetailsContent() {
     return (
       <>
         <Header />
-        <div style={{ background: "#f0f4ff", flexGrow: 1, paddingBottom: "60px" }}>
-          {/* Gradient hero top */}
-          <div style={{ background: "linear-gradient(135deg,#3e56f0 0%,#2563eb 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
-            <div className="container" style={{ maxWidth: "680px" }}>
-              <div className="d-flex align-items-center gap-3">
-                <button
-                  onClick={() => setBookingStep(1)}
-                  style={{ width: "40px", height: "40px", borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                >
-                  <i className="fa-solid fa-arrow-left"></i>
-                </button>
-                <div>
-                  <h4 className="fw-bold text-white m-0">Review Order</h4>
-                  <span style={{ color: "rgba(255,255,255,0.72)", fontSize: "13px" }}>Confirm your selected items</span>
+        <div style={{ background: "#f8fafc", flexGrow: 1, paddingTop: "86px", paddingBottom: "64px", minHeight: "calc(100vh - 80px)" }}>
+          <div className="container" style={{ maxWidth: "820px" }}>
+            <div className="bg-white rounded-4 border shadow-xs p-4 mb-4" style={{ borderColor: "#e2e8f0" }}>
+              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom">
+                <div className="d-flex align-items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setBookingStep(1)}
+                    className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center"
+                    style={{ width: "38px", height: "38px", borderColor: "#e2e8f0", color: "#334155" }}
+                    aria-label="Back"
+                  >
+                    <i className="fa-solid fa-arrow-left" style={{ fontSize: "14px" }}></i>
+                  </button>
+                  <div>
+                    <h4 className="fw-bold text-dark m-0" style={{ fontSize: "19px", letterSpacing: "-0.3px" }}>Review Order</h4>
+                    <span className="text-muted" style={{ fontSize: "13px" }}>Confirm your selected items</span>
+                  </div>
                 </div>
+                <span className="badge rounded-pill px-3 py-2 fw-semibold" style={{ background: "#eef2ff", color: "#3e56f0", fontSize: "12px" }}>
+                  Step 2 of 3
+                </span>
               </div>
-            </div>
-          </div>
-
-          <div className="container" style={{ maxWidth: "680px" }}>
-            {/* Step bar */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(62,86,240,0.10)" }}>
-              <StepBar />
+              <div className="py-2 overflow-x-auto">
+                <StepBar />
+              </div>
             </div>
 
             {/* Cart Items */}
@@ -648,41 +673,44 @@ function MerchantDetailsContent() {
     return (
       <>
         <Header />
-        <div style={{ background: "#f0f4ff", flexGrow: 1, paddingBottom: "60px" }}>
-          {/* Gradient hero top */}
-          <div style={{ background: "linear-gradient(135deg,#3e56f0 0%,#2563eb 100%)", padding: "96px 0 64px", marginBottom: "-40px" }}>
-            <div className="container" style={{ maxWidth: "680px" }}>
-              <div className="d-flex align-items-center gap-3">
-                <button
-                  onClick={() => setBookingStep(2)}
-                  style={{ width: "40px", height: "40px", borderRadius: "50%", border: "none", background: "rgba(255,255,255,0.18)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                >
-                  <i className="fa-solid fa-arrow-left"></i>
-                </button>
-                <div>
-                  <h4 className="fw-bold text-white m-0">Payment Summary</h4>
-                  <span style={{ color: "rgba(255,255,255,0.72)", fontSize: "13px" }}>Review and confirm your booking</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="container" style={{ maxWidth: "680px" }}>
-            {/* Step bar */}
-            <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", marginBottom: "20px", boxShadow: "0 8px 32px rgba(62,86,240,0.10)" }}>
-              <StepBar />
-              {/* Booking info strip */}
-              <div className="d-flex align-items-center justify-content-between p-3 rounded-3" style={{ background: "#eff6ff", border: "1.5px solid #dbeafe" }}>
+        <div style={{ background: "#f8fafc", flexGrow: 1, paddingTop: "86px", paddingBottom: "64px", minHeight: "calc(100vh - 80px)" }}>
+          <div className="container" style={{ maxWidth: "820px" }}>
+            <div className="bg-white rounded-4 border shadow-xs p-4 mb-4" style={{ borderColor: "#e2e8f0" }}>
+              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom">
                 <div className="d-flex align-items-center gap-3">
-                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "linear-gradient(135deg,#3e56f0,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <i className="fa-solid fa-store text-white" style={{ fontSize: "14px" }}></i>
+                  <button
+                    type="button"
+                    onClick={() => setBookingStep(2)}
+                    className="btn btn-light border rounded-circle d-flex align-items-center justify-content-center"
+                    style={{ width: "38px", height: "38px", borderColor: "#e2e8f0", color: "#334155" }}
+                    aria-label="Back"
+                  >
+                    <i className="fa-solid fa-arrow-left" style={{ fontSize: "14px" }}></i>
+                  </button>
+                  <div>
+                    <h4 className="fw-bold text-dark m-0" style={{ fontSize: "19px", letterSpacing: "-0.3px" }}>Payment Summary</h4>
+                    <span className="text-muted" style={{ fontSize: "13px" }}>Review and confirm your booking</span>
+                  </div>
+                </div>
+                <span className="badge rounded-pill px-3 py-2 fw-semibold" style={{ background: "#eef2ff", color: "#3e56f0", fontSize: "12px" }}>
+                  Step 3 of 3
+                </span>
+              </div>
+              <div className="py-2 mb-3 overflow-x-auto">
+                <StepBar />
+              </div>
+              {/* Booking info strip */}
+              <div className="d-flex align-items-center justify-content-between p-3 rounded-3" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                <div className="d-flex align-items-center gap-3">
+                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: "#eef2ff", color: "#3e56f0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <i className="fa-solid fa-store" style={{ fontSize: "14px" }}></i>
                   </div>
                   <div>
-                    <div className="fw-bold text-dark" style={{ fontSize: "14px" }}>{merchant.serviceName}</div>
-                    <div className="text-muted" style={{ fontSize: "11px" }}>Service Booking Request</div>
+                    <div className="fw-bold text-dark" style={{ fontSize: "14px" }}>{cleanText(merchant.serviceName, "Merchant Partner")}</div>
+                    <div className="text-muted" style={{ fontSize: "11.5px" }}>Service Booking Request</div>
                   </div>
                 </div>
-                <span style={{ background: "#fef3c7", color: "#d97706", borderRadius: "20px", padding: "5px 14px", fontSize: "12px", fontWeight: 700 }}>⏳ Pending</span>
+                <span style={{ background: "#fef3c7", color: "#b45309", borderRadius: "20px", padding: "5px 14px", fontSize: "12px", fontWeight: 700 }}>Pending Approval</span>
               </div>
             </div>
 
