@@ -51,7 +51,18 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
   const [toastMessage, setToastMessage] = useState(null);
 
   const currentUser = getUser();
+  const currentUserId = String(currentUser?.userId || currentUser?._id || currentUser?.id || "");
   const eventId = activeGalleryEvent?.id || activeGalleryEvent?._id;
+  const rawCreator =
+    activeGalleryEvent?.rawEvent?.eventcreator?._id ||
+    activeGalleryEvent?.rawEvent?.eventcreator ||
+    activeGalleryEvent?.rawEvent?.userId?._id ||
+    activeGalleryEvent?.rawEvent?.userId ||
+    activeGalleryEvent?.userId?._id ||
+    activeGalleryEvent?.userId ||
+    "";
+  const eventCreatorId = rawCreator ? String(rawCreator) : "";
+  const isEventCreator = Boolean(currentUserId && eventCreatorId && currentUserId === eventCreatorId);
 
   const showToast = (msg, type = "success") => {
     setToastMessage({ msg, type });
@@ -108,7 +119,9 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
     const isLiked =
       !!m.isLiked ||
       !!m.isLikedByUser ||
-      (Array.isArray(m.likes) && currentUser && m.likes.includes(currentUser.userId));
+      (Array.isArray(m.likes) &&
+        currentUserId &&
+        m.likes.some((l) => String(l?._id || l) === currentUserId));
 
     return {
       id: rawId,
@@ -508,10 +521,10 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
       tabIndex="-1"
       style={{ backgroundColor: "rgba(15, 23, 42, 0.75)", backdropFilter: "blur(6px)", zIndex: 1060 }}
     >
-      <div className="modal-dialog modal-dialog-centered modal-xl">
+      <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
         <div
           className="modal-content border-0 shadow-lg overflow-hidden"
-          style={{ borderRadius: "20px", backgroundColor: "#ffffff" }}
+          style={{ borderRadius: "20px", backgroundColor: "#ffffff", maxHeight: "92vh" }}
         >
           {/* Toast Notification */}
           {toastMessage && (
@@ -563,7 +576,7 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                     }
                     setUploadError("");
                   }}
-                  className="btn btn-primary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-2 shadow-sm"
+                  className="btn btn-primary rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-2 shadow-sm"
                   style={{ fontSize: "13px" }}
                 >
                   <i className="bi bi-camera-video-fill fs-6"></i>
@@ -603,7 +616,7 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                         setUploadMode("file");
                       }}
                     >
-                      <i className="bi bi-folder2-open me-1.5"></i> Choose File
+                      <i className="bi bi-folder2-open me-1"></i> Choose File
                     </button>
                     <button
                       type="button"
@@ -616,7 +629,7 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                         startCamera("photo");
                       }}
                     >
-                      <i className="bi bi-camera-fill me-1.5"></i> Open Live Camera
+                      <i className="bi bi-camera-fill me-1"></i> Open Live Camera
                     </button>
                   </div>
                   <small className="text-muted">Supported: JPG, PNG, MP4, WEBM</small>
@@ -675,7 +688,7 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                   {uploadMode === "camera" && (
                     <div className="mb-3">
                       {/* Camera Controls Bar */}
-                      <div className="d-flex align-items-center justify-content-between mb-3 bg-light p-2.5 rounded-3 border">
+                      <div className="d-flex align-items-center justify-content-between mb-3 bg-light p-2 rounded-3 border">
                         <div className="d-flex align-items-center gap-2">
                           <span className="fw-semibold text-dark small me-2">Capture Mode:</span>
                           <button
@@ -886,11 +899,12 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
               <div>
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline-secondary rounded-pill mb-3 fw-semibold px-3 d-inline-flex align-items-center gap-1.5"
+                  className="btn btn-sm btn-outline-secondary rounded-pill mb-3 fw-semibold px-3 d-inline-flex align-items-center"
                   onClick={() => setSelectedPhoto(null)}
-                  style={{ fontSize: "12.5px" }}
+                  style={{ fontSize: "12.5px", gap: "6px" }}
                 >
-                  <i className="bi bi-arrow-left"></i> Back to Gallery Grid
+                  <i className="bi bi-arrow-left"></i>
+                  <span>Back to Gallery Grid</span>
                 </button>
 
                 <div className="row g-4">
@@ -925,34 +939,36 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                         <button
                           type="button"
                           onClick={(e) => handleLikeMedia(selectedPhoto, e)}
-                          className={`btn btn-sm rounded-pill px-3 py-1.5 d-flex align-items-center gap-1.5 fw-semibold transition-all ${
+                          className={`btn btn-sm rounded-pill px-3 py-1 d-flex align-items-center fw-semibold transition-all ${
                             selectedPhoto.isLiked
                               ? "btn-danger text-white shadow-sm"
                               : "btn-outline-danger"
                           }`}
-                          style={{ fontSize: "13px" }}
+                          style={{ fontSize: "13px", gap: "6px" }}
                         >
                           <i className={`bi bi-heart${selectedPhoto.isLiked ? "-fill" : ""}`}></i>
                           <span>{selectedPhoto.likesCount} Likes</span>
                         </button>
 
                         {/* Comments Count Badge */}
-                        <span className="text-secondary small fw-medium d-flex align-items-center gap-1">
+                        <span className="text-secondary small fw-medium d-flex align-items-center" style={{ gap: "6px" }}>
                           <i className="bi bi-chat-left-text text-primary"></i>
-                          {selectedPhoto.commentsCount} Comments
+                          <span>{selectedPhoto.commentsCount} Comments</span>
                         </span>
                       </div>
 
-                      {/* Delete Media Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteMedia(selectedPhoto.id, e)}
-                        className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
-                        style={{ width: "36px", height: "36px" }}
-                        title="Delete Media"
-                      >
-                        <i className="bi bi-trash text-danger"></i>
-                      </button>
+                      {/* Delete Media Button (only uploader or event creator) */}
+                      {(isEventCreator || (currentUserId && String(selectedPhoto.raw?.uploadedBy?._id || selectedPhoto.raw?.uploadedBy || "") === currentUserId)) && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteMedia(selectedPhoto.id, e)}
+                          className="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center"
+                          style={{ width: "36px", height: "36px" }}
+                          title="Delete Media"
+                        >
+                          <i className="bi bi-trash text-danger"></i>
+                        </button>
+                      )}
                     </div>
 
                     {selectedPhoto.caption && (
@@ -966,8 +982,8 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                   {/* Right Column: Comments Section */}
                   <div className="col-lg-5">
                     <div
-                      className="card border-0 shadow-sm rounded-4 d-flex flex-column h-100 bg-white"
-                      style={{ border: "1px solid #e2e8f0", minHeight: "450px", maxHeight: "550px" }}
+                      className="card border-0 shadow-sm rounded-4 d-flex flex-column bg-white"
+                      style={{ border: "1px solid #e2e8f0", minHeight: "380px", maxHeight: "480px" }}
                     >
                       {/* Comments Header */}
                       <div className="p-3 border-bottom d-flex align-items-center justify-content-between">
@@ -996,15 +1012,19 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                             <p className="small mb-0">No comments yet. Be the first to comment!</p>
                           </div>
                         ) : (
-                          <div className="d-flex flex-column gap-2.5">
+                          <div className="d-flex flex-column" style={{ gap: "10px" }}>
                             {comments.map((c, i) => {
                               const commentId = c._id || c.id;
+                              const commentOwnerId = String(c.userId?._id || c.userId || c.user?._id || c.user || "");
+                              const canDeleteComment = isEventCreator || (currentUserId && commentOwnerId && commentOwnerId === currentUserId);
                               const authorName =
                                 c.userName ||
                                 c.user?.fullName ||
                                 c.userId?.fullName ||
                                 c.fullName ||
-                                "User";
+                                c.userId?.email?.split("@")[0] ||
+                                c.userId?.mobile ||
+                                "Event Guest";
                               const text = c.comment || c.text || "";
                               const commentLikes = c.likesCount || 0;
                               const isCommentLiked = !!c.isLiked;
@@ -1031,16 +1051,18 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                                         {commentLikes > 0 && <span className="ms-1">{commentLikes}</span>}
                                       </button>
 
-                                      {/* Delete Comment Button */}
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteComment(commentId)}
-                                        className="btn btn-link p-0 text-muted hover-text-danger border-0"
-                                        style={{ fontSize: "11px" }}
-                                        title="Delete comment"
-                                      >
-                                        <i className="bi bi-x-circle text-secondary"></i>
-                                      </button>
+                                      {/* Delete Comment Button (only comment author or event creator) */}
+                                      {canDeleteComment && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteComment(commentId)}
+                                          className="btn btn-link p-0 text-muted hover-text-danger border-0"
+                                          style={{ fontSize: "11px" }}
+                                          title="Delete comment"
+                                        >
+                                          <i className="bi bi-x-circle text-secondary"></i>
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                   <p className="text-secondary small mb-0 text-break" style={{ fontSize: "13px" }}>
@@ -1061,13 +1083,13 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                             value={newCommentText}
                             onChange={(e) => setNewCommentText(e.target.value)}
                             placeholder="Write a comment..."
-                            className="form-control rounded-pill-start border-light-subtle px-3"
+                            className="form-control rounded-start-pill border-light-subtle px-3"
                             style={{ fontSize: "13px", height: "42px" }}
                           />
                           <button
                             type="submit"
                             disabled={postingComment || !newCommentText.trim()}
-                            className="btn btn-primary rounded-pill-end px-3 d-flex align-items-center justify-content-center"
+                            className="btn btn-primary rounded-end-pill px-3 d-flex align-items-center justify-content-center"
                             style={{ height: "42px" }}
                           >
                             {postingComment ? (
@@ -1184,16 +1206,18 @@ export default function EventMediaModal({ activeGalleryEvent, onClose }) {
                           </span>
                         </div>
 
-                        {/* Delete Button */}
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteMedia(photo.id, e)}
-                          className="btn btn-link p-0 text-muted hover-text-danger border-0"
-                          title="Delete Media"
-                          style={{ fontSize: "13px" }}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
+                        {/* Delete Button (only uploader or event creator) */}
+                        {(isEventCreator || (currentUserId && String(photo.raw?.uploadedBy?._id || photo.raw?.uploadedBy || "") === currentUserId)) && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteMedia(photo.id, e)}
+                            className="btn btn-link p-0 text-muted hover-text-danger border-0"
+                            title="Delete Media"
+                            style={{ fontSize: "13px" }}
+                          >
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
