@@ -264,7 +264,7 @@ function ChatContent() {
     <>
       <Header />
       <div className="wrapper flex-grow-1" style={{ background: "#f8f9fa", flex: "1 0 auto" }}>
-        <div className="event-dt-block p-80" style={{ paddingTop: "90px", paddingBottom: "70px" }}>
+        <div className="event-dt-block p-80" style={{ paddingTop: "80px", paddingBottom: "30px" }}>
           <div className="container">
             <div className="row">
 
@@ -293,7 +293,7 @@ function ChatContent() {
                       />
                     </div>
                     <h5 className="fw-bold mb-1">{profile?.fullName || "User Profile"}</h5>
-                    <span className="badge bg-success-subtle text-success rounded-pill px-2.5 py-1 small fw-semibold">
+                    <span className="badge bg-success-subtle text-success rounded-pill px-2 py-1 small fw-semibold">
                       <i className="bi bi-check-circle-fill me-1"></i> Verified User
                     </span>
                   </div>
@@ -342,7 +342,7 @@ function ChatContent() {
                   >
                     <div
                       className="chat-window d-flex flex-column"
-                      style={{ height: "650px", background: "#fcfcfd" }}
+                      style={{ height: "min(560px, calc(100vh - 150px))", minHeight: "420px", background: "#fcfcfd" }}
                     >
 
                       {/* Chat Header */}
@@ -351,8 +351,8 @@ function ChatContent() {
                           <button
                             type="button"
                             onClick={() => router.back()}
-                            className="btn btn-sm btn-white border rounded-pill px-3 py-1.5 fw-medium d-inline-flex align-items-center gap-1.5 shadow-xs text-secondary hover-shadow transition"
-                            style={{ fontSize: "13px", background: "#ffffff", borderColor: "#e2e8f0" }}
+                            className="btn btn-sm btn-white border rounded-pill px-3 py-1 fw-medium d-inline-flex align-items-center shadow-xs text-secondary hover-shadow transition"
+                            style={{ fontSize: "13px", background: "#ffffff", borderColor: "#e2e8f0", gap: "6px" }}
                           >
                             <i className="bi bi-arrow-left text-primary fw-bold" style={{ fontSize: "14px" }}></i>
                             <span>Back</span>
@@ -403,7 +403,7 @@ function ChatContent() {
                           <button
                             type="button"
                             onClick={() => setShowMembersModal(true)}
-                            className="btn btn-sm btn-white border rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-2 shadow-xs transition btn-neutral-hover"
+                            className="btn btn-sm btn-white border rounded-pill px-3 py-1 d-inline-flex align-items-center gap-2 shadow-xs transition btn-neutral-hover"
                             style={{
                               background: "#f8fafc",
                               borderColor: "#e2e8f0",
@@ -435,7 +435,7 @@ function ChatContent() {
                             </div>
                             <span className="fw-semibold text-dark">Members</span>
                             <span
-                              className="badge bg-white text-dark border px-1.5 py-0.5 rounded-pill shadow-xs"
+                              className="badge bg-white text-dark border px-2 py-1 rounded-pill shadow-xs"
                               style={{ fontSize: "10px", fontWeight: "600", color: "#334155" }}
                             >
                               {members.length}
@@ -446,7 +446,7 @@ function ChatContent() {
                           {eventId && (
                             <Link
                               href={`/event-details?id=${eventId}`}
-                              className="btn btn-sm btn-white rounded-pill px-3 py-1.5 border d-none d-sm-inline-flex align-items-center gap-2 text-dark shadow-xs transition btn-neutral-hover"
+                              className="btn btn-sm btn-white rounded-pill px-3 py-1 border d-none d-sm-inline-flex align-items-center gap-2 text-dark shadow-xs transition btn-neutral-hover"
                               style={{
                                 background: "#ffffff",
                                 borderColor: "#e2e8f0",
@@ -515,13 +515,23 @@ function ChatContent() {
                         ) : (
                           messages.map((msg, idx) => {
                             const senderId =
-                              msg.sender?._id || msg.sender?.id || msg.sender;
-                            const currentUserId = profile?._id || profile?.id;
+                              msg.sender?._id || msg.sender?.id || msg.senderId?._id || msg.senderId || msg.sender;
+                            const currentUserId = profile?.userId || profile?._id || profile?.id;
                             const isSelf =
-                              currentUserId && String(senderId) === String(currentUserId);
+                              currentUserId && senderId && String(senderId) === String(currentUserId);
+                            const matchedMember = members.find(
+                              (m) => String(m._id || m.id || "") === String(senderId || "")
+                            );
                             const senderName =
-                              msg.sender?.fullName || (isSelf ? "You" : "Participant");
-                            const senderPic = msg.sender?.profilePic;
+                              msg.sender?.fullName ||
+                              msg.senderName ||
+                              matchedMember?.fullName ||
+                              msg.sender?.email?.split("@")[0] ||
+                              matchedMember?.email?.split("@")[0] ||
+                              msg.sender?.mobile ||
+                              matchedMember?.mobile ||
+                              (isSelf ? "You" : "Participant");
+                            const senderPic = msg.sender?.profilePic || matchedMember?.profilePic;
                             const timeDisplay =
                               msg.timeAgo ||
                               (msg.createdAt
@@ -541,10 +551,10 @@ function ChatContent() {
                             return (
                               <div
                                 key={msg._id || idx}
-                                className={`d-flex gap-2.5 ${
+                                className={`d-flex ${
                                   isSelf ? "justify-content-end" : "justify-content-start"
                                 }`}
-                                style={{ marginTop: isFirstInGroup ? (idx === 0 ? "0" : "12px") : "3px" }}
+                                style={{ gap: "10px", marginTop: isFirstInGroup ? (idx === 0 ? "0" : "12px") : "3px" }}
                               >
                                 {!isSelf && (
                                   <div className="flex-shrink-0" style={{ width: "34px", alignSelf: "flex-end" }}>
@@ -630,7 +640,7 @@ function ChatContent() {
                           <input
                             ref={inputRef}
                             type="text"
-                            className="form-control rounded-pill px-3.5 py-2.5 border bg-light text-dark shadow-none"
+                            className="form-control rounded-pill px-3 py-2 border bg-light text-dark shadow-none"
                             placeholder="Type your message to the group..."
                             value={newMsg}
                             onChange={(e) => setNewMsg(e.target.value)}
