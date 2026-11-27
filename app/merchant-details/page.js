@@ -93,11 +93,15 @@ function MerchantDetailsContent() {
       try {
         let foundMerchant = null;
 
-        // 1. Try reading from localStorage first
+        // 1. Try reading from localStorage first (only if it matches both merchantId and additionalServiceId)
         const stored = localStorage.getItem("eventuna-latest-merchant");
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (!merchantId || parsed._id === merchantId || parsed.id === merchantId) {
+          const parsedId = parsed._id || parsed.id;
+          const parsedServiceId = parsed.serviceId?._id || parsed.serviceId || parsed.categoryId?._id || parsed.categoryId;
+          const matchesMerchant = !merchantId || parsedId === merchantId;
+          const matchesService = !additionalServiceId || !parsedServiceId || String(parsedServiceId) === String(additionalServiceId);
+          if (matchesMerchant && matchesService) {
             foundMerchant = parsed;
           }
         }
@@ -223,10 +227,27 @@ function MerchantDetailsContent() {
   const finalAmount = Math.max(0, subtotal - discountAmount);
 
   // ── Apply coupon ──
+  const parseCouponDate = (val) => {
+    if (!val) return null;
+    const str = String(val).trim();
+    if (/^\d{2}-\d{2}-\d{4}$/.test(str)) {
+      const [dd, mm, yyyy] = str.split("-");
+      return new Date(Number(yyyy), Number(mm) - 1, Number(dd), 23, 59, 59);
+    }
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
   const handleApplyCoupon = () => {
     if (!couponCode.trim()) return;
     const match = (merchant?.couponIds || []).find(c => c.couponName.toLowerCase() === couponCode.trim().toLowerCase());
     if (match) {
+      const now = new Date();
+      const validTo = parseCouponDate(match.validTo);
+      if (validTo && validTo < now) {
+        Swal.fire({ icon: "warning", title: "Coupon Expired", text: `Coupon "${match.couponName}" expired on ${match.validTo}.`, confirmButtonColor: "#3e56f0" });
+        return;
+      }
       setAppliedCoupon(match);
       Swal.fire({ icon: "success", title: "Coupon Applied!", text: `${match.discount}% discount applied.`, confirmButtonColor: "#3e56f0", timer: 2000, timerProgressBar: true });
     } else {
@@ -470,7 +491,7 @@ function MerchantDetailsContent() {
                         <p className="text-muted mb-2" style={{ fontSize: "12px", lineHeight: "1.4", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                           {prod.description || "Premium quality product."}
                         </p>
-                        <span className="fw-bold" style={{ color: "#3e56f0", fontSize: "16px" }}>${prod.price}</span>
+                        <span className="fw-bold" style={{ color: "#3e56f0", fontSize: "16px" }}>SAR {prod.price}</span>
                       </div>
                       {/* Stepper */}
                       <div className="d-flex flex-column align-items-center justify-content-center gap-2 pe-3" style={{ flexShrink: 0 }}>
@@ -504,7 +525,7 @@ function MerchantDetailsContent() {
               <div>
                 <div className="text-muted" style={{ fontSize: "12px", fontWeight: 600 }}>ORDER TOTAL</div>
                 <div style={{ fontWeight: 800, fontSize: "22px", color: selectedProducts.length > 0 ? "#3e56f0" : "#94a3b8" }}>
-                  {selectedProducts.length > 0 ? `$${subtotal.toFixed(2)}` : "$0.00"}
+                  {selectedProducts.length > 0 ? `SAR ${subtotal.toFixed(2)}` : "SAR 0.00"}
                 </div>
                 <div className="text-muted" style={{ fontSize: "11px" }}>{selectedProducts.length} item{selectedProducts.length !== 1 ? "s" : ""} selected</div>
               </div>
@@ -574,11 +595,11 @@ function MerchantDetailsContent() {
                         <h6 className="fw-bold text-dark mb-1 text-truncate" style={{ fontSize: "15px" }}>{prod.name}</h6>
                         <div className="d-flex align-items-center gap-2">
                           <span style={{ background: "#e0e7ff", color: "#3e56f0", borderRadius: "20px", padding: "2px 10px", fontSize: "12px", fontWeight: 700 }}>x{quantities[prod._id]}</span>
-                          <span className="text-muted" style={{ fontSize: "12px" }}>${prod.price} each</span>
+                          <span className="text-muted" style={{ fontSize: "12px" }}>SAR {prod.price} each</span>
                         </div>
                       </div>
                       <div className="text-end" style={{ flexShrink: 0 }}>
-                        <div style={{ fontWeight: 800, fontSize: "17px", color: "#3e56f0" }}>${(prod.price * quantities[prod._id]).toFixed(2)}</div>
+                        <div style={{ fontWeight: 800, fontSize: "17px", color: "#3e56f0" }}>SAR {(prod.price * quantities[prod._id]).toFixed(2)}</div>
                         <button
                           type="button"
                           onClick={() => handleRemove(prod._id)}
@@ -598,7 +619,7 @@ function MerchantDetailsContent() {
             <div style={{ background: "#fff", borderRadius: "20px", padding: "20px 24px", marginBottom: "20px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
               <div className="d-flex justify-content-between align-items-center">
                 <span style={{ fontWeight: 600, color: "#64748b", fontSize: "14px" }}>Items Subtotal</span>
-                <span style={{ fontWeight: 800, fontSize: "20px", color: "#1e293b" }}>${subtotal.toFixed(2)}</span>
+                <span style={{ fontWeight: 800, fontSize: "20px", color: "#1e293b" }}>SAR {subtotal.toFixed(2)}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mt-2">
                 <span style={{ fontWeight: 600, color: "#64748b", fontSize: "14px" }}>Delivery Fee</span>
@@ -716,7 +737,7 @@ function MerchantDetailsContent() {
                       <span style={{ fontSize: "14px", color: "#475569" }}>{p.name}</span>
                       <span style={{ background: "#f1f5f9", color: "#64748b", borderRadius: "20px", padding: "1px 8px", fontSize: "11px", fontWeight: 700 }}>×{quantities[p._id]}</span>
                     </div>
-                    <span style={{ fontWeight: 700, color: "#1e293b", fontSize: "14px" }}>${(p.price * quantities[p._id]).toFixed(2)}</span>
+                    <span style={{ fontWeight: 700, color: "#1e293b", fontSize: "14px" }}>SAR {(p.price * quantities[p._id]).toFixed(2)}</span>
                   </div>
                   {idx < selectedProducts.length - 1 && <div style={{ height: "1px", background: "#f1f5f9", margin: "10px 0" }}></div>}
                 </div>
@@ -724,7 +745,7 @@ function MerchantDetailsContent() {
               <div style={{ height: "1px", background: "#e2e8f0", margin: "16px 0" }}></div>
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <span style={{ color: "#64748b", fontSize: "14px" }}>Items Total</span>
-                <span style={{ fontWeight: 600, color: "#1e293b", fontSize: "14px" }}>${subtotal.toFixed(2)}</span>
+                <span style={{ fontWeight: 600, color: "#1e293b", fontSize: "14px" }}>SAR {subtotal.toFixed(2)}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <span style={{ color: "#64748b", fontSize: "14px" }}>Delivery Fee</span>
@@ -733,13 +754,13 @@ function MerchantDetailsContent() {
               {appliedCoupon && (
                 <div className="d-flex justify-content-between align-items-center mb-2">
                   <span style={{ color: "#16a34a", fontSize: "14px" }}>Coupon ({appliedCoupon.couponName})</span>
-                  <span style={{ fontWeight: 700, color: "#16a34a", fontSize: "14px" }}>-${discountAmount.toFixed(2)}</span>
+                  <span style={{ fontWeight: 700, color: "#16a34a", fontSize: "14px" }}>-SAR {discountAmount.toFixed(2)}</span>
                 </div>
               )}
               <div style={{ height: "2px", background: "linear-gradient(90deg,#3e56f0,#2563eb)", margin: "16px 0", borderRadius: "2px" }}></div>
               <div className="d-flex justify-content-between align-items-center">
                 <span style={{ fontWeight: 700, color: "#0f172a", fontSize: "16px" }}>Total Payable</span>
-                <span style={{ fontWeight: 800, color: "#3e56f0", fontSize: "24px" }}>${finalAmount.toFixed(2)}</span>
+                <span style={{ fontWeight: 800, color: "#3e56f0", fontSize: "24px" }}>SAR {finalAmount.toFixed(2)}</span>
               </div>
             </div>
 
@@ -827,19 +848,19 @@ function MerchantDetailsContent() {
               <div className="border rounded-3 overflow-hidden">
                 <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom" style={{ fontSize: "14px" }}>
                   <span className="text-muted">Items Total</span>
-                  <span className="fw-semibold text-dark">${subtotal.toFixed(2)}</span>
+                  <span className="fw-semibold text-dark">SAR {subtotal.toFixed(2)}</span>
                 </div>
                 <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom" style={{ fontSize: "14px" }}>
                   <span className="text-muted">Delivery Fee</span>
-                  <span className="fw-semibold text-dark">$0.0</span>
+                  <span className="fw-semibold text-dark">SAR 0.00</span>
                 </div>
                 <div className="d-flex justify-content-between align-items-center px-3 py-2 border-bottom" style={{ fontSize: "14px" }}>
                   <span className="text-muted">Coupon discount</span>
-                  <span className="fw-semibold text-dark">${discountAmount.toFixed(2)}</span>
+                  <span className="fw-semibold text-dark">SAR {discountAmount.toFixed(2)}</span>
                 </div>
                 <div className="d-flex justify-content-between align-items-center px-3 py-2" style={{ fontSize: "14px", background: "#eff6ff" }}>
-                  <span className="fw-bold text-dark">Paid Amount</span>
-                  <span className="fw-bold" style={{ color: "#3e56f0" }}>${Number(bookingResult && bookingResult.finalAmount !== undefined ? bookingResult.finalAmount : finalAmount).toFixed(2)}</span>
+                  <span className="fw-bold text-dark">Total Amount (Pending Payment)</span>
+                  <span className="fw-bold" style={{ color: "#3e56f0" }}>SAR {Number(bookingResult && bookingResult.finalAmount !== undefined ? bookingResult.finalAmount : finalAmount).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -871,12 +892,12 @@ function MerchantDetailsContent() {
           className="merchant-hero-banner"
           style={{
             position: "relative",
-            minHeight: "360px",
+            minHeight: "380px",
             color: "#fff",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            padding: "24px 0 36px",
+            padding: "92px 0 36px",
             borderRadius: 0,
             marginBottom: 0,
             overflow: "hidden"
@@ -907,7 +928,7 @@ function MerchantDetailsContent() {
             <div className="d-flex justify-content-between align-items-center">
               <button
                 onClick={() => router.back()}
-                className="btn rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm text-white"
+                className="btn rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm text-white"
                 style={{
                   background: "rgba(0, 0, 0, 0.45)",
                   backdropFilter: "blur(8px)",
@@ -921,7 +942,7 @@ function MerchantDetailsContent() {
 
               {allBanners.length > 1 && (
                 <div
-                  className="d-flex align-items-center gap-2 px-3 py-1.5 rounded-pill shadow-sm"
+                  className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill shadow-sm"
                   style={{
                     background: "rgba(0, 0, 0, 0.55)",
                     backdropFilter: "blur(8px)",
@@ -1106,7 +1127,13 @@ function MerchantDetailsContent() {
                           <div className="border rounded-3 p-3 h-100 bg-white shadow-sm d-flex flex-column justify-content-between">
                             <div>
                               <div className="rounded-2 overflow-hidden mb-3" style={{ height: "160px" }}>
-                                <img src={getProductImage(prod.photo)} alt={prod.name} className="w-100 h-100" style={{ objectFit: "cover" }} />
+                                <img
+                                  src={getProductImage(prod.photo)}
+                                  alt={prod.name}
+                                  className="w-100 h-100"
+                                  style={{ objectFit: "cover" }}
+                                  onError={e => { e.target.onerror = null; e.target.src = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80"; }}
+                                />
                               </div>
                               <h5 className="fw-bold text-dark mb-1">{prod.name}</h5>
                               <p className="text-muted small mb-3" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -1115,7 +1142,7 @@ function MerchantDetailsContent() {
                             </div>
                             <div className="border-top pt-2 d-flex justify-content-between align-items-center">
                               <span className="small text-muted">Price</span>
-                              <span className="fw-bold text-primary fs-5">${prod.price}</span>
+                              <span className="fw-bold text-primary fs-5">SAR {prod.price}</span>
                             </div>
                           </div>
                         </div>
@@ -1167,7 +1194,7 @@ function MerchantDetailsContent() {
                     <button
                       type="button"
                       onClick={() => setShowMerchantRatingModal(true)}
-                      className="btn btn-outline-warning w-100 rounded-pill py-2.5 fw-bold text-dark d-flex align-items-center justify-content-center gap-2 shadow-xs"
+                      className="btn btn-outline-warning w-100 rounded-pill py-2 fw-bold text-dark d-flex align-items-center justify-content-center gap-2 shadow-xs"
                     >
                       <i className="fa-solid fa-star text-warning"></i> Write a Review
                     </button>
@@ -1197,7 +1224,7 @@ function MerchantDetailsContent() {
                         const targetUrl = `/merchant-chat?${eventId ? `eventId=${eventId}&` : ""}merchantId=${mId}&merchantName=${mName}`;
                         router.push(targetUrl);
                       }}
-                      className="btn w-100 rounded-pill py-2.5 fw-semibold d-flex align-items-center justify-content-center gap-2"
+                      className="btn w-100 rounded-pill py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
                       style={{ border: "1.5px solid #475569", color: "#334155", background: "#ffffff", fontSize: "15px" }}
                     >
                       <i className="fa-regular fa-comment-dots text-primary"></i> Contact Merchant
