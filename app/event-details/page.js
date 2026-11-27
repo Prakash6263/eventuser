@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { getMerchantsByServiceApi, updateEventApi, updateEventStatusApi, cancelEventApi, deleteEventApi, sendInvitationReminderApi, publishDraftEventApi, rateEventApi, getEventRatingsApi, getEventRatingSummaryApi, scanAttendanceApi, markManualAttendanceApi } from "../services/eventApi";
+import { getMerchantsByServiceApi, updateEventApi, updateEventStatusApi, cancelEventApi, deleteEventApi, sendInvitationReminderApi, publishDraftEventApi, rateEventApi, getEventRatingsApi, getEventRatingSummaryApi, scanAttendanceApi, markManualAttendanceApi, createMoyasarPaymentApi, updateServiceBookingPaymentApi } from "../services/eventApi";
 import { makeReservationApi, getReservationDetailsByIdApi } from "../services/reservationApi";
 import { getEventGroupChatApi } from "../services/chatApi";
 import { apiRequest } from "../services/apiClient";
@@ -166,6 +166,20 @@ function EventDetailsContent() {
 
   // Table Reservation state
   const [reservation, setReservation] = useState(null);
+  const [serviceBookings, setServiceBookings] = useState([]);
+  const [payModal, setPayModal] = useState({
+    show: false,
+    booking: null,
+    serviceName: "",
+    amount: 0,
+    cardName: "",
+    cardNumber: "",
+    expMonth: "",
+    expYear: "",
+    cvc: "",
+  });
+  const [paySubmitting, setPaySubmitting] = useState(false);
+  const [payError, setPayError] = useState("");
   const [loadingReservation, setLoadingReservation] = useState(false);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [resAdults, setResAdults] = useState("1");
@@ -399,6 +413,127 @@ function EventDetailsContent() {
       });
     } finally {
       setRatingSubmitting(false);
+    }
+  };
+
+  const handleOpenPayModal = (service, booking, serviceName) => {
+    setPayError("");
+    setPayModal({
+      show: true,
+      booking,
+      serviceName,
+      amount: Number(booking?.finalAmount || booking?.amount || 0),
+      cardName: "",
+      cardNumber: "",
+      expMonth: "",
+      expYear: "",
+      cvc: "",
+    });
+  };
+
+  const handleSubmitServicePayment = async (e) => {
+    e.preventDefault();
+    const { booking, serviceName, amount, cardName, cardNumber, expMonth, expYear, cvc } = payModal;
+    if (!booking?._id) {
+      setPayError("Booking reference is missing.");
+      return;
+    }
+    const cleanNum = cardNumber.replace(/\s+/g, "");
+    if (!cardName.trim() || cardName.trim().length < 3) {
+      setPayError("Please enter cardholder name (min 3 characters).");
+      return;
+    }
+    if (!/^\d{13,19}$/.test(cleanNum)) {
+      setPayError("Please enter a valid card number.");
+      return;
+    }
+    if (!/^(0?[1-9]|1[0-2])$/.test(expMonth.trim()) || !/^\d{2,4}$/.test(expYear.trim())) {
+      setPayError("Please enter valid expiry month (MM) and year (YY).");
+      return;
+    }
+    if (!/^\d{3,4}$/.test(cvc.trim())) {
+      setPayError("Please enter a valid 3 or 4 digit CVC.");
+      return;
+    }
+    if (!amount || Number(amount) <= 0) {
+      setPayError("Invalid payment amount.");
+      return;
+    }
+
+    setPaySubmitting(true);
+    setPayError("");
+    try {
+      const mId = String(booking.merchantId?._id || booking.merchantId || "");
+      const payRes = await createMoyasarPaymentApi({
+        merchantId: mId,
+        eventId: event.eventId,
+        serviceBookingId: booking._id,
+        amount: Number(amount),
+        currency: "SAR",
+        description: `Payment for ${serviceName} - ${event.eventTitle || "Event"}`,
+        source: {
+          type: "creditcard",
+          name: cardName.trim(),
+          number: cleanNum,
+          cvc: cvc.trim(),
+          month: expMonth.trim().padStart(2, "0"),
+          year: expYear.trim().length === 2 ? `20${expYear.trim()}` : expYear.trim(),
+        },
+      });
+
+      if (!payRes?.status) {
+        setPayError(payRes?.message || "Payment gateway declined or failed.");
+        setPaySubmitting(false);
+        return;
+      }
+
+      const moyasarData = payRes.data?.data || payRes.data || {};
+      const txId = moyasarData.id || payRes.data?.paymenId || `TX-${Date.now()}`;
+
+      if (moyasarData.status === "initiated" && moyasarData.source?.transaction_url) {
+        window.open(moyasarData.source.transaction_url, "_blank", "noopener,noreferrer");
+      }
+
+      const statusRes = await updateServiceBookingPaymentApi({
+        bookingId: booking._id,
+        paymentStatus: "yes",
+        transactionId: txId,
+      });
+
+      if (statusRes?.status) {
+        setEvent((prev) => {
+          if (!prev) return prev;
+          const sid = String(booking.additionalServiceId?._id || booking.additionalServiceId || "");
+          return {
+            ...prev,
+            additionalServices: (prev.additionalServices || []).map((s) => {
+              const curSid = String(s.serviceId?._id || s.serviceId || s._id || "");
+              return curSid === sid ? { ...s, paymentStatus: "yes", status: "confirmed" } : s;
+            }),
+          };
+        });
+        setServiceBookings((prev) =>
+          prev.map((b) =>
+            String(b._id) === String(booking._id)
+              ? { ...b, status: "confirmed", transactionId: txId, invoiceLink: statusRes.booking?.invoiceLink || b.invoiceLink }
+              : b
+          )
+        );
+        setPayModal((prev) => ({ ...prev, show: false }));
+        await Swal.fire({
+          icon: "success",
+          title: "Payment Successful!",
+          text: "Your service booking is now paid and confirmed.",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+      } else {
+        setPayError(statusRes?.message || "Payment recorded but failed to update booking status.");
+      }
+    } catch (err) {
+      setPayError(err.message || "Payment failed. Please try again.");
+    } finally {
+      setPaySubmitting(false);
     }
   };
 
@@ -768,19 +903,30 @@ function EventDetailsContent() {
             const resData = await getReservationDetailsByIdApi(eventId);
             if (resData && resData.status && resData.data) {
               let currentEventReservation = null;
+              let extractedBookings = [];
               if (Array.isArray(resData.data)) {
                 const matching = resData.data.find(d => String(d._id) === String(eventId) || String(d.id) === String(eventId));
                 if (matching && (matching.makeReservation || matching.reservation)) {
                   currentEventReservation = matching.makeReservation || matching.reservation;
                 }
-              } else if (resData.data.makeReservation || resData.data.reservation) {
-                currentEventReservation = resData.data.makeReservation || resData.data.reservation;
-              } else if (resData.data._id && (String(resData.data.eventId) === String(eventId) || String(resData.data._id) === String(eventId))) {
-                currentEventReservation = resData.data;
+                if (Array.isArray(matching?.serviceBookings)) {
+                  extractedBookings = matching.serviceBookings;
+                }
+              } else {
+                if (resData.data.makeReservation || resData.data.reservation) {
+                  currentEventReservation = resData.data.makeReservation || resData.data.reservation;
+                } else if (resData.data._id && (String(resData.data.eventId) === String(eventId) || String(resData.data._id) === String(eventId))) {
+                  currentEventReservation = resData.data;
+                }
+                if (Array.isArray(resData.data.serviceBookings)) {
+                  extractedBookings = resData.data.serviceBookings;
+                }
               }
               setReservation(currentEventReservation);
+              setServiceBookings(extractedBookings.length > 0 ? extractedBookings : (Array.isArray(res.data?.serviceBookings) ? res.data.serviceBookings : []));
             } else {
               setReservation(null);
+              setServiceBookings(Array.isArray(res.data?.serviceBookings) ? res.data.serviceBookings : []);
             }
           } catch (rErr) {
             setReservation(null);
@@ -964,7 +1110,7 @@ function EventDetailsContent() {
             </div>
           </div>
         </div>
-        <Footer />
+      <Footer />
       </>
     );
   }
@@ -988,7 +1134,7 @@ function EventDetailsContent() {
             </Link>
           </div>
         </div>
-        <Footer />
+      <Footer />
       </>
     );
   }
@@ -1073,7 +1219,7 @@ function EventDetailsContent() {
 
           </div>
         </div>
-        <Footer />
+      <Footer />
       </>
     );
   }
@@ -1603,6 +1749,16 @@ function EventDetailsContent() {
                       
                       const meta = getServiceIconClass(serviceName);
                       const isClickable = !!resolvedServiceId;
+                      const matchedBooking = serviceBookings.find((b) => {
+                        const bSid = String(b.additionalServiceId?._id || b.additionalServiceId || "");
+                        return bSid && resolvedServiceId && bSid === String(resolvedServiceId);
+                      });
+                      const effectiveStatus = (matchedBooking?.status || service.status || "Pending").toLowerCase();
+                      const isPaid = ["yes", "paid", "success"].includes((service.paymentStatus || "").toLowerCase()) || effectiveStatus === "confirmed";
+                      const canPay = event.isMyEvent && matchedBooking && ["accepted", "approved"].includes(effectiveStatus) && !isPaid;
+                      const invoiceHref = matchedBooking?.invoiceLink
+                        ? (matchedBooking.invoiceLink.startsWith("http") ? matchedBooking.invoiceLink : `https://eventuna.com/api${matchedBooking.invoiceLink}`)
+                        : "";
 
                       const rowContent = (
                         <div 
@@ -1656,24 +1812,53 @@ function EventDetailsContent() {
                           </div>
 
                           {/* Status and Payment Badges */}
-                          <div className="d-flex align-items-center gap-2 flex-shrink-0">
+                          <div className="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap justify-content-end">
                             {/* Booking Status Badge */}
-                            <span className="badge rounded-pill px-2.5 py-1.5 fw-semibold text-capitalize shadow-sm" style={{
+                            <span className="badge rounded-pill px-2 py-1 fw-semibold text-capitalize shadow-sm" style={{
                               fontSize: "10px",
-                              background: ["accepted", "approved"].includes(service.status?.toLowerCase()) ? "#d1fae5" : "#fee2e2",
-                              color: ["accepted", "approved"].includes(service.status?.toLowerCase()) ? "#065f46" : "#991b1b"
+                              background: ["accepted", "approved", "confirmed"].includes(effectiveStatus) ? "#d1fae5" : "#fee2e2",
+                              color: ["accepted", "approved", "confirmed"].includes(effectiveStatus) ? "#065f46" : "#991b1b"
                             }}>
-                              Status: {service.status || "Pending"}
+                              Status: {matchedBooking?.status || service.status || "Pending"}
                             </span>
 
                             {/* Payment Status Badge */}
-                            <span className="badge rounded-pill px-2.5 py-1.5 fw-semibold shadow-sm" style={{
+                            <span className="badge rounded-pill px-2 py-1 fw-semibold shadow-sm" style={{
                               fontSize: "10px",
-                              background: ["yes", "paid", "success"].includes(service.paymentStatus?.toLowerCase()) ? "#e0f2fe" : "#fff1f2",
-                              color: ["yes", "paid", "success"].includes(service.paymentStatus?.toLowerCase()) ? "#0369a1" : "#be123c"
+                              background: isPaid ? "#e0f2fe" : "#fff1f2",
+                              color: isPaid ? "#0369a1" : "#be123c"
                             }}>
-                              {["yes", "paid", "success"].includes(service.paymentStatus?.toLowerCase()) ? "Paid" : "Unpaid"}
+                              {isPaid ? "Paid" : "Unpaid"}
                             </span>
+
+                            {canPay && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleOpenPayModal(service, matchedBooking, serviceName);
+                                }}
+                                className="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold shadow-xs"
+                                style={{ fontSize: "11px", background: "#3e56f0", border: "none" }}
+                              >
+                                <i className="fa-solid fa-credit-card me-1"></i>
+                                {matchedBooking.finalAmount ? `Pay SAR ${matchedBooking.finalAmount}` : "Pay Now"}
+                              </button>
+                            )}
+
+                            {isPaid && invoiceHref && (
+                              <a
+                                href={invoiceHref}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold"
+                                style={{ fontSize: "10.5px" }}
+                              >
+                                <i className="fa-solid fa-file-invoice me-1"></i>Invoice
+                              </a>
+                            )}
                           </div>
                         </div>
                       );
@@ -3254,6 +3439,122 @@ function EventDetailsContent() {
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Moyasar Service Booking Payment Modal */}
+      {payModal.show && (
+        <div className="modal show d-block" style={{ backgroundColor: "rgba(15, 23, 42, 0.65)", zIndex: 1060 }} tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: "440px" }}>
+            <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+              <div className="modal-header border-bottom px-4 py-3 bg-white">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="rounded-3 d-flex align-items-center justify-content-center text-primary" style={{ width: "36px", height: "36px", background: "#eef2ff" }}>
+                    <i className="fa-solid fa-credit-card"></i>
+                  </div>
+                  <div>
+                    <h6 className="modal-title fw-bold mb-0 text-dark">Pay for {payModal.serviceName}</h6>
+                    <small className="text-muted">Secured by Moyasar Payment Gateway</small>
+                  </div>
+                </div>
+                <button type="button" className="btn-close" onClick={() => setPayModal((p) => ({ ...p, show: false }))}></button>
+              </div>
+              <form onSubmit={handleSubmitServicePayment}>
+                <div className="modal-body p-4">
+                  <div className="p-3 rounded-3 mb-3 d-flex align-items-center justify-content-between" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                    <span className="text-muted small fw-semibold">Total Payable Amount</span>
+                    <span className="fw-bold text-primary fs-5">SAR {payModal.amount}</span>
+                  </div>
+
+                  {payError && (
+                    <div className="alert alert-danger py-2 px-3 small rounded-3 mb-3">
+                      <i className="fa-solid fa-circle-exclamation me-1"></i> {payError}
+                    </div>
+                  )}
+
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold text-dark">Cardholder Name</label>
+                    <input
+                      type="text"
+                      className="form-control rounded-3"
+                      placeholder="Name on card"
+                      value={payModal.cardName}
+                      onChange={(e) => setPayModal((p) => ({ ...p, cardName: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label small fw-semibold text-dark">Card Number</label>
+                    <input
+                      type="text"
+                      className="form-control rounded-3"
+                      placeholder="4111 1111 1111 1111"
+                      maxLength={19}
+                      value={payModal.cardNumber}
+                      onChange={(e) => setPayModal((p) => ({ ...p, cardNumber: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="row g-2">
+                    <div className="col-4">
+                      <label className="form-label small fw-semibold text-dark">Month</label>
+                      <input
+                        type="text"
+                        className="form-control rounded-3"
+                        placeholder="MM"
+                        maxLength={2}
+                        value={payModal.expMonth}
+                        onChange={(e) => setPayModal((p) => ({ ...p, expMonth: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="col-4">
+                      <label className="form-label small fw-semibold text-dark">Year</label>
+                      <input
+                        type="text"
+                        className="form-control rounded-3"
+                        placeholder="YY"
+                        maxLength={4}
+                        value={payModal.expYear}
+                        onChange={(e) => setPayModal((p) => ({ ...p, expYear: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="col-4">
+                      <label className="form-label small fw-semibold text-dark">CVC</label>
+                      <input
+                        type="password"
+                        className="form-control rounded-3"
+                        placeholder="123"
+                        maxLength={4}
+                        value={payModal.cvc}
+                        onChange={(e) => setPayModal((p) => ({ ...p, cvc: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer border-top px-4 py-3 bg-light d-flex justify-content-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-light border rounded-pill px-4 fw-semibold btn-sm"
+                    onClick={() => setPayModal((p) => ({ ...p, show: false }))}
+                    disabled={paySubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary rounded-pill px-4 fw-semibold btn-sm"
+                    style={{ background: "#3e56f0", border: "none" }}
+                    disabled={paySubmitting}
+                  >
+                    {paySubmitting ? "Processing..." : `Pay SAR ${payModal.amount}`}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

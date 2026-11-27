@@ -214,6 +214,24 @@ export const voteEventPollApi = async ({ pollId, optionId, action = "vote" }) =>
   });
 };
 
+// 20. Create Moyasar Payment API (iOS Payment Flow)
+export const createMoyasarPaymentApi = async (payload) => {
+  return await apiRequest("/payment/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+};
+
+// 21. Update Service Booking Payment Status API
+export const updateServiceBookingPaymentApi = async ({ bookingId, paymentStatus = "yes", transactionId = "" }) => {
+  return await apiRequest("/event/update-service-booking-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ bookingId, paymentStatus, transactionId }),
+  });
+};
+
 export const eventApi = {
   getEventTypes: getEventTypesApi,
   getEventCategoriesByTypeId: getEventCategoriesByTypeIdApi,
@@ -228,6 +246,8 @@ export const eventApi = {
   sendInvitationReminder: sendInvitationReminderApi,
   getAttendanceQr: getAttendanceQrApi,
   voteEventPoll: voteEventPollApi,
+  createMoyasarPayment: createMoyasarPaymentApi,
+  updateServiceBookingPayment: updateServiceBookingPaymentApi,
   getMyEvents: getMyEventsApi,
   getMyCreatedEvents: getMyCreatedEventsApi,
   getMyJoinedEvents: getMyJoinedEventsApi,
